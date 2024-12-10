@@ -1,0 +1,15 @@
+echo "# Generated OpenAPI client
+internal/client/
+# Build artifacts
+dist/
+# IDE files
+.idea/
+.vscode/
+# Go files
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out" > .gitignore

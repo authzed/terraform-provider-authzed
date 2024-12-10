@@ -1,0 +1,54 @@
+openapi: 3.0.3
+info:
+  description: this is a test API ![](https://commonmark.org/help/images/favicon.png)
+  title: some test API
+  version: ""
+paths:
+  /hello:
+    post:
+      description: Say hello.
+      operationId: SayHello
+      parameters:
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: "20241017"
+          description: The version of the API to use. Must be specified.
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/V20241017SayHelloRequest'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V20241017SayHelloResponse'
+          description: OK
+      security:
+      - auth: []
+components:
+  schemas:
+    V20241017SayHelloRequest:
+      properties:
+        name:
+          type: string
+        owner:
+          type: string
+      type: object
+    V20241017SayHelloResponse:
+      properties:
+        message:
+          type: string
+        owner:
+          type: string
+      type: object
+  securitySchemes:
+    auth:
+      bearerFormat: Bearer token
+      description: Token used for authentication.
+      scheme: bearer
+      type: http
