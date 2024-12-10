@@ -1,8 +1,13 @@
 # Terraform Provider for Platform API
 
-This Terraform provider allows you to interact with the Platform API (heighliner).
+A Terraform provider for managing Platform API resources.
 
 ## Requirements
 
-- Go 1.21+
-- Terraform 1.0+
+- [Terraform](https://www.terraform.io/downloads.html) >= 1.0
+- [Go](https://golang.org/doc/install) >= 1.23.4
+- Access to Platform API server
+
+## Building The Provider
+
+1. Clone the repository
