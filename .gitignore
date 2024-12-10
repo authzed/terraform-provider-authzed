@@ -1,5 +1,3 @@
-echo "# Generated OpenAPI client
-internal/client/
 # Build artifacts
 dist/
 # IDE files
@@ -12,4 +10,4 @@ dist/
 *.so
 *.dylib
 *.test
-*.out" > .gitignore
+*.out
