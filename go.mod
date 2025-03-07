@@ -2,7 +2,7 @@ module terraform-provider-platform-api
 
 go 1.23.4
 
-require github.com/hashicorp/terraform-plugin-framework v1.13.0
+require github.com/hashicorp/terraform-plugin-framework v1.4.0
 
 require (
 	github.com/fatih/color v1.13.0 // indirect
