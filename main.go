@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"log"
+	"os"
 
 	"terraform-provider-platform-api/internal/provider"
 
@@ -15,10 +16,15 @@ var (
 )
 
 func main() {
-	var debug bool
+	// Enable debugging by default for development
+	var debug = true
 
-	flag.BoolVar(&debug, "debug", false, "set to true to run the provider with support for debuggers")
+	flag.BoolVar(&debug, "debug", true, "set to true to run the provider with support for debuggers")
 	flag.Parse()
+
+	// Log important details
+	log.Println("Starting provider with debug =", debug)
+	log.Println("Environment:", os.Environ())
 
 	opts := providerserver.ServeOpts{
 		Address: "registry.terraform.io/authzed/platform-api",

@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 
 	"terraform-provider-platform-api/internal/client"
 
@@ -42,7 +43,7 @@ func (p *PlatformProvider) Schema(_ context.Context, _ provider.SchemaRequest, r
 		Attributes: map[string]schema.Attribute{
 			"host": schema.StringAttribute{
 				Required:    true,
-				Description: "The host address of the Platform API",
+				Description: "The host address of Platform API",
 			},
 			"token": schema.StringAttribute{
 				Required:    true,
@@ -77,10 +78,55 @@ func (p *PlatformProvider) Configure(ctx context.Context, req provider.Configure
 }
 
 func (p *PlatformProvider) Resources(_ context.Context) []func() resource.Resource {
-	return []func() resource.Resource{
+	fmt.Println("PROVIDER DEBUG: Resources method called")
+
+	roleResource := NewRoleResource()
+	if roleResource == nil {
+		panic("NewRoleResource() returned nil")
 	}
+	fmt.Printf("PROVIDER DEBUG: Role resource type: %T\n", roleResource)
+
+	resources := []func() resource.Resource{
+		NewRoleResource,
+	}
+	fmt.Printf("PROVIDER DEBUG: Returning %d resources\n", len(resources))
+	return resources
 }
 
 func (p *PlatformProvider) DataSources(_ context.Context) []func() datasource.DataSource {
-	return nil
+	fmt.Println("PROVIDER DEBUG: DataSources method called")
+
+	// Check each data source constructor
+	permSysDS := NewPermissionSystemDataSource()
+	if permSysDS == nil {
+		panic("NewPermissionSystemDataSource() returned nil")
+	}
+	fmt.Printf("PROVIDER DEBUG: Permission System DS type: %T\n", permSysDS)
+
+	permSysListDS := NewPermissionSystemsDataSource()
+	if permSysListDS == nil {
+		panic("NewPermissionSystemsDataSource() returned nil")
+	}
+	fmt.Printf("PROVIDER DEBUG: Permission Systems List DS type: %T\n", permSysListDS)
+
+	roleDS := NewRoleDataSource()
+	if roleDS == nil {
+		panic("NewRoleDataSource() returned nil")
+	}
+	fmt.Printf("PROVIDER DEBUG: Role DS type: %T\n", roleDS)
+
+	rolesDS := NewRolesDataSource()
+	if rolesDS == nil {
+		panic("NewRolesDataSource() returned nil")
+	}
+	fmt.Printf("PROVIDER DEBUG: Roles List DS type: %T\n", rolesDS)
+
+	dataSources := []func() datasource.DataSource{
+		NewPermissionSystemDataSource,
+		NewPermissionSystemsDataSource,
+		NewRoleDataSource,
+		NewRolesDataSource,
+	}
+	fmt.Printf("PROVIDER DEBUG: Returning %d data sources\n", len(dataSources))
+	return dataSources
 }
