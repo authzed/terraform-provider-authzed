@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// Ensure provider defined types fully satisfy framework interfaces
 var _ datasource.DataSource = &rolesDataSource{}
 
 // NewRolesDataSource creates a new data source for listing roles
@@ -19,12 +18,10 @@ func NewRolesDataSource() datasource.DataSource {
 	return &rolesDataSource{}
 }
 
-// rolesDataSource defines the data source implementation
 type rolesDataSource struct {
 	client *client.PlatformClient
 }
 
-// rolesDataSourceModel describes the data source data model
 type rolesDataSourceModel struct {
 	ID                 types.String    `tfsdk:"id"`
 	PermissionSystemID types.String    `tfsdk:"permission_system_id"`
@@ -40,13 +37,10 @@ type roleDataModel struct {
 	CreatedAt   types.String `tfsdk:"created_at"`
 }
 
-// Metadata returns the data source type name
 func (d *rolesDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_roles"
-	fmt.Printf("DEBUG: Roles data source type name: %s\n", resp.TypeName)
 }
 
-// Schema defines the schema for the data source
 func (d *rolesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Lists all roles for a given permission system",
@@ -91,7 +85,6 @@ func (d *rolesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 	}
 }
 
-// Configure configures the data source with the provider's client
 func (d *rolesDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
@@ -141,6 +134,5 @@ func (d *rolesDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	}
 	data.Roles = rolesList
 
-	// Set state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

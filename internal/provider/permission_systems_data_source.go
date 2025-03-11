@@ -38,7 +38,6 @@ type permissionSystemModelForList struct {
 
 func (d *permissionSystemsDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_permission_systems"
-	fmt.Printf("DEBUG: Permission systems data source type name: %s\n", resp.TypeName)
 }
 
 func (d *permissionSystemsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {

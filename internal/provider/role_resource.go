@@ -34,7 +34,6 @@ type roleResourceModel struct {
 
 func (r *roleResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_role"
-	fmt.Printf("DEBUG: Role resource type name: %s\n", resp.TypeName)
 }
 
 func (r *roleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {

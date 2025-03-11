@@ -12,15 +12,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// Ensure the implementation satisfies the expected interfaces
 var _ datasource.DataSource = &permissionSystemDataSource{}
 
-// NewPermissionSystemDataSource creates a new permission system data source
 func NewPermissionSystemDataSource() datasource.DataSource {
 	return &permissionSystemDataSource{}
 }
 
-// permissionSystemDataSource is the data source implementation
 type permissionSystemDataSource struct {
 	client *client.PlatformClient
 }
@@ -35,13 +32,11 @@ type permissionSystemDataSourceModel struct {
 	Version       types.Object `tfsdk:"version"`
 }
 
-// Metadata returns the data source type name
 func (d *permissionSystemDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_permission_system"
 	fmt.Printf("DEBUG: Permission system data source type name: %s\n", resp.TypeName)
 }
 
-// Schema defines the schema for the data source
 func (d *permissionSystemDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Fetches a permission system by ID",
@@ -159,7 +154,6 @@ func (d *permissionSystemDataSource) Read(ctx context.Context, req datasource.Re
 	data.GlobalDnsPath = types.StringValue(permissionSystem.GlobalDnsPath)
 	data.SystemType = types.StringValue(permissionSystem.SystemType)
 
-	// Map SystemState
 	systemStateMap := map[string]attr.Value{
 		"status":  types.StringValue(permissionSystem.SystemState.Status),
 		"message": types.StringValue(permissionSystem.SystemState.Message),
@@ -177,7 +171,6 @@ func (d *permissionSystemDataSource) Read(ctx context.Context, req datasource.Re
 	}
 	data.SystemState = systemStateObj
 
-	// Map CurrentVersion inside Version
 	supportedFeatureNames := []attr.Value{}
 	for _, feature := range permissionSystem.Version.CurrentVersion.SupportedFeatureNames {
 		supportedFeatureNames = append(supportedFeatureNames, types.StringValue(feature))
@@ -231,6 +224,5 @@ func (d *permissionSystemDataSource) Read(ctx context.Context, req datasource.Re
 	resp.Diagnostics.Append(diags...)
 	data.Version = versionObj
 
-	// Set state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
