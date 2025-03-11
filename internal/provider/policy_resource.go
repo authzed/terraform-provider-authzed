@@ -171,52 +171,10 @@ func (r *policyResource) Read(ctx context.Context, req resource.ReadRequest, res
 }
 
 func (r *policyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data policyResourceModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	err := r.client.DeletePolicy(data.PermissionSystemID.ValueString(), data.ID.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete policy during update, got error: %s", err))
-		return
-	}
-
-	// Extract role IDs from types.List
-	var roleIDs []string
-	resp.Diagnostics.Append(data.RoleIDs.ElementsAs(ctx, &roleIDs, false)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	policy := &models.Policy{
-		Name:               data.Name.ValueString(),
-		Description:        data.Description.ValueString(),
-		PermissionSystemID: data.PermissionSystemID.ValueString(),
-		PrincipalID:        data.PrincipalID.ValueString(),
-		RoleIDs:            roleIDs,
-	}
-
-	createdPolicy, err := r.client.CreatePolicy(policy)
-	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to recreate policy during update, got error: %s", err))
-		return
-	}
-
-	data.ID = types.StringValue(createdPolicy.ID)
-	data.CreatedAt = types.StringValue(createdPolicy.CreatedAt)
-	data.Creator = types.StringValue(createdPolicy.Creator)
-
-	// Update role IDs in case the order or values changed, common in tf providers
-	roleIDList, diags := types.ListValueFrom(ctx, types.StringType, createdPolicy.RoleIDs)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	data.RoleIDs = roleIDList
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	resp.Diagnostics.AddError(
+		"Policy Update Not Supported",
+		"Platform API does not support updating policies. To change a policy, you need to delete it and create a new one.",
+	)
 }
 
 func (r *policyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
