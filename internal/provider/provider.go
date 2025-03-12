@@ -81,6 +81,7 @@ func (p *PlatformProvider) Resources(_ context.Context) []func() resource.Resour
 		NewRoleResource,
 		NewPolicyResource,
 		NewServiceAccountResource,
+		NewTokenResource,
 	}
 	return resources
 }
@@ -95,6 +96,8 @@ func (p *PlatformProvider) DataSources(_ context.Context) []func() datasource.Da
 		NewPoliciesDataSource,
 		NewServiceAccountDataSource,
 		NewServiceAccountsDataSource,
+		NewTokenDataSource,
+		NewTokensDataSource,
 	}
 	return dataSources
 }

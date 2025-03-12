@@ -3,6 +3,7 @@ package client
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"terraform-provider-platform-api/internal/models"
 )
@@ -23,14 +24,26 @@ func (c *PlatformClient) ListServiceAccounts(permissionSystemID string) ([]model
 		return nil, NewAPIError(resp)
 	}
 
-	var listResp struct {
-		Items []models.ServiceAccount `json:"items"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+	// Read the entire body
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	return listResp.Items, nil
+	// Try to decode as a direct array first
+	var serviceAccounts []models.ServiceAccount
+	if err := json.Unmarshal(bodyBytes, &serviceAccounts); err != nil {
+		// If direct decode fails, try with the wrapped items format
+		var listResp struct {
+			Items []models.ServiceAccount `json:"items"`
+		}
+		if err := json.Unmarshal(bodyBytes, &listResp); err != nil {
+			return nil, fmt.Errorf("failed to decode response: %w", err)
+		}
+		return listResp.Items, nil
+	}
+
+	return serviceAccounts, nil
 }
 
 func (c *PlatformClient) GetServiceAccount(permissionSystemID, serviceAccountID string) (*models.ServiceAccount, error) {
