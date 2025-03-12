@@ -17,8 +17,9 @@ type PlatformProvider struct {
 }
 
 type PlatformProviderModel struct {
-	Host  types.String `tfsdk:"host"`
-	Token types.String `tfsdk:"token"`
+	Endpoint   types.String `tfsdk:"endpoint"`
+	Token      types.String `tfsdk:"token"`
+	APIVersion types.String `tfsdk:"api_version"`
 }
 
 var _ provider.Provider = &PlatformProvider{}
@@ -39,14 +40,18 @@ func (p *PlatformProvider) Metadata(_ context.Context, _ provider.MetadataReques
 func (p *PlatformProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"host": schema.StringAttribute{
+			"endpoint": schema.StringAttribute{
 				Required:    true,
-				Description: "The host address of the Platform API",
+				Description: "The host address of Platform API",
 			},
 			"token": schema.StringAttribute{
 				Required:    true,
 				Description: "The bearer token for authentication",
 				Sensitive:   true,
+			},
+			"api_version": schema.StringAttribute{
+				Optional:    true,
+				Description: "The version of the API to use (defaults to 25r1)",
 			},
 		},
 	}
@@ -59,28 +64,40 @@ func (p *PlatformProvider) Configure(ctx context.Context, req provider.Configure
 		return
 	}
 
-	conf := client.NewConfiguration()
-	conf.Servers = []client.ServerConfiguration{
-		{
-			URL:         config.Host.ValueString(),
-			Description: "v1",
-		},
+	clientConfig := &client.PlatformClientConfig{
+		Host:       config.Endpoint.ValueString(),
+		Token:      config.Token.ValueString(),
+		APIVersion: config.APIVersion.ValueString(),
 	}
-	conf.DefaultHeader["X-API-Version"] = "20241017"
-	conf.AddDefaultHeader("Authorization", "Bearer "+config.Token.ValueString())
 
-	apiClient := client.NewAPIClient(conf)
+	platformClient := client.NewPlatformClient(clientConfig)
 
-	resp.DataSourceData = apiClient
-	resp.ResourceData = apiClient
+	resp.DataSourceData = platformClient
+	resp.ResourceData = platformClient
 }
 
 func (p *PlatformProvider) Resources(_ context.Context) []func() resource.Resource {
-	return []func() resource.Resource{
-		NewHelloResource,
+	resources := []func() resource.Resource{
+		NewRoleResource,
+		NewPolicyResource,
+		NewServiceAccountResource,
+		NewTokenResource,
 	}
+	return resources
 }
 
 func (p *PlatformProvider) DataSources(_ context.Context) []func() datasource.DataSource {
-	return nil
+	dataSources := []func() datasource.DataSource{
+		NewPermissionSystemDataSource,
+		NewPermissionSystemsDataSource,
+		NewRoleDataSource,
+		NewRolesDataSource,
+		NewPolicyDataSource,
+		NewPoliciesDataSource,
+		NewServiceAccountDataSource,
+		NewServiceAccountsDataSource,
+		NewTokenDataSource,
+		NewTokensDataSource,
+	}
+	return dataSources
 }
