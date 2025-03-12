@@ -22,7 +22,6 @@ type permissionSystemDataSource struct {
 	client *client.PlatformClient
 }
 
-// permissionSystemDataSourceModel maps the data source schema to values
 type permissionSystemDataSourceModel struct {
 	ID            types.String `tfsdk:"id"`
 	Name          types.String `tfsdk:"name"`
@@ -34,7 +33,6 @@ type permissionSystemDataSourceModel struct {
 
 func (d *permissionSystemDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_permission_system"
-	fmt.Printf("DEBUG: Permission system data source type name: %s\n", resp.TypeName)
 }
 
 func (d *permissionSystemDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
@@ -116,7 +114,6 @@ func (d *permissionSystemDataSource) Schema(_ context.Context, _ datasource.Sche
 	}
 }
 
-// Configure adds the provider configured client to the data source
 func (d *permissionSystemDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
@@ -142,14 +139,12 @@ func (d *permissionSystemDataSource) Read(ctx context.Context, req datasource.Re
 		return
 	}
 
-	// Get permission system from API
 	permissionSystem, err := d.client.GetPermissionSystem(data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read permission system, got error: %s", err))
 		return
 	}
 
-	// Map response body to model
 	data.Name = types.StringValue(permissionSystem.Name)
 	data.GlobalDnsPath = types.StringValue(permissionSystem.GlobalDnsPath)
 	data.SystemType = types.StringValue(permissionSystem.SystemType)

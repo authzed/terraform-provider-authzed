@@ -17,7 +17,7 @@ type PlatformProvider struct {
 }
 
 type PlatformProviderModel struct {
-	Host       types.String `tfsdk:"host"`
+	Endpoint   types.String `tfsdk:"endpoint"`
 	Token      types.String `tfsdk:"token"`
 	APIVersion types.String `tfsdk:"api_version"`
 }
@@ -40,7 +40,7 @@ func (p *PlatformProvider) Metadata(_ context.Context, _ provider.MetadataReques
 func (p *PlatformProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"host": schema.StringAttribute{
+			"endpoint": schema.StringAttribute{
 				Required:    true,
 				Description: "The host address of Platform API",
 			},
@@ -65,7 +65,7 @@ func (p *PlatformProvider) Configure(ctx context.Context, req provider.Configure
 	}
 
 	clientConfig := &client.PlatformClientConfig{
-		Host:       config.Host.ValueString(),
+		Host:       config.Endpoint.ValueString(),
 		Token:      config.Token.ValueString(),
 		APIVersion: config.APIVersion.ValueString(),
 	}
