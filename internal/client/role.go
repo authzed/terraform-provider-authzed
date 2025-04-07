@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"terraform-provider-platform-api/internal/models"
+	"terraform-provider-cloud-api/internal/models"
 )
 
 // ListRoles retrieves all roles for a ps

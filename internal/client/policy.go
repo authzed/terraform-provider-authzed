@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"terraform-provider-platform-api/internal/models"
+	"terraform-provider-cloud-api/internal/models"
 )
 
 // ListPolicies retrieves all policies for a permission system
@@ -35,6 +35,7 @@ func (c *CloudClient) ListPolicies(permissionSystemID string) ([]models.Policy, 
 	return listResp.Items, nil
 }
 
+// GetPolicy retrieves a policy by its ID
 func (c *CloudClient) GetPolicy(permissionSystemID, policyID string) (*models.Policy, error) {
 	path := fmt.Sprintf("/ps/%s/access/policies/%s", permissionSystemID, policyID)
 	req, err := c.NewRequest(http.MethodGet, path, nil)
