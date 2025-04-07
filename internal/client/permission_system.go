@@ -10,9 +10,10 @@ import (
 	"terraform-provider-platform-api/internal/models"
 )
 
-// ListPermissionSystems retrieves all permiss
-func (c *PlatformClient) ListPermissionSystems() ([]models.PermissionSystem, error) {
-	req, err := c.NewRequest(http.MethodGet, "/ps", nil)
+// ListPermissionSystems retrieves all permission systems
+func (c *CloudClient) ListPermissionSystems() ([]models.PermissionSystem, error) {
+	path := "/ps"
+	req, err := c.NewRequest(http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -56,9 +57,10 @@ func (c *PlatformClient) ListPermissionSystems() ([]models.PermissionSystem, err
 	return permissionSystems, nil
 }
 
-// GetPermissionSystem retrieves a ps by ID
-func (c *PlatformClient) GetPermissionSystem(id string) (*models.PermissionSystem, error) {
-	req, err := c.NewRequest(http.MethodGet, fmt.Sprintf("/ps/%s", id), nil)
+// GetPermissionSystem retrieves a permission system by ID
+func (c *CloudClient) GetPermissionSystem(permissionSystemID string) (*models.PermissionSystem, error) {
+	path := fmt.Sprintf("/ps/%s", permissionSystemID)
+	req, err := c.NewRequest(http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +82,7 @@ func (c *PlatformClient) GetPermissionSystem(id string) (*models.PermissionSyste
 	}
 
 	// Log the raw response for debugging
-	fmt.Printf("DEBUG: Raw API response for permission system %s: %s\n", id, string(bodyBytes))
+	fmt.Printf("DEBUG: Raw API response for permission system %s: %s\n", permissionSystemID, string(bodyBytes))
 
 	// Create a new reader from the bytes for JSON decoding
 	bodyReader := bytes.NewReader(bodyBytes)

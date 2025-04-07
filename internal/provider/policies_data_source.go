@@ -18,7 +18,7 @@ func NewPoliciesDataSource() datasource.DataSource {
 }
 
 type policiesDataSource struct {
-	client *client.PlatformClient
+	client *client.CloudClient
 }
 
 type policiesDataSourceModel struct {
@@ -104,11 +104,11 @@ func (d *policiesDataSource) Configure(_ context.Context, req datasource.Configu
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.PlatformClient)
+	client, ok := req.ProviderData.(*client.CloudClient)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *client.PlatformClient, got: %T", req.ProviderData),
+			fmt.Sprintf("Expected *client.CloudClient, got: %T", req.ProviderData),
 		)
 		return
 	}

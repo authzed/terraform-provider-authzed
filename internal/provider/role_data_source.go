@@ -18,7 +18,7 @@ func NewRoleDataSource() datasource.DataSource {
 }
 
 type roleDataSource struct {
-	client *client.PlatformClient
+	client *client.CloudClient
 }
 
 type roleDataSourceModel struct {
@@ -82,11 +82,11 @@ func (d *roleDataSource) Configure(_ context.Context, req datasource.ConfigureRe
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.PlatformClient)
+	client, ok := req.ProviderData.(*client.CloudClient)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *client.PlatformClient, got: %T", req.ProviderData),
+			fmt.Sprintf("Expected *client.CloudClient, got: %T", req.ProviderData),
 		)
 		return
 	}

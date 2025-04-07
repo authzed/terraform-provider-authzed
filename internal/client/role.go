@@ -3,13 +3,17 @@ package client
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 	"terraform-provider-platform-api/internal/models"
 )
 
 // ListRoles retrieves all roles for a ps
 func (c *PlatformClient) ListRoles(permissionSystemID string) ([]models.Role, error) {
-	req, err := c.NewRequest(http.MethodGet, fmt.Sprintf("/access/roles?permissionSystemID=%s", permissionSystemID), nil)
+	path := fmt.Sprintf("/ps/%s/access/roles", permissionSystemID)
+
+	req, err := c.NewRequest(http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +40,9 @@ func (c *PlatformClient) ListRoles(permissionSystemID string) ([]models.Role, er
 
 // GetRole retrieves a role by ID
 func (c *PlatformClient) GetRole(permissionSystemID, roleID string) (*models.Role, error) {
-	req, err := c.NewRequest(http.MethodGet, fmt.Sprintf("/access/roles/%s?permissionSystemID=%s", roleID, permissionSystemID), nil)
+	path := fmt.Sprintf("/ps/%s/access/roles/%s", permissionSystemID, roleID)
+
+	req, err := c.NewRequest(http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +66,9 @@ func (c *PlatformClient) GetRole(permissionSystemID, roleID string) (*models.Rol
 }
 
 func (c *PlatformClient) CreateRole(role *models.Role) (*models.Role, error) {
-	req, err := c.NewRequest(http.MethodPost, "/access/roles", role)
+	path := fmt.Sprintf("/ps/%s/access/roles", role.PermissionSystemID)
+
+	req, err := c.NewRequest(http.MethodPost, path, role)
 	if err != nil {
 		return nil, err
 	}
@@ -72,6 +80,15 @@ func (c *PlatformClient) CreateRole(role *models.Role) (*models.Role, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
+		// Read the response body to check for specific error messages
+		body, _ := io.ReadAll(resp.Body)
+		if resp.StatusCode == http.StatusInternalServerError {
+			// Check if the error message indicates a duplicate name
+			if strings.Contains(string(body), "duplicate") || strings.Contains(string(body), "already exists") {
+				return nil, fmt.Errorf("role with name '%s' already exists in permission system '%s'", role.Name, role.PermissionSystemID)
+			}
+		}
+		// If it's not a duplicate name error, return the original API error
 		return nil, NewAPIError(resp)
 	}
 
@@ -84,7 +101,9 @@ func (c *PlatformClient) CreateRole(role *models.Role) (*models.Role, error) {
 }
 
 func (c *PlatformClient) DeleteRole(permissionSystemID, roleID string) error {
-	req, err := c.NewRequest(http.MethodDelete, fmt.Sprintf("/access/roles/%s?permissionSystemID=%s", roleID, permissionSystemID), nil)
+	path := fmt.Sprintf("/ps/%s/access/roles/%s", permissionSystemID, roleID)
+
+	req, err := c.NewRequest(http.MethodDelete, path, nil)
 	if err != nil {
 		return err
 	}

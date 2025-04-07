@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// Ensure the implementation satisfies the expected interfaces
 var _ datasource.DataSource = &permissionSystemsDataSource{}
 
 func NewPermissionSystemsDataSource() datasource.DataSource {
@@ -19,7 +18,7 @@ func NewPermissionSystemsDataSource() datasource.DataSource {
 }
 
 type permissionSystemsDataSource struct {
-	client *client.PlatformClient
+	client *client.CloudClient
 }
 
 // permissionSystemsDataSourceModel maps the data source schema to values
@@ -28,7 +27,6 @@ type permissionSystemsDataSourceModel struct {
 	PermissionSystems []permissionSystemModelForList `tfsdk:"permission_systems"`
 }
 
-// permissionSystemModelForList is a simplified model for listing permission systems
 type permissionSystemModelForList struct {
 	ID            types.String `tfsdk:"id"`
 	Name          types.String `tfsdk:"name"`
@@ -81,11 +79,11 @@ func (d *permissionSystemsDataSource) Configure(_ context.Context, req datasourc
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.PlatformClient)
+	client, ok := req.ProviderData.(*client.CloudClient)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *client.PlatformClient, got: %T", req.ProviderData),
+			fmt.Sprintf("Expected *client.CloudClient, got: %T", req.ProviderData),
 		)
 		return
 	}

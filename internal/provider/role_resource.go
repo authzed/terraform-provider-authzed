@@ -19,7 +19,7 @@ func NewRoleResource() resource.Resource {
 }
 
 type roleResource struct {
-	client *client.PlatformClient
+	client *client.CloudClient
 }
 
 type roleResourceModel struct {
@@ -78,11 +78,11 @@ func (r *roleResource) Configure(_ context.Context, req resource.ConfigureReques
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.PlatformClient)
+	client, ok := req.ProviderData.(*client.CloudClient)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *client.PlatformClient, got: %T", req.ProviderData),
+			fmt.Sprintf("Expected *client.CloudClient, got: %T", req.ProviderData),
 		)
 		return
 	}

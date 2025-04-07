@@ -9,8 +9,10 @@ import (
 
 type APIError struct {
 	StatusCode int
-	Message string
-	Body []byte
+	Message    string
+	URL        string
+	Method     string
+	Body       []byte
 }
 
 func (e *APIError) Error() string {
@@ -38,6 +40,8 @@ func NewAPIError(resp *http.Response) *APIError {
 	return &APIError{
 		StatusCode: resp.StatusCode,
 		Message:    errMsg,
+		URL:        resp.Request.URL.String(),
+		Method:     resp.Request.Method,
 		Body:       body,
 	}
 }

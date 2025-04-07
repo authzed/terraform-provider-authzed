@@ -8,8 +8,9 @@ import (
 )
 
 // ListPolicies retrieves all policies for a permission system
-func (c *PlatformClient) ListPolicies(permissionSystemID string) ([]models.Policy, error) {
-	req, err := c.NewRequest(http.MethodGet, fmt.Sprintf("/access/policies?permissionSystemID=%s", permissionSystemID), nil)
+func (c *CloudClient) ListPolicies(permissionSystemID string) ([]models.Policy, error) {
+	path := fmt.Sprintf("/ps/%s/access/policies", permissionSystemID)
+	req, err := c.NewRequest(http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -34,9 +35,9 @@ func (c *PlatformClient) ListPolicies(permissionSystemID string) ([]models.Polic
 	return listResp.Items, nil
 }
 
-// GetPolicy retrieves a policy by its ID
-func (c *PlatformClient) GetPolicy(permissionSystemID, policyID string) (*models.Policy, error) {
-	req, err := c.NewRequest(http.MethodGet, fmt.Sprintf("/access/policies/%s?permissionSystemID=%s", policyID, permissionSystemID), nil)
+func (c *CloudClient) GetPolicy(permissionSystemID, policyID string) (*models.Policy, error) {
+	path := fmt.Sprintf("/ps/%s/access/policies/%s", permissionSystemID, policyID)
+	req, err := c.NewRequest(http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -59,8 +60,9 @@ func (c *PlatformClient) GetPolicy(permissionSystemID, policyID string) (*models
 	return &policy, nil
 }
 
-func (c *PlatformClient) CreatePolicy(policy *models.Policy) (*models.Policy, error) {
-	req, err := c.NewRequest(http.MethodPost, "/access/policies", policy)
+func (c *CloudClient) CreatePolicy(policy *models.Policy) (*models.Policy, error) {
+	path := fmt.Sprintf("/ps/%s/access/policies", policy.PermissionSystemID)
+	req, err := c.NewRequest(http.MethodPost, path, policy)
 	if err != nil {
 		return nil, err
 	}
@@ -83,8 +85,9 @@ func (c *PlatformClient) CreatePolicy(policy *models.Policy) (*models.Policy, er
 	return &createdPolicy, nil
 }
 
-func (c *PlatformClient) DeletePolicy(permissionSystemID, policyID string) error {
-	req, err := c.NewRequest(http.MethodDelete, fmt.Sprintf("/access/policies/%s?permissionSystemID=%s", policyID, permissionSystemID), nil)
+func (c *CloudClient) DeletePolicy(permissionSystemID, policyID string) error {
+	path := fmt.Sprintf("/ps/%s/access/policies/%s", permissionSystemID, policyID)
+	req, err := c.NewRequest(http.MethodDelete, path, nil)
 	if err != nil {
 		return err
 	}

@@ -18,7 +18,7 @@ func NewServiceAccountsDataSource() datasource.DataSource {
 }
 
 type serviceAccountsDataSource struct {
-	client *client.PlatformClient
+	client *client.CloudClient
 }
 
 // serviceAccountsDataSourceModel maps the data source schema to values
@@ -89,11 +89,11 @@ func (d *serviceAccountsDataSource) Configure(_ context.Context, req datasource.
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.PlatformClient)
+	client, ok := req.ProviderData.(*client.CloudClient)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *client.PlatformClient, got: %T", req.ProviderData),
+			fmt.Sprintf("Expected *client.CloudClient, got: %T", req.ProviderData),
 		)
 		return
 	}

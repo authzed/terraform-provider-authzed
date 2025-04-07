@@ -10,20 +10,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// Ensure TokensDataSource satisfies the datasource interfaces
 var _ datasource.DataSource = &TokensDataSource{}
 
-// NewTokensDataSource returns a new tokens data source instance
 func NewTokensDataSource() datasource.DataSource {
 	return &TokensDataSource{}
 }
 
-// TokensDataSource defines the tokens data source implementation
 type TokensDataSource struct {
-	client *client.PlatformClient
+	client *client.CloudClient
 }
 
-// TokensDataSourceModel represents the tokens data source schema model
 type TokensDataSourceModel struct {
 	ID                 types.String    `tfsdk:"id"`
 	PermissionSystemID types.String    `tfsdk:"permission_system_id"`
@@ -32,7 +28,6 @@ type TokensDataSourceModel struct {
 	TokensCount        types.Int64     `tfsdk:"tokens_count"`
 }
 
-// TokenDataItem represents a single token in the list of tokens
 type TokenDataItem struct {
 	ID          types.String `tfsdk:"id"`
 	Name        types.String `tfsdk:"name"`
@@ -41,12 +36,10 @@ type TokenDataItem struct {
 	Creator     types.String `tfsdk:"creator"`
 }
 
-// Metadata returns the data source type name
 func (d *TokensDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_tokens"
 }
 
-// Schema defines the schema for the data source
 func (d *TokensDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Lists all tokens for a service account.",
@@ -99,17 +92,16 @@ func (d *TokensDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 	}
 }
 
-// Configure sets up the data source with the provider client
 func (d *TokensDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.PlatformClient)
+	client, ok := req.ProviderData.(*client.CloudClient)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *client.PlatformClient, got: %T", req.ProviderData),
+			fmt.Sprintf("Expected *client.CloudClient, got: %T", req.ProviderData),
 		)
 		return
 	}
@@ -117,7 +109,6 @@ func (d *TokensDataSource) Configure(_ context.Context, req datasource.Configure
 	d.client = client
 }
 
-// Read fetches the tokens list from the API
 func (d *TokensDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var config TokensDataSourceModel
 	diags := req.Config.Get(ctx, &config)

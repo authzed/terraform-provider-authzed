@@ -19,7 +19,7 @@ func NewPermissionSystemDataSource() datasource.DataSource {
 }
 
 type permissionSystemDataSource struct {
-	client *client.PlatformClient
+	client *client.CloudClient
 }
 
 type permissionSystemDataSourceModel struct {
@@ -119,11 +119,11 @@ func (d *permissionSystemDataSource) Configure(_ context.Context, req datasource
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.PlatformClient)
+	client, ok := req.ProviderData.(*client.CloudClient)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *client.PlatformClient, got: %T", req.ProviderData),
+			fmt.Sprintf("Expected *client.CloudClient, got: %T", req.ProviderData),
 		)
 		return
 	}

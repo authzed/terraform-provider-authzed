@@ -19,7 +19,7 @@ func NewPolicyResource() resource.Resource {
 }
 
 type policyResource struct {
-	client *client.PlatformClient
+	client *client.CloudClient
 }
 
 type policyResourceModel struct {
@@ -83,11 +83,11 @@ func (r *policyResource) Configure(_ context.Context, req resource.ConfigureRequ
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.PlatformClient)
+	client, ok := req.ProviderData.(*client.CloudClient)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *client.PlatformClient, got: %T", req.ProviderData),
+			fmt.Sprintf("Expected *client.CloudClient, got: %T", req.ProviderData),
 		)
 		return
 	}

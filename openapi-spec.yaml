@@ -1,50 +1,1353 @@
 openapi: 3.0.3
 info:
-  description: this is a test API ![](https://commonmark.org/help/images/favicon.png)
-  title: some test API
-  version: ""
+  contact:
+    email: support@authzed.com
+  description: Platform API for AuthZed Dedicated
+  termsOfService: https://authzed.com/terms-conditions
+  title: AuthZed Platform API
+  version: 25r1
+externalDocs:
+  description: Find out more at the official Authzed Docs site
+  url: https://authzed.com/docs
+tags:
+- description: A permission system defines a managed SpiceDB instance
+  externalDocs:
+    description: Find out more at the official Authzed Docs site
+    url: https://authzed.com/docs
+  name: permission system
+- description: Set of APIs to for the fine-grained access management of a Permission
+    System
+  externalDocs:
+    description: Find out more at the official Authzed Docs site
+    url: https://authzed.com/docs/authzed/concepts/restricted-api-access
+  name: access management
 paths:
-  /hello:
+  /access/policies:
+    get:
+      description: list all permission system access-management polices
+      operationId: ListPolicies
+      parameters:
+      - in: query
+        name: permissionSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListPoliciesResponse'
+          description: OK
+      security:
+      - auth: []
+      tags:
+      - access management
     post:
-      description: Say hello.
-      operationId: SayHello
+      description: create a permission system access-management policy
+      operationId: CreatePolicy
       parameters:
       - description: The version of the API to use. Must be specified.
         in: header
         name: X-API-Version
         schema:
-          default: "20241017"
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/V20241017SayHelloRequest'
+              $ref: '#/components/schemas/CreatePolicyRequest'
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatePolicyResponse'
+          description: Created
+      security:
+      - auth: []
+      tags:
+      - access management
+  /access/policies/{policyID}:
+    delete:
+      description: delete a permission system access-management policy by its ID
+      operationId: DeletePolicy
+      parameters:
+      - in: query
+        name: permissionSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - in: path
+        name: policyID
+        required: true
+        schema:
+          pattern: ^apc-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - auth: []
+      tags:
+      - access management
+    get:
+      description: get a permission system access-management policy by its ID
+      operationId: GetPolicy
+      parameters:
+      - in: query
+        name: permissionSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - in: path
+        name: policyID
+        required: true
+        schema:
+          pattern: ^apc-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/V20241017SayHelloResponse'
+                $ref: '#/components/schemas/GetPolicyResponse'
           description: OK
       security:
       - auth: []
+      tags:
+      - access management
+  /access/roles:
+    get:
+      description: list all permission system access-management roles
+      operationId: ListRoles
+      parameters:
+      - in: query
+        name: permissionSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListRolesResponse'
+          description: OK
+      security:
+      - auth: []
+      tags:
+      - access management
+    post:
+      description: create a permission system access-management role
+      operationId: CreateRole
+      parameters:
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRoleRequest'
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateRoleResponse'
+          description: Created
+      security:
+      - auth: []
+      tags:
+      - access management
+  /access/roles/{roleID}:
+    get:
+      description: get a permission system access-management role by its ID
+      operationId: GetRole
+      parameters:
+      - in: query
+        name: permissionSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - in: path
+        name: roleID
+        required: true
+        schema:
+          pattern: ^arl-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetRoleResponse'
+          description: OK
+      security:
+      - auth: []
+      tags:
+      - access management
+  /access/service-accounts:
+    get:
+      description: list all permission system access-management service accounts
+      operationId: ListServiceAccounts
+      parameters:
+      - in: query
+        name: permissionSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListServiceAccountsResponse'
+          description: OK
+      security:
+      - auth: []
+      tags:
+      - access management
+    post:
+      description: create a permission system access-management service account
+      operationId: CreateServiceAccount
+      parameters:
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateServiceAccountRequest'
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateServiceAccountResponse'
+          description: Created
+      security:
+      - auth: []
+      tags:
+      - access management
+  /access/service-accounts/{serviceAccountID}:
+    delete:
+      description: delete a permission system access-management service account by
+        its ID
+      operationId: DeleteServiceAccount
+      parameters:
+      - in: query
+        name: permissionSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - in: path
+        name: serviceAccountID
+        required: true
+        schema:
+          pattern: ^asa-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - auth: []
+      tags:
+      - access management
+    get:
+      description: get a permission system access-management service account by its
+        ID
+      operationId: GetServiceAccount
+      parameters:
+      - in: query
+        name: permissionSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - in: path
+        name: serviceAccountID
+        required: true
+        schema:
+          pattern: ^asa-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetServiceAccountResponse'
+          description: OK
+      security:
+      - auth: []
+      tags:
+      - access management
+  /access/service-accounts/{serviceAccountID}/tokens:
+    get:
+      description: list all permission system access-management tokens under a service
+        account
+      operationId: ListTokens
+      parameters:
+      - in: query
+        name: permissionSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - in: path
+        name: serviceAccountID
+        required: true
+        schema:
+          pattern: ^asa-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListTokensResponse'
+          description: OK
+      security:
+      - auth: []
+      tags:
+      - access management
+    post:
+      description: create a permission system access-management token under a service
+        account
+      operationId: CreateToken
+      parameters:
+      - description: The globally unique ID for the containing Service Account
+        in: path
+        name: serviceAccountID
+        required: true
+        schema:
+          description: The globally unique ID for the containing Service Account
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTokenRequest'
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateTokenResponse'
+          description: Created
+      security:
+      - auth: []
+      tags:
+      - access management
+  /access/service-accounts/{serviceAccountID}/tokens/{tokenID}:
+    get:
+      description: get a permission system access-management token by its ID, under
+        a service account
+      operationId: GetToken
+      parameters:
+      - in: query
+        name: permissionSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - in: path
+        name: tokenID
+        required: true
+        schema:
+          pattern: ^atk-[a-zA-Z0-9-]+$
+          type: string
+      - in: path
+        name: serviceAccountID
+        required: true
+        schema:
+          pattern: ^asa-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetTokenResponse'
+          description: OK
+      security:
+      - auth: []
+      tags:
+      - access management
+  /ps:
+    get:
+      description: list all permission systems
+      operationId: ListPermissionSystems
+      parameters:
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListPermissionSystemsResponse'
+          description: OK
+      security:
+      - auth: []
+      tags:
+      - permission system
+  /ps/{permissionSystemID}:
+    get:
+      description: get a permission system by its ID
+      operationId: GetPermissionSystem
+      parameters:
+      - in: path
+        name: permissionSystemID
+        required: true
+        schema:
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetPermissionSystemResponse'
+          description: OK
+      security:
+      - auth: []
+      tags:
+      - permission system
 components:
   schemas:
-    V20241017SayHelloRequest:
+    CreatePolicyRequest:
       properties:
+        createdAt:
+          description: The timestamp when the Policy was created (RFC 3339). May not
+            be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        creator:
+          description: The name of the user that created this Policy. May be empty.
+          readOnly: true
+          type: string
+        description:
+          description: The human-supplied description of the Policy. May be empty.
+          maxLength: 200
+          type: string
+        id:
+          description: The globally unique ID for this Policy
+          readOnly: true
+          type: string
         name:
+          description: The name of the Policy
+          maxLength: 50
+          minLength: 1
           type: string
-        owner:
+        permissionSystemID:
+          description: The globally unique ID for the Permission System
           type: string
+        principalID:
+          description: The ID of the Principal that this Policy is associated with
+          type: string
+        roleIDs:
+          description: The IDs of the Roles that this Policy is associated with. Currently
+            only allowed to be a single ID
+          items:
+            type: string
+          maxLength: 1
+          minLength: 1
+          type: array
+      required:
+      - permissionSystemID
+      - name
+      - principalID
+      - roleIDs
       type: object
-    V20241017SayHelloResponse:
+    CreatePolicyResponse:
+      properties:
+        createdAt:
+          description: The timestamp when the Policy was created (RFC 3339). May not
+            be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        creator:
+          description: The name of the user that created this Policy. May be empty.
+          readOnly: true
+          type: string
+        description:
+          description: The human-supplied description of the Policy. May be empty.
+          maxLength: 200
+          type: string
+        id:
+          description: The globally unique ID for this Policy
+          readOnly: true
+          type: string
+        name:
+          description: The name of the Policy
+          maxLength: 50
+          minLength: 1
+          type: string
+        permissionSystemID:
+          description: The globally unique ID for the Permission System
+          type: string
+        principalID:
+          description: The ID of the Principal that this Policy is associated with
+          type: string
+        roleIDs:
+          description: The IDs of the Roles that this Policy is associated with. Currently
+            only allowed to be a single ID
+          items:
+            type: string
+          maxLength: 1
+          minLength: 1
+          type: array
+      required:
+      - permissionSystemID
+      - name
+      - principalID
+      - roleIDs
+      type: object
+    CreateRoleRequest:
+      properties:
+        createdAt:
+          description: The timestamp when the Role was created (RFC 3339). May not
+            be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        creator:
+          description: The name of the user that created this Role. May be empty.
+          readOnly: true
+          type: string
+        description:
+          description: The human-supplied description of the Role. May be empty.
+          maxLength: 200
+          type: string
+        id:
+          description: The globally unique ID for this Role
+          readOnly: true
+          type: string
+        name:
+          description: The name of the Role
+          maxLength: 50
+          minLength: 1
+          type: string
+        permissionSystemID:
+          description: The globally unique ID for the Permission System
+          type: string
+        permissions:
+          $ref: '#/components/schemas/PermissionExprMap'
+      required:
+      - permissionSystemID
+      - name
+      - permissions
+      type: object
+    CreateRoleResponse:
+      properties:
+        createdAt:
+          description: The timestamp when the Role was created (RFC 3339). May not
+            be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        creator:
+          description: The name of the user that created this Role. May be empty.
+          readOnly: true
+          type: string
+        description:
+          description: The human-supplied description of the Role. May be empty.
+          maxLength: 200
+          type: string
+        id:
+          description: The globally unique ID for this Role
+          readOnly: true
+          type: string
+        name:
+          description: The name of the Role
+          maxLength: 50
+          minLength: 1
+          type: string
+        permissionSystemID:
+          description: The globally unique ID for the Permission System
+          type: string
+        permissions:
+          $ref: '#/components/schemas/PermissionExprMap'
+      required:
+      - permissionSystemID
+      - name
+      - permissions
+      type: object
+    CreateServiceAccountRequest:
+      properties:
+        createdAt:
+          description: The timestamp when the Service Account was created (RFC 3339).
+            May not be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        creator:
+          description: The name of the user that created this Service Account. May
+            be empty.
+          readOnly: true
+          type: string
+        description:
+          description: The human-supplied description of the Service Account. May
+            be empty.
+          maxLength: 200
+          type: string
+        id:
+          description: The globally unique ID for this Service Account
+          readOnly: true
+          type: string
+        name:
+          description: The name of the Service Account
+          maxLength: 50
+          minLength: 1
+          type: string
+        permissionSystemID:
+          description: The globally unique ID for the Permission System
+          type: string
+        token:
+          description: The Tokens associated with this Service Account
+          items:
+            $ref: '#/components/schemas/Token'
+          readOnly: true
+          type: array
+      required:
+      - permissionSystemID
+      - name
+      type: object
+    CreateServiceAccountResponse:
+      properties:
+        createdAt:
+          description: The timestamp when the Service Account was created (RFC 3339).
+            May not be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        creator:
+          description: The name of the user that created this Service Account. May
+            be empty.
+          readOnly: true
+          type: string
+        description:
+          description: The human-supplied description of the Service Account. May
+            be empty.
+          maxLength: 200
+          type: string
+        id:
+          description: The globally unique ID for this Service Account
+          readOnly: true
+          type: string
+        name:
+          description: The name of the Service Account
+          maxLength: 50
+          minLength: 1
+          type: string
+        permissionSystemID:
+          description: The globally unique ID for the Permission System
+          type: string
+        token:
+          description: The Tokens associated with this Service Account
+          items:
+            $ref: '#/components/schemas/Token'
+          readOnly: true
+          type: array
+      required:
+      - permissionSystemID
+      - name
+      type: object
+    CreateTokenRequest:
+      properties:
+        createdAt:
+          description: The timestamp when the Token was created (RFC 3339). May not
+            be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        creator:
+          description: The name of the user that created this Token. May be empty.
+          readOnly: true
+          type: string
+        description:
+          description: The human-supplied description of the Token. May be empty.
+          maxLength: 200
+          type: string
+        hash:
+          description: The SHA256 hash of the secret part of the token, without the
+            prefix
+          readOnly: true
+          type: string
+        id:
+          description: The globally unique ID for this Token
+          readOnly: true
+          type: string
+        name:
+          description: The name of the Token
+          maxLength: 50
+          minLength: 1
+          type: string
+        permissionSystemID:
+          description: The globally unique ID for the Permission System
+          type: string
+        serviceAccountID:
+          description: The globally unique ID for the containing Service Account
+          type: string
+      required:
+      - permissionSystemID
+      - serviceAccountID
+      - name
+      type: object
+    CreateTokenResponse:
+      properties:
+        createdAt:
+          description: The timestamp when the Token was created (RFC 3339). May not
+            be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        creator:
+          description: The name of the user that created this Token. May be empty.
+          readOnly: true
+          type: string
+        description:
+          description: The human-supplied description of the Token. May be empty.
+          maxLength: 200
+          type: string
+        hash:
+          description: The SHA256 hash of the secret part of the token, without the
+            prefix
+          readOnly: true
+          type: string
+        id:
+          description: The globally unique ID for this Token
+          readOnly: true
+          type: string
+        name:
+          description: The name of the Token
+          maxLength: 50
+          minLength: 1
+          type: string
+        permissionSystemID:
+          description: The globally unique ID for the Permission System
+          type: string
+        secret:
+          description: The secret for the token. Will not be returned again.
+          readOnly: true
+          type: string
+        serviceAccountID:
+          description: The globally unique ID for the containing Service Account
+          type: string
+      required:
+      - permissionSystemID
+      - serviceAccountID
+      - name
+      type: object
+    GetPermissionSystemResponse:
+      properties:
+        globalDnsPath:
+          description: The global DNS path for the Permission System
+          type: string
+        id:
+          description: The globally unique ID for this Permission System
+          type: string
+        name:
+          description: The name of the Permission System
+          type: string
+        systemState:
+          $ref: '#/components/schemas/PermissionsSystemState'
+        systemType:
+          description: The type of the Permission System, either 'development' or
+            'production'
+          type: string
+        version:
+          $ref: '#/components/schemas/SystemVersion'
+      type: object
+    GetPolicyResponse:
+      properties:
+        createdAt:
+          description: The timestamp when the Policy was created (RFC 3339). May not
+            be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        creator:
+          description: The name of the user that created this Policy. May be empty.
+          readOnly: true
+          type: string
+        description:
+          description: The human-supplied description of the Policy. May be empty.
+          maxLength: 200
+          type: string
+        id:
+          description: The globally unique ID for this Policy
+          readOnly: true
+          type: string
+        name:
+          description: The name of the Policy
+          maxLength: 50
+          minLength: 1
+          type: string
+        permissionSystemID:
+          description: The globally unique ID for the Permission System
+          type: string
+        principalID:
+          description: The ID of the Principal that this Policy is associated with
+          type: string
+        roleIDs:
+          description: The IDs of the Roles that this Policy is associated with. Currently
+            only allowed to be a single ID
+          items:
+            type: string
+          maxLength: 1
+          minLength: 1
+          type: array
+      required:
+      - permissionSystemID
+      - name
+      - principalID
+      - roleIDs
+      type: object
+    GetRoleResponse:
+      properties:
+        createdAt:
+          description: The timestamp when the Role was created (RFC 3339). May not
+            be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        creator:
+          description: The name of the user that created this Role. May be empty.
+          readOnly: true
+          type: string
+        description:
+          description: The human-supplied description of the Role. May be empty.
+          maxLength: 200
+          type: string
+        id:
+          description: The globally unique ID for this Role
+          readOnly: true
+          type: string
+        name:
+          description: The name of the Role
+          maxLength: 50
+          minLength: 1
+          type: string
+        permissionSystemID:
+          description: The globally unique ID for the Permission System
+          type: string
+        permissions:
+          $ref: '#/components/schemas/PermissionExprMap'
+      required:
+      - permissionSystemID
+      - name
+      - permissions
+      type: object
+    GetServiceAccountResponse:
+      properties:
+        createdAt:
+          description: The timestamp when the Service Account was created (RFC 3339).
+            May not be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        creator:
+          description: The name of the user that created this Service Account. May
+            be empty.
+          readOnly: true
+          type: string
+        description:
+          description: The human-supplied description of the Service Account. May
+            be empty.
+          maxLength: 200
+          type: string
+        id:
+          description: The globally unique ID for this Service Account
+          readOnly: true
+          type: string
+        name:
+          description: The name of the Service Account
+          maxLength: 50
+          minLength: 1
+          type: string
+        permissionSystemID:
+          description: The globally unique ID for the Permission System
+          type: string
+        token:
+          description: The Tokens associated with this Service Account
+          items:
+            $ref: '#/components/schemas/Token'
+          readOnly: true
+          type: array
+      required:
+      - permissionSystemID
+      - name
+      type: object
+    GetTokenResponse:
+      properties:
+        createdAt:
+          description: The timestamp when the Token was created (RFC 3339). May not
+            be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        creator:
+          description: The name of the user that created this Token. May be empty.
+          readOnly: true
+          type: string
+        description:
+          description: The human-supplied description of the Token. May be empty.
+          maxLength: 200
+          type: string
+        hash:
+          description: The SHA256 hash of the secret part of the token, without the
+            prefix
+          readOnly: true
+          type: string
+        id:
+          description: The globally unique ID for this Token
+          readOnly: true
+          type: string
+        name:
+          description: The name of the Token
+          maxLength: 50
+          minLength: 1
+          type: string
+        permissionSystemID:
+          description: The globally unique ID for the Permission System
+          type: string
+        serviceAccountID:
+          description: The globally unique ID for the containing Service Account
+          type: string
+      required:
+      - permissionSystemID
+      - serviceAccountID
+      - name
+      type: object
+    ListPermissionSystemsResponse:
+      items:
+        $ref: '#/components/schemas/PermissionSystem'
+      nullable: true
+      type: array
+    ListPoliciesResponse:
+      items:
+        $ref: '#/components/schemas/Policy'
+      nullable: true
+      type: array
+    ListRolesResponse:
+      items:
+        $ref: '#/components/schemas/Role'
+      nullable: true
+      type: array
+    ListServiceAccountsResponse:
+      items:
+        $ref: '#/components/schemas/ServiceAccount'
+      nullable: true
+      type: array
+    ListTokensResponse:
+      items:
+        $ref: '#/components/schemas/Token'
+      nullable: true
+      type: array
+    PermissionExprMap:
+      properties:
+        authzed.v1/BulkCheckPermission:
+          type: string
+        authzed.v1/BulkExportRelationships:
+          type: string
+        authzed.v1/BulkImportRelationships:
+          type: string
+        authzed.v1/CheckBulkPermissions:
+          type: string
+        authzed.v1/CheckPermission:
+          type: string
+        authzed.v1/ComputablePermissions:
+          type: string
+        authzed.v1/DeleteRelationships:
+          type: string
+        authzed.v1/DependentRelations:
+          type: string
+        authzed.v1/DiffSchema:
+          type: string
+        authzed.v1/ExpandPermissionTree:
+          type: string
+        authzed.v1/ExperimentalComputablePermissions:
+          type: string
+        authzed.v1/ExperimentalCountRelationships:
+          type: string
+        authzed.v1/ExperimentalDependentRelations:
+          type: string
+        authzed.v1/ExperimentalDiffSchema:
+          type: string
+        authzed.v1/ExperimentalReflectSchema:
+          type: string
+        authzed.v1/ExperimentalRegisterRelationshipCounter:
+          type: string
+        authzed.v1/ExperimentalUnregisterRelationshipCounter:
+          type: string
+        authzed.v1/ExportBulkRelationships:
+          type: string
+        authzed.v1/ImportBulkRelationships:
+          type: string
+        authzed.v1/LookupResources:
+          type: string
+        authzed.v1/LookupSubjects:
+          type: string
+        authzed.v1/ReadRelationships:
+          type: string
+        authzed.v1/ReadSchema:
+          type: string
+        authzed.v1/ReflectSchema:
+          type: string
+        authzed.v1/Watch:
+          type: string
+        authzed.v1/WriteRelationships:
+          type: string
+        authzed.v1/WriteSchema:
+          type: string
+    PermissionSystem:
+      properties:
+        globalDnsPath:
+          description: The global DNS path for the Permission System
+          type: string
+        id:
+          description: The globally unique ID for this Permission System
+          type: string
+        name:
+          description: The name of the Permission System
+          type: string
+        systemState:
+          $ref: '#/components/schemas/PermissionsSystemState'
+        systemType:
+          description: The type of the Permission System, either 'development' or
+            'production'
+          type: string
+        version:
+          $ref: '#/components/schemas/SystemVersion'
+      type: object
+    PermissionsSystemState:
       properties:
         message:
+          description: The message associated with the status
           type: string
-        owner:
+        status:
+          description: The status of the Permission System
           type: string
+      type: object
+    Policy:
+      properties:
+        createdAt:
+          description: The timestamp when the Policy was created (RFC 3339). May not
+            be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        creator:
+          description: The name of the user that created this Policy. May be empty.
+          readOnly: true
+          type: string
+        description:
+          description: The human-supplied description of the Policy. May be empty.
+          maxLength: 200
+          type: string
+        id:
+          description: The globally unique ID for this Policy
+          readOnly: true
+          type: string
+        name:
+          description: The name of the Policy
+          maxLength: 50
+          minLength: 1
+          type: string
+        permissionSystemID:
+          description: The globally unique ID for the Permission System
+          type: string
+        principalID:
+          description: The ID of the Principal that this Policy is associated with
+          type: string
+        roleIDs:
+          description: The IDs of the Roles that this Policy is associated with. Currently
+            only allowed to be a single ID
+          items:
+            type: string
+          maxLength: 1
+          minLength: 1
+          type: array
+      required:
+      - permissionSystemID
+      - name
+      - principalID
+      - roleIDs
+      type: object
+    Role:
+      properties:
+        createdAt:
+          description: The timestamp when the Role was created (RFC 3339). May not
+            be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        creator:
+          description: The name of the user that created this Role. May be empty.
+          readOnly: true
+          type: string
+        description:
+          description: The human-supplied description of the Role. May be empty.
+          maxLength: 200
+          type: string
+        id:
+          description: The globally unique ID for this Role
+          readOnly: true
+          type: string
+        name:
+          description: The name of the Role
+          maxLength: 50
+          minLength: 1
+          type: string
+        permissionSystemID:
+          description: The globally unique ID for the Permission System
+          type: string
+        permissions:
+          $ref: '#/components/schemas/PermissionExprMap'
+      required:
+      - permissionSystemID
+      - name
+      - permissions
+      type: object
+    ServiceAccount:
+      properties:
+        createdAt:
+          description: The timestamp when the Service Account was created (RFC 3339).
+            May not be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        creator:
+          description: The name of the user that created this Service Account. May
+            be empty.
+          readOnly: true
+          type: string
+        description:
+          description: The human-supplied description of the Service Account. May
+            be empty.
+          maxLength: 200
+          type: string
+        id:
+          description: The globally unique ID for this Service Account
+          readOnly: true
+          type: string
+        name:
+          description: The name of the Service Account
+          maxLength: 50
+          minLength: 1
+          type: string
+        permissionSystemID:
+          description: The globally unique ID for the Permission System
+          type: string
+        token:
+          description: The Tokens associated with this Service Account
+          items:
+            $ref: '#/components/schemas/Token'
+          readOnly: true
+          type: array
+      required:
+      - permissionSystemID
+      - name
+      type: object
+    SpiceDBVersion:
+      properties:
+        displayName:
+          description: The display name of the version
+          type: string
+        supportedFeatureNames:
+          description: The features supported by the version
+          items:
+            type: string
+          type: array
+        version:
+          description: The version of SpiceDB
+          type: string
+      type: object
+    SystemVersion:
+      properties:
+        currentVersion:
+          $ref: '#/components/schemas/SpiceDBVersion'
+        hasUpdateAvailable:
+          description: Whether an update is available for the SpiceDB version
+          type: boolean
+        isLockedToVersion:
+          description: Whether the version is locked to a specific version or not
+          type: boolean
+        overrideImage:
+          description: The image to use for the SpiceDB instance. If not specified,
+            the default image for the channel will be used.
+          type: string
+        selectedChannel:
+          description: The channel selected for the SpiceDB version. May be empty.
+          type: string
+      type: object
+    Token:
+      properties:
+        createdAt:
+          description: The timestamp when the Token was created (RFC 3339). May not
+            be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        creator:
+          description: The name of the user that created this Token. May be empty.
+          readOnly: true
+          type: string
+        description:
+          description: The human-supplied description of the Token. May be empty.
+          maxLength: 200
+          type: string
+        hash:
+          description: The SHA256 hash of the secret part of the token, without the
+            prefix
+          readOnly: true
+          type: string
+        id:
+          description: The globally unique ID for this Token
+          readOnly: true
+          type: string
+        name:
+          description: The name of the Token
+          maxLength: 50
+          minLength: 1
+          type: string
+        permissionSystemID:
+          description: The globally unique ID for the Permission System
+          type: string
+        serviceAccountID:
+          description: The globally unique ID for the containing Service Account
+          type: string
+      required:
+      - permissionSystemID
+      - serviceAccountID
+      - name
       type: object
   securitySchemes:
     auth:
