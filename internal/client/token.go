@@ -3,13 +3,13 @@ package client
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"terraform-provider-platform-api/internal/models"
 )
 
-func (c *PlatformClient) CreateToken(token *models.Token) (*models.Token, error) {
-	req, err := c.NewRequest(http.MethodPost, fmt.Sprintf("/access/service-accounts/%s/tokens", token.ServiceAccountID), token)
+func (c *CloudClient) CreateToken(token *models.Token) (*models.Token, error) {
+	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s/tokens", token.PermissionSystemID, token.ServiceAccountID)
+	req, err := c.NewRequest(http.MethodPost, path, token)
 	if err != nil {
 		return nil, err
 	}
@@ -32,8 +32,9 @@ func (c *PlatformClient) CreateToken(token *models.Token) (*models.Token, error)
 	return &createdToken, nil
 }
 
-func (c *PlatformClient) GetToken(permissionSystemID, serviceAccountID, tokenID string) (*models.Token, error) {
-	req, err := c.NewRequest(http.MethodGet, fmt.Sprintf("/access/service-accounts/%s/tokens/%s?permissionSystemID=%s", serviceAccountID, tokenID, permissionSystemID), nil)
+func (c *CloudClient) GetToken(permissionSystemID, serviceAccountID, tokenID string) (*models.Token, error) {
+	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s/tokens/%s", permissionSystemID, serviceAccountID, tokenID)
+	req, err := c.NewRequest(http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -56,8 +57,9 @@ func (c *PlatformClient) GetToken(permissionSystemID, serviceAccountID, tokenID 
 	return &token, nil
 }
 
-func (c *PlatformClient) ListTokens(permissionSystemID, serviceAccountID string) ([]models.Token, error) {
-	req, err := c.NewRequest(http.MethodGet, fmt.Sprintf("/access/service-accounts/%s/tokens?permissionSystemID=%s", serviceAccountID, permissionSystemID), nil)
+func (c *CloudClient) ListTokens(permissionSystemID, serviceAccountID string) ([]models.Token, error) {
+	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s/tokens", permissionSystemID, serviceAccountID)
+	req, err := c.NewRequest(http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -72,30 +74,20 @@ func (c *PlatformClient) ListTokens(permissionSystemID, serviceAccountID string)
 		return nil, NewAPIError(resp)
 	}
 
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
+	var listResp struct {
+		Items []models.Token `json:"items"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	// Try to decode as a direct array first
-	var tokens []models.Token
-	if err := json.Unmarshal(bodyBytes, &tokens); err != nil {
-		// If direct decode fails, try with the wrapped items format
-		var listResp struct {
-			Items []models.Token `json:"items"`
-		}
-		if err := json.Unmarshal(bodyBytes, &listResp); err != nil {
-			return nil, fmt.Errorf("failed to decode response: %w", err)
-		}
-		return listResp.Items, nil
-	}
-
-	return tokens, nil
+	return listResp.Items, nil
 }
 
 // DeleteToken deletes a token by ID for a service account
-func (c *PlatformClient) DeleteToken(permissionSystemID, serviceAccountID, tokenID string) error {
-	req, err := c.NewRequest(http.MethodDelete, fmt.Sprintf("/access/service-accounts/%s/tokens/%s?permissionSystemID=%s", serviceAccountID, tokenID, permissionSystemID), nil)
+func (c *CloudClient) DeleteToken(permissionSystemID, serviceAccountID, tokenID string) error {
+	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s/tokens/%s", permissionSystemID, serviceAccountID, tokenID)
+	req, err := c.NewRequest(http.MethodDelete, path, nil)
 	if err != nil {
 		return err
 	}

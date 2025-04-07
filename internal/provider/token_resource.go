@@ -21,7 +21,7 @@ func NewTokenResource() resource.Resource {
 }
 
 type TokenResource struct {
-	client *client.PlatformClient
+	client *client.CloudClient
 }
 
 type TokenResourceModel struct {
@@ -88,11 +88,11 @@ func (r *TokenResource) Configure(_ context.Context, req resource.ConfigureReque
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.PlatformClient)
+	client, ok := req.ProviderData.(*client.CloudClient)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *client.PlatformClient, got: %T", req.ProviderData),
+			fmt.Sprintf("Expected *client.CloudClient, got: %T", req.ProviderData),
 		)
 		return
 	}

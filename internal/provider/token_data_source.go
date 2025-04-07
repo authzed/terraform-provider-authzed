@@ -17,7 +17,7 @@ func NewTokenDataSource() datasource.DataSource {
 }
 
 type TokenDataSource struct {
-	client *client.PlatformClient
+	client *client.CloudClient
 }
 
 type TokenDataSourceModel struct {
@@ -75,17 +75,16 @@ func (d *TokenDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 	}
 }
 
-// Configure sets up the data source with the provider client
 func (d *TokenDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.PlatformClient)
+	client, ok := req.ProviderData.(*client.CloudClient)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *client.PlatformClient, got: %T", req.ProviderData),
+			fmt.Sprintf("Expected *client.CloudClient, got: %T", req.ProviderData),
 		)
 		return
 	}

@@ -12,37 +12,37 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-type PlatformProvider struct {
+type CloudProvider struct {
 	version string
 }
 
-type PlatformProviderModel struct {
+type CloudProviderModel struct {
 	Endpoint   types.String `tfsdk:"endpoint"`
 	Token      types.String `tfsdk:"token"`
 	APIVersion types.String `tfsdk:"api_version"`
 }
 
-var _ provider.Provider = &PlatformProvider{}
+var _ provider.Provider = &CloudProvider{}
 
 func New(version string) func() provider.Provider {
 	return func() provider.Provider {
-		return &PlatformProvider{
+		return &CloudProvider{
 			version: version,
 		}
 	}
 }
 
-func (p *PlatformProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
-	resp.TypeName = "platform-api"
+func (p *CloudProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
+	resp.TypeName = "cloud-api"
 	resp.Version = p.version
 }
 
-func (p *PlatformProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
+func (p *CloudProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"endpoint": schema.StringAttribute{
 				Required:    true,
-				Description: "The host address of Platform API",
+				Description: "The host address of AuthZed Cloud API",
 			},
 			"token": schema.StringAttribute{
 				Required:    true,
@@ -57,26 +57,26 @@ func (p *PlatformProvider) Schema(_ context.Context, _ provider.SchemaRequest, r
 	}
 }
 
-func (p *PlatformProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	var config PlatformProviderModel
+func (p *CloudProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+	var config CloudProviderModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	clientConfig := &client.PlatformClientConfig{
+	clientConfig := &client.CloudClientConfig{
 		Host:       config.Endpoint.ValueString(),
 		Token:      config.Token.ValueString(),
 		APIVersion: config.APIVersion.ValueString(),
 	}
 
-	platformClient := client.NewPlatformClient(clientConfig)
+	cloudClient := client.NewCloudClient(clientConfig)
 
-	resp.DataSourceData = platformClient
-	resp.ResourceData = platformClient
+	resp.DataSourceData = cloudClient
+	resp.ResourceData = cloudClient
 }
 
-func (p *PlatformProvider) Resources(_ context.Context) []func() resource.Resource {
+func (p *CloudProvider) Resources(_ context.Context) []func() resource.Resource {
 	resources := []func() resource.Resource{
 		NewRoleResource,
 		NewPolicyResource,
@@ -86,7 +86,7 @@ func (p *PlatformProvider) Resources(_ context.Context) []func() resource.Resour
 	return resources
 }
 
-func (p *PlatformProvider) DataSources(_ context.Context) []func() datasource.DataSource {
+func (p *CloudProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	dataSources := []func() datasource.DataSource{
 		NewPermissionSystemDataSource,
 		NewPermissionSystemsDataSource,
