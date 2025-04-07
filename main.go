@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"terraform-provider-platform-api/internal/provider"
+	"terraform-provider-cloud-api/internal/provider"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 )

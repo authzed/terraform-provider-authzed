@@ -6,11 +6,11 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"terraform-provider-platform-api/internal/models"
+	"terraform-provider-cloud-api/internal/models"
 )
 
 // ListRoles retrieves all roles for a ps
-func (c *PlatformClient) ListRoles(permissionSystemID string) ([]models.Role, error) {
+func (c *CloudClient) ListRoles(permissionSystemID string) ([]models.Role, error) {
 	path := fmt.Sprintf("/ps/%s/access/roles", permissionSystemID)
 
 	req, err := c.NewRequest(http.MethodGet, path, nil)
@@ -39,7 +39,7 @@ func (c *PlatformClient) ListRoles(permissionSystemID string) ([]models.Role, er
 }
 
 // GetRole retrieves a role by ID
-func (c *PlatformClient) GetRole(permissionSystemID, roleID string) (*models.Role, error) {
+func (c *CloudClient) GetRole(permissionSystemID, roleID string) (*models.Role, error) {
 	path := fmt.Sprintf("/ps/%s/access/roles/%s", permissionSystemID, roleID)
 
 	req, err := c.NewRequest(http.MethodGet, path, nil)
@@ -65,7 +65,7 @@ func (c *PlatformClient) GetRole(permissionSystemID, roleID string) (*models.Rol
 	return &role, nil
 }
 
-func (c *PlatformClient) CreateRole(role *models.Role) (*models.Role, error) {
+func (c *CloudClient) CreateRole(role *models.Role) (*models.Role, error) {
 	path := fmt.Sprintf("/ps/%s/access/roles", role.PermissionSystemID)
 
 	req, err := c.NewRequest(http.MethodPost, path, role)
@@ -100,7 +100,7 @@ func (c *PlatformClient) CreateRole(role *models.Role) (*models.Role, error) {
 	return &createdRole, nil
 }
 
-func (c *PlatformClient) DeleteRole(permissionSystemID, roleID string) error {
+func (c *CloudClient) DeleteRole(permissionSystemID, roleID string) error {
 	path := fmt.Sprintf("/ps/%s/access/roles/%s", permissionSystemID, roleID)
 
 	req, err := c.NewRequest(http.MethodDelete, path, nil)

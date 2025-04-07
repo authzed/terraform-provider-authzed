@@ -7,7 +7,7 @@ import (
 	"io"
 	"net/http"
 
-	"terraform-provider-platform-api/internal/models"
+	"terraform-provider-cloud-api/internal/models"
 )
 
 // ListPermissionSystems retrieves all permission systems

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"terraform-provider-platform-api/internal/client"
-	"terraform-provider-platform-api/internal/models"
+	"terraform-provider-cloud-api/internal/client"
+	"terraform-provider-cloud-api/internal/models"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"

@@ -3,7 +3,7 @@ package provider
 import (
 	"context"
 
-	"terraform-provider-platform-api/internal/client"
+	"terraform-provider-cloud-api/internal/client"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
