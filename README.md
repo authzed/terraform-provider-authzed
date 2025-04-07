@@ -1,71 +1,111 @@
-# Terraform Provider for Platform API
+# Terraform Provider for AuthZed Cloud API
 
-A Terraform provider for managing Platform API resources.
+The AuthZed Cloud API Terraform Provider allows you to manage AuthZed Cloud resources through Terraform. AuthZed is a fine-grained permissions database that enables you to implement advanced access control models.
+
+## Documentation
+
+Full documentation will soon be available on the Terraform Registry.
 
 ## Requirements
 
 - [Terraform](https://www.terraform.io/downloads.html) >= 1.0
 - [Go](https://golang.org/doc/install) >= 1.23.4
-- Access to Platform API server
+- AuthZed Dedicated account
 
-### Clone the repository:
-```git clone https://github.com/authzed/terraform-provider-platform-api.git```
+## Using the Provider
 
-### Build the provider:
-```go build -o terraform-provider-platform-api```
+To use the provider in your Terraform configuration:
 
-### Install the provider locally:
-mkdir -p ~/.terraform.d/plugins/local.providers/local/platform-api/1.0.0/darwin_arm64
-cp terraform-provider-platform-api ~/.terraform.d/plugins/local.providers/local-platform-api/1.0.0/darwin_arm64/
-
-## Project structure:
-#### The layout of the repository is as follows:
-```terraform-provider-platform-api/
-├── examples/
-│   └── provider/
-│       └── provider.tf  # Example provider configuration
-├── internal/
-│   ├── client/          # Generated API client
-│   │   ├── client.go
-│   │   ├── configuration.go
-│   │   ├── response.go
-│   │   └── api_default.go
-│   └── provider/        # Provider implementation
-│       ├── provider.go
-│       └── hello_resource.go
-├── openapi-spec.yaml    # API specification
-└── go.mod               # Go module dependencies
-```
-
-## Using the provider:
-### Configure the required provider:
 ```hcl
-  terraform {
+terraform {
   required_providers {
-    platform-api = {
-      source = "local.providers/local-platform-api"
-      version = "1.0.0"
+    cloud-api = {
+      source  = "authzed/cloud-api"
+      version = "~> 0.1.0"
     }
+  }
+}
+
+provider "cloud-api" {
+  endpoint = "https://cloud.authzed.com/api"
+  token    = "your-token"
+}
+
+# Example: Creating a service account
+resource "cloud-api_service_account" "api_service" {
+  name                 = "api-service"
+  description          = "Service account for the API service"
+  permission_system_id = "sys_123456789"
+}
+
+# Example: Creating a role
+resource "cloud-api_role" "reader" {
+  name                 = "reader"
+  description          = "Role for read-only operations"
+  permission_system_id = "sys_123456789"
+  permissions = {
+    "authzed.v1/ReadSchema"        = "true"
+    "authzed.v1/ReadRelationships" = "true"
+    "authzed.v1/CheckPermission"   = "true"
   }
 }
 ```
 
-### Configure the platform-api provider:
-```hcl
-  provider "platform-api" {
-  host  = "http://localhost:3030"
-  token = "your-token"
+## Resources and Data Sources
+
+This provider offers resources for managing:
+
+* Permission systems
+* Roles and permissions
+* Service accounts
+* Tokens
+* Policies
+
+And data sources for retrieving:
+
+* Permission systems
+* Roles
+* Service accounts
+* Tokens
+* Policies
+
+## Development
+
+### Building the Provider
+
+Clone the repository:
+```bash
+git clone https://github.com/authzed/terraform-provider-cloud-api.git
+cd terraform-provider-cloud-api
+go build
 ```
-### Define a resource:
+
+### Local Installation
+
+To install the provider locally for development:
+
+```bash
+mkdir -p ~/.terraform.d/plugins/registry.terraform.io/authzed/cloud-api/0.1.0/$(go env GOOS)_$(go env GOARCH)
+cp terraform-provider-cloud-api ~/.terraform.d/plugins/registry.terraform.io/authzed/cloud-api/0.1.0/$(go env GOOS)_$(go env GOARCH)/
+```
+
+### Using a Local Build in Terraform
+
+To use the locally built provider, add a dev_overrides section to your ~/.terraformrc:
+
 ```hcl
-  resource "platform-api_hello" "example" {
-  name = "World"
+provider_installation {
+  dev_overrides {
+    "registry.terraform.io/authzed/cloud-api" = "/path/to/terraform-provider-cloud-api"
+  }
+  direct {}
 }
 ```
 
-### Output the resource's response:
-```hcl
-  output "hello_response" {
-  value = platform-api_hello.example.response
-}
-```
+## Contributing
+
+Contributions are welcome! Please see the [contribution guidelines](CONTRIBUTING.md) for more information.
+
+## License
+
+This provider is licensed under the [Apache 2.0 License](LICENSE).
