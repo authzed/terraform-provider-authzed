@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"terraform-provider-cloud-api/internal/provider"
+	"terraform-provider-cloudapi/internal/provider"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 )
@@ -25,7 +25,7 @@ func main() {
 	flag.Parse()
 
 	opts := providerserver.ServeOpts{
-		Address: "registry.terraform.io/authzed/cloud-api",
+		Address: "registry.terraform.io/authzed/cloudapi",
 		Debug:   debug,
 	}
 

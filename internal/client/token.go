@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"terraform-provider-cloud-api/internal/models"
+	"terraform-provider-cloudapi/internal/models"
 )
 
 func (c *CloudClient) CreateToken(token *models.Token) (*models.Token, error) {

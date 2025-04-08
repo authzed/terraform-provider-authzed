@@ -1,0 +1,8 @@
+provider_installation {
+  network_mirror {
+    url = "https://terraform.releases.hashicorp.com"
+  }
+  direct {
+    exclude = ["registry.terraform.io/authzed/cloudapi"]
+  }
+} 

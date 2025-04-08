@@ -3,8 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
-	"terraform-provider-cloud-api/internal/client"
-	"terraform-provider-cloud-api/internal/models"
+	"terraform-provider-cloudapi/internal/client"
+	"terraform-provider-cloudapi/internal/models"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
