@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"terraform-provider-cloud-api/internal/models"
+	"terraform-provider-cloudapi/internal/models"
 )
 
 func (c *CloudClient) ListServiceAccounts(permissionSystemID string) ([]models.ServiceAccount, error) {

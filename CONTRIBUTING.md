@@ -11,7 +11,7 @@ Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
 1. **Fork the repository** on GitHub.
 2. **Clone your fork** locally:
    ```
-   git clone https://github.com/YOUR-USERNAME/terraform-provider-cloud-api.git
+   git clone https://github.com/YOUR-USERNAME/terraform-provider-cloudapi.git
    ```
 3. **Create a branch** for your work:
    ```
@@ -24,7 +24,7 @@ Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 - Go 1.23 or higher
 - Terraform 1.0 or higher
-- Access to an AuthZed Dedicated account for testing
+- Access to an AuthZed Cloud account for testing
 
 ### Building and Testing
 
@@ -40,8 +40,8 @@ Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 3. **Install locally for testing**:
    ```
-   mkdir -p ~/.terraform.d/plugins/registry.terraform.io/authzed/cloud-api/0.1.0/$(go env GOOS)_$(go env GOARCH)
-   cp terraform-provider-cloud-api ~/.terraform.d/plugins/registry.terraform.io/authzed/cloud-api/0.1.0/$(go env GOOS)_$(go env GOARCH)/
+   mkdir -p ~/.terraform.d/plugins/registry.terraform.io/authzed/cloudapi/0.1.0/$(go env GOOS)_$(go env GOARCH)
+   cp terraform-provider-cloudapi ~/.terraform.d/plugins/registry.terraform.io/authzed/cloudapi/0.1.0/$(go env GOOS)_$(go env GOARCH)/
    ```
 
 ## Making Changes
@@ -52,6 +52,13 @@ Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
 - Use `go fmt` to format your code
 - Ensure your code passes `go vet` and `golint`
 
+### Commit Messages
+
+- Use the present tense ("Add feature" not "Added feature")
+- Use the imperative mood ("Move cursor to..." not "Moves cursor to...")
+- Limit the first line to 72 characters or less
+- Reference issues and pull requests liberally after the first line
+
 ### Pull Requests
 
 1. Update the README.md with details of changes if appropriate
@@ -59,6 +66,11 @@ Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
 3. The PR should work against the main branch
 4. Include appropriate tests
 
+## Documentation
+
+- Update documentation to reflect any changes in functionality
+- Provide examples for new features
+- Keep the README and other documentation up to date
 
 ## Releasing
 
