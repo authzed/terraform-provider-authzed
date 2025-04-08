@@ -1,97 +1,46 @@
 # Terraform Provider for AuthZed Cloud API
 
-The AuthZed Cloud API Terraform Provider allows you to manage AuthZed Cloud resources through Terraform. AuthZed is a fine-grained permissions database that enables you to implement advanced access control models.
+A Terraform provider for managing administrative access to [AuthZed](https://authzed.com/) through its Cloud API.
+
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+
+## Overview
+
+This provider automates the management of platform access in AuthZed environments:
+
+- **Service accounts** for programmatic access to permission systems
+- **API tokens** for secure authentication
+- **Roles and policies** for fine-grained access control
+- **Permission system monitoring** and configuration
+
+> **Note:** This provider manages platform administration only. For managing permissions data (relationships between users and resources), use the [AuthZed Permissions API](https://docs.authzed.com/reference/api) directly.
 
 ## Documentation
 
-Full documentation is available on the [Terraform Registry](https://registry.terraform.io/providers/authzed/cloudapi/latest/docs).
+Full provider documentation is available on the [Terraform Registry](https://registry.terraform.io/providers/authzed/cloudapi/latest/docs).
 
-## Requirements
-
-- [Terraform](https://www.terraform.io/downloads.html) >= 1.0
-- [Go](https://golang.org/doc/install) >= 1.23
-- AuthZed Cloud account
-
-## Using the Provider
-
-To use the provider in your Terraform configuration:
-
-```hcl
-terraform {
-  required_providers {
-    cloudapi = {
-      source  = "authzed/cloudapi"
-      version = "~> 0.1.0"
-    }
-  }
-}
-
-provider "cloudapi" {
-  endpoint = "https://cloud.authzed.com/api"
-  token    = "your-token"
-}
-
-# Example: Creating a service account
-resource "cloudapi_service_account" "api_service" {
-  name                 = "api-service"
-  description          = "Service account for the API service"
-  permission_system_id = "sys_123456789"
-}
-
-# Example: Creating a role
-resource "cloudapi_role" "reader" {
-  name                 = "reader"
-  description          = "Role for read-only operations"
-  permission_system_id = "sys_123456789"
-  permissions = {
-    "authzed.v1/ReadSchema"        = "true"
-    "authzed.v1/ReadRelationships" = "true"
-    "authzed.v1/CheckPermission"   = "true"
-  }
-}
-```
-
-## Resources and Data Sources
-
-This provider offers resources for managing:
-
-* Permission systems
-* Roles and permissions
-* Service accounts
-* Tokens
-* Policies
-
-And data sources for retrieving:
-
-* Permission systems
-* Roles
-* Service accounts
-* Tokens
-* Policies
+API documentation is available on [Postman](https://www.postman.com/authzed/spicedb/collection/5fm402n/authzed-cloud-api).
 
 ## Development
 
-### Building the Provider
+### Building Locally
 
-Clone the repository:
 ```bash
+# Clone the repository
 git clone https://github.com/authzed/terraform-provider-cloudapi.git
 cd terraform-provider-cloudapi
+
+# Build the provider
 go build
-```
 
-### Local Installation
-
-To install the provider locally for development:
-
-```bash
+# Install locally
 mkdir -p ~/.terraform.d/plugins/registry.terraform.io/authzed/cloudapi/0.1.0/$(go env GOOS)_$(go env GOARCH)
 cp terraform-provider-cloudapi ~/.terraform.d/plugins/registry.terraform.io/authzed/cloudapi/0.1.0/$(go env GOOS)_$(go env GOARCH)/
 ```
 
-### Using a Local Build in Terraform
+### Testing Changes
 
-To use the locally built provider, add a dev_overrides section to your ~/.terraformrc:
+To use a local build with Terraform, configure your `.terraformrc` file:
 
 ```hcl
 provider_installation {
@@ -108,4 +57,4 @@ Contributions are welcome! Please see the [contribution guidelines](CONTRIBUTING
 
 ## License
 
-This provider is licensed under the [Apache 2.0 License](LICENSE).
+[Apache 2.0 License](LICENSE)

@@ -6,7 +6,7 @@ description: |-
 
 # AuthZed Cloud API Provider
 
-The AuthZed Cloud API provider allows you to manage access to [AuthZed](https://authzed.com/) through Terraform. This provider is used to interact with the resources supported by AuthZed Cloud API.
+The AuthZed Cloud API provider allows you to manage access to [AuthZed Cloud API](https://www.postman.com/authzed/spicedb/collection/5fm402n/authzed-cloud-api) through Terraform. This provider is used to interact with the resources supported by AuthZed Cloud API.
 
 Use the navigation to the left to read about the available resources and data sources.
 
