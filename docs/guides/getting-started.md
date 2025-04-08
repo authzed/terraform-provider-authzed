@@ -36,7 +36,7 @@ The AuthZed API has certain limitations you should be aware of when working with
 To follow this guide, you'll need:
 
 * [Terraform](https://www.terraform.io/downloads.html) 1.0 or later
-* An AuthZed account
+* An AuthZed Dedicated account
 * API token for AuthZed (contact your account team to obtain one)
 
 ## Step 1: Configure the Provider
@@ -259,8 +259,7 @@ When working with this provider, be aware of these limitations:
 
 4. **Use Variables**: Keep tokens and IDs in variables to make your configurations more flexible.
 
-## Next Steps
+## Additional Resources 
 
 - Learn about the available [resources](../index.md#resources) and [data sources](../index.md#data-sources)
 - Explore the [AuthZed documentation](https://docs.authzed.com) to understand permissions concepts
-- Implement a CI/CD pipeline to manage your AuthZed infrastructure as code
