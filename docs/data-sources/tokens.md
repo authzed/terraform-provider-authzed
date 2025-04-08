@@ -42,4 +42,4 @@ The following attributes are exported:
   * `creator` - The identifier of the creator of the token.
 * `tokens_count` - The total number of tokens found.
 
-~> **Note:** Token secrets are not available through this data source. Please contact your account manager to get your unique API token. 
+~> **Note:** For security reasons, token secrets are not available through this data source.  

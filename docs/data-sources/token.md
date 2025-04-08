@@ -40,4 +40,4 @@ The following attributes are exported:
 * `created_at` - The timestamp when the token was created.
 * `updated_at` - The timestamp when the token was last updated.
 
-~> **Note:** Token secrets are not available through this data source. Please contact your account manage    r to get your unique API token.
+~> **Note:** For security reasons, token secrets are not available through this data source. 
