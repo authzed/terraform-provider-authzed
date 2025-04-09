@@ -6,7 +6,7 @@ A Terraform provider for managing administrative access to [AuthZed](https://aut
 
 ## Overview
 
-This provider automates the management of platform access in AuthZed environments:
+This provider automates the management of platform access in AuthZed Dedicated environments:
 
 - **Service accounts** for programmatic access to permission systems
 - **API tokens** for secure authentication
