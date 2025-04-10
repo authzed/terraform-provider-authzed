@@ -3,7 +3,7 @@ package provider
 import (
 	"context"
 
-	"terraform-provider-cloud-api/internal/client"
+	"terraform-provider-authzed/internal/client"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -33,7 +33,7 @@ func New(version string) func() provider.Provider {
 }
 
 func (p *CloudProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
-	resp.TypeName = "cloud-api"
+	resp.TypeName = "authzed"
 	resp.Version = p.version
 }
 

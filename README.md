@@ -17,7 +17,7 @@ This provider automates the management of platform access in AuthZed Dedicated e
 
 ## Documentation
 
-Full provider documentation is available on the [Terraform Registry](https://registry.terraform.io/providers/authzed/cloudapi/latest/docs).
+Full provider documentation is available on the [Terraform Registry](https://registry.terraform.io/providers/authzed/authzed/latest/docs).
 
 API documentation is available on [Postman](https://www.postman.com/authzed/spicedb/collection/5fm402n/authzed-cloud-api).
 
@@ -27,15 +27,15 @@ API documentation is available on [Postman](https://www.postman.com/authzed/spic
 
 ```bash
 # Clone the repository
-git clone https://github.com/authzed/terraform-provider-cloudapi.git
-cd terraform-provider-cloudapi
+git clone https://github.com/authzed/terraform-provider-authzed.git
+cd terraform-provider-authzed
 
 # Build the provider
 go build
 
 # Install locally
-mkdir -p ~/.terraform.d/plugins/registry.terraform.io/authzed/cloudapi/0.1.0/$(go env GOOS)_$(go env GOARCH)
-cp terraform-provider-cloudapi ~/.terraform.d/plugins/registry.terraform.io/authzed/cloudapi/0.1.0/$(go env GOOS)_$(go env GOARCH)/
+mkdir -p ~/.terraform.d/plugins/registry.terraform.io/authzed/authzed/0.1.0/$(go env GOOS)_$(go env GOARCH)
+cp terraform-provider-authzed ~/.terraform.d/plugins/registry.terraform.io/authzed/authzed/0.1.0/$(go env GOOS)_$(go env GOARCH)/
 ```
 
 ### Testing Changes
@@ -45,7 +45,7 @@ To use a local build with Terraform, configure your `.terraformrc` file:
 ```hcl
 provider_installation {
   dev_overrides {
-    "registry.terraform.io/authzed/cloudapi" = "/path/to/terraform-provider-cloudapi"
+    "registry.terraform.io/authzed/authzed" = "/path/to/terraform-provider-authzed"
   }
   direct {}
 }

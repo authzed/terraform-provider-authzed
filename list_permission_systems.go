@@ -4,7 +4,7 @@ package main
 
 import (
 	"fmt"
-	"terraform-provider-cloudapi/internal/client"
+	"terraform-provider-authzed/internal/client"
 )
 
 func main() {

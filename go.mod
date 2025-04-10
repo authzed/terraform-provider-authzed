@@ -1,4 +1,4 @@
-module terraform-provider-cloud-api
+module terraform-provider-authzed
 
 go 1.23.4
 
