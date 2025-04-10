@@ -1,21 +1,25 @@
 terraform {
   required_providers {
-    platform-api = {
-      source = "local.providers/local/platform-api"
-      version = "1.0.0"
+    authzed = {
+      source  = "authzed/authzed"
+      version = "0.1.0"
     }
   }
 }
 
-provider "platform-api" {
-  host = "http://localhost:3030"
-  token = "testing123"
+provider "authzed" {
+  endpoint    = "https://api.admin.stage.aws.authzed.net"
+  token       = "your-api-token-here"
+  api_version = "25r1"
 }
 
-resource "platform-api_hello" "example" {
-  name = "Terraform"
+# Example resources
+resource "authzed_service_account" "example" {
+  name                 = "example-service-account"
+  description          = "Example service account created by Terraform"
+  permission_system_id = "ps-example123456789"
 }
 
-output "hello_response" {
-  value = platform-api_hello.example.response
+output "service_account_id" {
+  value = authzed_service_account.example.id
 } 

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"terraform-provider-cloudapi/internal/models"
+	"terraform-provider-authzed/internal/models"
 )
 
 // ListPolicies retrieves all policies for a permission system
