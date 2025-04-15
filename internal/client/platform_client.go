@@ -48,7 +48,7 @@ func NewPlatformClient(cfg *PlatformClientConfig) *PlatformClient {
 }
 
 // NewRequest creates a new HTTP request with the necessary headers
-func (c *PlatformClient) NewRequest(method, path string, body interface{}) (*http.Request, error) {
+func (c *PlatformClient) NewRequest(method, path string, body any) (*http.Request, error) {
 	url := fmt.Sprintf("%s%s", c.Host, path)
 
 	var bodyReader io.Reader
