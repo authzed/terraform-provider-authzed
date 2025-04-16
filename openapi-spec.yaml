@@ -2,9 +2,9 @@ openapi: 3.0.3
 info:
   contact:
     email: support@authzed.com
-  description: Platform API for AuthZed Dedicated
+  description: Cloud API for AuthZed Dedicated
   termsOfService: https://authzed.com/terms-conditions
-  title: AuthZed Platform API
+  title: AuthZed Cloud API
   version: 25r1
 externalDocs:
   description: Find out more at the official Authzed Docs site
@@ -22,12 +22,63 @@ tags:
     url: https://authzed.com/docs/authzed/concepts/restricted-api-access
   name: access management
 paths:
-  /access/policies:
+  /ps:
+    get:
+      description: list all permission systems
+      operationId: ListPermissionsSystems
+      parameters:
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListPermissionsSystemsResponse'
+          description: OK
+      security:
+      - auth: []
+      tags:
+      - permission system
+  /ps/{permissionSystemID}:
+    get:
+      description: get a permission system by its ID
+      operationId: GetPermissionsSystem
+      parameters:
+      - in: path
+        name: permissionSystemID
+        required: true
+        schema:
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetPermissionsSystemResponse'
+          description: OK
+      security:
+      - auth: []
+      tags:
+      - permission system
+  /ps/{permissionSystemID}/access/policies:
     get:
       description: list all permission system access-management polices
       operationId: ListPolicies
       parameters:
-      - in: query
+      - in: path
         name: permissionSystemID
         required: true
         schema:
@@ -55,6 +106,15 @@ paths:
       description: create a permission system access-management policy
       operationId: CreatePolicy
       parameters:
+      - description: The globally unique ID for the Permission System
+        in: path
+        name: permissionSystemID
+        required: true
+        schema:
+          description: The globally unique ID for the Permission System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
+          type: string
       - description: The version of the API to use. Must be specified.
         in: header
         name: X-API-Version
@@ -78,22 +138,22 @@ paths:
       - auth: []
       tags:
       - access management
-  /access/policies/{policyID}:
+  /ps/{permissionSystemID}/access/policies/{policyID}:
     delete:
       description: delete a permission system access-management policy by its ID
       operationId: DeletePolicy
       parameters:
-      - in: query
-        name: permissionSystemID
-        required: true
-        schema:
-          pattern: ^ps-[a-zA-Z0-9-]+$
-          type: string
       - in: path
         name: policyID
         required: true
         schema:
           pattern: ^apc-[a-zA-Z0-9-]+$
+          type: string
+      - in: path
+        name: permissionSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
           type: string
       - description: The version of the API to use. Must be specified.
         in: header
@@ -113,17 +173,17 @@ paths:
       description: get a permission system access-management policy by its ID
       operationId: GetPolicy
       parameters:
-      - in: query
-        name: permissionSystemID
-        required: true
-        schema:
-          pattern: ^ps-[a-zA-Z0-9-]+$
-          type: string
       - in: path
         name: policyID
         required: true
         schema:
           pattern: ^apc-[a-zA-Z0-9-]+$
+          type: string
+      - in: path
+        name: permissionSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
           type: string
       - description: The version of the API to use. Must be specified.
         in: header
@@ -143,12 +203,12 @@ paths:
       - auth: []
       tags:
       - access management
-  /access/roles:
+  /ps/{permissionSystemID}/access/roles:
     get:
       description: list all permission system access-management roles
       operationId: ListRoles
       parameters:
-      - in: query
+      - in: path
         name: permissionSystemID
         required: true
         schema:
@@ -176,6 +236,15 @@ paths:
       description: create a permission system access-management role
       operationId: CreateRole
       parameters:
+      - description: The globally unique ID for the Permission System
+        in: path
+        name: permissionSystemID
+        required: true
+        schema:
+          description: The globally unique ID for the Permission System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
+          type: string
       - description: The version of the API to use. Must be specified.
         in: header
         name: X-API-Version
@@ -199,22 +268,52 @@ paths:
       - auth: []
       tags:
       - access management
-  /access/roles/{roleID}:
-    get:
-      description: get a permission system access-management role by its ID
-      operationId: GetRole
+  /ps/{permissionSystemID}/access/roles/{roleID}:
+    delete:
+      description: delete a permission system access-management role by its ID
+      operationId: DeleteRole
       parameters:
-      - in: query
-        name: permissionSystemID
-        required: true
-        schema:
-          pattern: ^ps-[a-zA-Z0-9-]+$
-          type: string
       - in: path
         name: roleID
         required: true
         schema:
           pattern: ^arl-[a-zA-Z0-9-]+$
+          type: string
+      - in: path
+        name: permissionSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - auth: []
+      tags:
+      - access management
+    get:
+      description: get a permission system access-management role by its ID
+      operationId: GetRole
+      parameters:
+      - in: path
+        name: roleID
+        required: true
+        schema:
+          pattern: ^arl-[a-zA-Z0-9-]+$
+          type: string
+      - in: path
+        name: permissionSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
           type: string
       - description: The version of the API to use. Must be specified.
         in: header
@@ -234,12 +333,12 @@ paths:
       - auth: []
       tags:
       - access management
-  /access/service-accounts:
+  /ps/{permissionSystemID}/access/service-accounts:
     get:
       description: list all permission system access-management service accounts
       operationId: ListServiceAccounts
       parameters:
-      - in: query
+      - in: path
         name: permissionSystemID
         required: true
         schema:
@@ -267,6 +366,15 @@ paths:
       description: create a permission system access-management service account
       operationId: CreateServiceAccount
       parameters:
+      - description: The globally unique ID for the Permission System
+        in: path
+        name: permissionSystemID
+        required: true
+        schema:
+          description: The globally unique ID for the Permission System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
+          type: string
       - description: The version of the API to use. Must be specified.
         in: header
         name: X-API-Version
@@ -290,23 +398,23 @@ paths:
       - auth: []
       tags:
       - access management
-  /access/service-accounts/{serviceAccountID}:
+  /ps/{permissionSystemID}/access/service-accounts/{serviceAccountID}:
     delete:
       description: delete a permission system access-management service account by
         its ID
       operationId: DeleteServiceAccount
       parameters:
-      - in: query
-        name: permissionSystemID
-        required: true
-        schema:
-          pattern: ^ps-[a-zA-Z0-9-]+$
-          type: string
       - in: path
         name: serviceAccountID
         required: true
         schema:
           pattern: ^asa-[a-zA-Z0-9-]+$
+          type: string
+      - in: path
+        name: permissionSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
           type: string
       - description: The version of the API to use. Must be specified.
         in: header
@@ -327,17 +435,17 @@ paths:
         ID
       operationId: GetServiceAccount
       parameters:
-      - in: query
-        name: permissionSystemID
-        required: true
-        schema:
-          pattern: ^ps-[a-zA-Z0-9-]+$
-          type: string
       - in: path
         name: serviceAccountID
         required: true
         schema:
           pattern: ^asa-[a-zA-Z0-9-]+$
+          type: string
+      - in: path
+        name: permissionSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
           type: string
       - description: The version of the API to use. Must be specified.
         in: header
@@ -357,13 +465,13 @@ paths:
       - auth: []
       tags:
       - access management
-  /access/service-accounts/{serviceAccountID}/tokens:
+  /ps/{permissionSystemID}/access/service-accounts/{serviceAccountID}/tokens:
     get:
       description: list all permission system access-management tokens under a service
         account
       operationId: ListTokens
       parameters:
-      - in: query
+      - in: path
         name: permissionSystemID
         required: true
         schema:
@@ -398,12 +506,22 @@ paths:
         account
       operationId: CreateToken
       parameters:
+      - description: The globally unique ID for the Permission System
+        in: path
+        name: permissionSystemID
+        required: true
+        schema:
+          description: The globally unique ID for the Permission System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
+          type: string
       - description: The globally unique ID for the containing Service Account
         in: path
         name: serviceAccountID
         required: true
         schema:
           description: The globally unique ID for the containing Service Account
+          readOnly: true
           type: string
       - description: The version of the API to use. Must be specified.
         in: header
@@ -428,18 +546,12 @@ paths:
       - auth: []
       tags:
       - access management
-  /access/service-accounts/{serviceAccountID}/tokens/{tokenID}:
-    get:
-      description: get a permission system access-management token by its ID, under
+  /ps/{permissionSystemID}/access/service-accounts/{serviceAccountID}/tokens/{tokenID}:
+    delete:
+      description: delete a permission system access-management token by its ID, under
         a service account
-      operationId: GetToken
+      operationId: DeleteToken
       parameters:
-      - in: query
-        name: permissionSystemID
-        required: true
-        schema:
-          pattern: ^ps-[a-zA-Z0-9-]+$
-          type: string
       - in: path
         name: tokenID
         required: true
@@ -451,6 +563,49 @@ paths:
         required: true
         schema:
           pattern: ^asa-[a-zA-Z0-9-]+$
+          type: string
+      - in: path
+        name: permissionSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - auth: []
+      tags:
+      - access management
+    get:
+      description: get a permission system access-management token by its ID, under
+        a service account
+      operationId: GetToken
+      parameters:
+      - in: path
+        name: tokenID
+        required: true
+        schema:
+          pattern: ^atk-[a-zA-Z0-9-]+$
+          type: string
+      - in: path
+        name: serviceAccountID
+        required: true
+        schema:
+          pattern: ^asa-[a-zA-Z0-9-]+$
+          type: string
+      - in: path
+        name: permissionSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
           type: string
       - description: The version of the API to use. Must be specified.
         in: header
@@ -470,57 +625,6 @@ paths:
       - auth: []
       tags:
       - access management
-  /ps:
-    get:
-      description: list all permission systems
-      operationId: ListPermissionSystems
-      parameters:
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: 25r1
-          description: The version of the API to use. Must be specified.
-          type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ListPermissionSystemsResponse'
-          description: OK
-      security:
-      - auth: []
-      tags:
-      - permission system
-  /ps/{permissionSystemID}:
-    get:
-      description: get a permission system by its ID
-      operationId: GetPermissionSystem
-      parameters:
-      - in: path
-        name: permissionSystemID
-        required: true
-        schema:
-          type: string
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: 25r1
-          description: The version of the API to use. Must be specified.
-          type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GetPermissionSystemResponse'
-          description: OK
-      security:
-      - auth: []
-      tags:
-      - permission system
 components:
   schemas:
     CreatePolicyRequest:
@@ -551,6 +655,8 @@ components:
           type: string
         permissionSystemID:
           description: The globally unique ID for the Permission System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
           type: string
         principalID:
           description: The ID of the Principal that this Policy is associated with
@@ -564,7 +670,6 @@ components:
           minLength: 1
           type: array
       required:
-      - permissionSystemID
       - name
       - principalID
       - roleIDs
@@ -597,6 +702,8 @@ components:
           type: string
         permissionSystemID:
           description: The globally unique ID for the Permission System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
           type: string
         principalID:
           description: The ID of the Principal that this Policy is associated with
@@ -610,7 +717,6 @@ components:
           minLength: 1
           type: array
       required:
-      - permissionSystemID
       - name
       - principalID
       - roleIDs
@@ -643,11 +749,12 @@ components:
           type: string
         permissionSystemID:
           description: The globally unique ID for the Permission System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
           type: string
         permissions:
           $ref: '#/components/schemas/PermissionExprMap'
       required:
-      - permissionSystemID
       - name
       - permissions
       type: object
@@ -679,11 +786,12 @@ components:
           type: string
         permissionSystemID:
           description: The globally unique ID for the Permission System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
           type: string
         permissions:
           $ref: '#/components/schemas/PermissionExprMap'
       required:
-      - permissionSystemID
       - name
       - permissions
       type: object
@@ -717,6 +825,8 @@ components:
           type: string
         permissionSystemID:
           description: The globally unique ID for the Permission System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
           type: string
         token:
           description: The Tokens associated with this Service Account
@@ -725,7 +835,6 @@ components:
           readOnly: true
           type: array
       required:
-      - permissionSystemID
       - name
       type: object
     CreateServiceAccountResponse:
@@ -758,6 +867,8 @@ components:
           type: string
         permissionSystemID:
           description: The globally unique ID for the Permission System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
           type: string
         token:
           description: The Tokens associated with this Service Account
@@ -766,7 +877,6 @@ components:
           readOnly: true
           type: array
       required:
-      - permissionSystemID
       - name
       type: object
     CreateTokenRequest:
@@ -802,13 +912,14 @@ components:
           type: string
         permissionSystemID:
           description: The globally unique ID for the Permission System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
           type: string
         serviceAccountID:
           description: The globally unique ID for the containing Service Account
+          readOnly: true
           type: string
       required:
-      - permissionSystemID
-      - serviceAccountID
       - name
       type: object
     CreateTokenResponse:
@@ -844,6 +955,8 @@ components:
           type: string
         permissionSystemID:
           description: The globally unique ID for the Permission System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
           type: string
         secret:
           description: The secret for the token. Will not be returned again.
@@ -851,17 +964,30 @@ components:
           type: string
         serviceAccountID:
           description: The globally unique ID for the containing Service Account
+          readOnly: true
           type: string
       required:
-      - permissionSystemID
-      - serviceAccountID
       - name
       type: object
-    GetPermissionSystemResponse:
+    Feature:
       properties:
-        globalDnsPath:
-          description: The global DNS path for the Permission System
+        displayName:
+          description: The display name for the Feature
           type: string
+        enabled:
+          description: Whether a specific feature is enabled or disabled
+          type: boolean
+        id:
+          description: The feature identifier
+          type: string
+      type: object
+    GetPermissionsSystemResponse:
+      properties:
+        features:
+          description: The features enabled in this Permission System
+          items:
+            $ref: '#/components/schemas/Feature'
+          type: array
         id:
           description: The globally unique ID for this Permission System
           type: string
@@ -871,9 +997,7 @@ components:
         systemState:
           $ref: '#/components/schemas/PermissionsSystemState'
         systemType:
-          description: The type of the Permission System, either 'development' or
-            'production'
-          type: string
+          $ref: '#/components/schemas/SystemType'
         version:
           $ref: '#/components/schemas/SystemVersion'
       type: object
@@ -905,6 +1029,8 @@ components:
           type: string
         permissionSystemID:
           description: The globally unique ID for the Permission System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
           type: string
         principalID:
           description: The ID of the Principal that this Policy is associated with
@@ -918,7 +1044,6 @@ components:
           minLength: 1
           type: array
       required:
-      - permissionSystemID
       - name
       - principalID
       - roleIDs
@@ -951,11 +1076,12 @@ components:
           type: string
         permissionSystemID:
           description: The globally unique ID for the Permission System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
           type: string
         permissions:
           $ref: '#/components/schemas/PermissionExprMap'
       required:
-      - permissionSystemID
       - name
       - permissions
       type: object
@@ -989,6 +1115,8 @@ components:
           type: string
         permissionSystemID:
           description: The globally unique ID for the Permission System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
           type: string
         token:
           description: The Tokens associated with this Service Account
@@ -997,7 +1125,6 @@ components:
           readOnly: true
           type: array
       required:
-      - permissionSystemID
       - name
       type: object
     GetTokenResponse:
@@ -1033,18 +1160,19 @@ components:
           type: string
         permissionSystemID:
           description: The globally unique ID for the Permission System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
           type: string
         serviceAccountID:
           description: The globally unique ID for the containing Service Account
+          readOnly: true
           type: string
       required:
-      - permissionSystemID
-      - serviceAccountID
       - name
       type: object
-    ListPermissionSystemsResponse:
+    ListPermissionsSystemsResponse:
       items:
-        $ref: '#/components/schemas/PermissionSystem'
+        $ref: '#/components/schemas/PermissionsSystem'
       nullable: true
       type: array
     ListPoliciesResponse:
@@ -1123,11 +1251,13 @@ components:
           type: string
         authzed.v1/WriteSchema:
           type: string
-    PermissionSystem:
+    PermissionsSystem:
       properties:
-        globalDnsPath:
-          description: The global DNS path for the Permission System
-          type: string
+        features:
+          description: The features enabled in this Permission System
+          items:
+            $ref: '#/components/schemas/Feature'
+          type: array
         id:
           description: The globally unique ID for this Permission System
           type: string
@@ -1137,9 +1267,7 @@ components:
         systemState:
           $ref: '#/components/schemas/PermissionsSystemState'
         systemType:
-          description: The type of the Permission System, either 'development' or
-            'production'
-          type: string
+          $ref: '#/components/schemas/SystemType'
         version:
           $ref: '#/components/schemas/SystemVersion'
       type: object
@@ -1149,9 +1277,21 @@ components:
           description: The message associated with the status
           type: string
         status:
-          description: The status of the Permission System
-          type: string
+          $ref: '#/components/schemas/PermissionsSystemStatus'
       type: object
+    PermissionsSystemStatus:
+      enum:
+      - CLUSTER_ISSUE
+      - DEGRADED
+      - MODIFYING
+      - PAUSED
+      - PROVISIONING
+      - PROVISION_ERROR
+      - RUNNING
+      - UNKNOWN
+      - UPGRADE_ERROR
+      - UPGRADING
+      type: string
     Policy:
       properties:
         createdAt:
@@ -1180,6 +1320,8 @@ components:
           type: string
         permissionSystemID:
           description: The globally unique ID for the Permission System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
           type: string
         principalID:
           description: The ID of the Principal that this Policy is associated with
@@ -1193,7 +1335,6 @@ components:
           minLength: 1
           type: array
       required:
-      - permissionSystemID
       - name
       - principalID
       - roleIDs
@@ -1226,11 +1367,12 @@ components:
           type: string
         permissionSystemID:
           description: The globally unique ID for the Permission System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
           type: string
         permissions:
           $ref: '#/components/schemas/PermissionExprMap'
       required:
-      - permissionSystemID
       - name
       - permissions
       type: object
@@ -1264,6 +1406,8 @@ components:
           type: string
         permissionSystemID:
           description: The globally unique ID for the Permission System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
           type: string
         token:
           description: The Tokens associated with this Service Account
@@ -1272,7 +1416,6 @@ components:
           readOnly: true
           type: array
       required:
-      - permissionSystemID
       - name
       type: object
     SpiceDBVersion:
@@ -1289,6 +1432,11 @@ components:
           description: The version of SpiceDB
           type: string
       type: object
+    SystemType:
+      enum:
+      - development
+      - production
+      type: string
     SystemVersion:
       properties:
         currentVersion:
@@ -1305,6 +1453,9 @@ components:
           type: string
         selectedChannel:
           description: The channel selected for the SpiceDB version. May be empty.
+          type: string
+        selectedChannelDisplayName:
+          description: The display name of the selected channel
           type: string
       type: object
     Token:
@@ -1340,13 +1491,14 @@ components:
           type: string
         permissionSystemID:
           description: The globally unique ID for the Permission System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
           type: string
         serviceAccountID:
           description: The globally unique ID for the containing Service Account
+          readOnly: true
           type: string
       required:
-      - permissionSystemID
-      - serviceAccountID
       - name
       type: object
   securitySchemes:
