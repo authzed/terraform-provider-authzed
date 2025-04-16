@@ -10,8 +10,8 @@ import (
 	"terraform-provider-authzed/internal/models"
 )
 
-// ListPermissionSystems retrieves all permission systems
-func (c *CloudClient) ListPermissionSystems() ([]models.PermissionSystem, error) {
+// ListPermissionsSystems retrieves all permission systems
+func (c *CloudClient) ListPermissionsSystems() ([]models.PermissionsSystem, error) {
 	path := "/ps"
 	req, err := c.NewRequest(http.MethodGet, path, nil)
 	if err != nil {
@@ -22,7 +22,10 @@ func (c *CloudClient) ListPermissionSystems() ([]models.PermissionSystem, error)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		// Ignore the error
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, NewAPIError(resp)
@@ -41,12 +44,15 @@ func (c *CloudClient) ListPermissionSystems() ([]models.PermissionSystem, error)
 	bodyReader := bytes.NewReader(bodyBytes)
 
 	// Try direct array decoding first
-	var permissionSystems []models.PermissionSystem
-	if err := json.NewDecoder(bodyReader).Decode(&permissionSystems); err != nil {
+	var permissionsSystems []models.PermissionsSystem
+	if err := json.NewDecoder(bodyReader).Decode(&permissionsSystems); err != nil {
 		// If direct array decoding fails, try with the wrapper that has "items" field
-		bodyReader.Seek(0, io.SeekStart) // Reset reader to beginning
+		_, err = bodyReader.Seek(0, io.SeekStart) // Reset reader to beginning
+		if err != nil {
+			return nil, err
+		}
 		var listResp struct {
-			Items []models.PermissionSystem `json:"items"`
+			Items []models.PermissionsSystem `json:"items"`
 		}
 		if err := json.NewDecoder(bodyReader).Decode(&listResp); err != nil {
 			return nil, fmt.Errorf("failed to decode response: %w", err)
@@ -54,12 +60,12 @@ func (c *CloudClient) ListPermissionSystems() ([]models.PermissionSystem, error)
 		return listResp.Items, nil
 	}
 
-	return permissionSystems, nil
+	return permissionsSystems, nil
 }
 
-// GetPermissionSystem retrieves a permission system by ID
-func (c *CloudClient) GetPermissionSystem(permissionSystemID string) (*models.PermissionSystem, error) {
-	path := fmt.Sprintf("/ps/%s", permissionSystemID)
+// GetPermissionsSystem retrieves a permission system by ID
+func (c *CloudClient) GetPermissionsSystem(permissionsSystemID string) (*models.PermissionsSystem, error) {
+	path := fmt.Sprintf("/ps/%s", permissionsSystemID)
 	req, err := c.NewRequest(http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
@@ -69,7 +75,10 @@ func (c *CloudClient) GetPermissionSystem(permissionSystemID string) (*models.Pe
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		// Ignore the error
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, NewAPIError(resp)
@@ -82,24 +91,27 @@ func (c *CloudClient) GetPermissionSystem(permissionSystemID string) (*models.Pe
 	}
 
 	// Log the raw response for debugging
-	fmt.Printf("DEBUG: Raw API response for permission system %s: %s\n", permissionSystemID, string(bodyBytes))
+	fmt.Printf("DEBUG: Raw API response for permission system %s: %s\n", permissionsSystemID, string(bodyBytes))
 
 	// Create a new reader from the bytes for JSON decoding
 	bodyReader := bytes.NewReader(bodyBytes)
 
 	// Try direct decoding first
-	var permissionSystem models.PermissionSystem
-	if err := json.NewDecoder(bodyReader).Decode(&permissionSystem); err != nil {
+	var permissionsSystem models.PermissionsSystem
+	if err := json.NewDecoder(bodyReader).Decode(&permissionsSystem); err != nil {
 		// If direct decoding fails, try with the wrapper
-		bodyReader.Seek(0, io.SeekStart) // Reset reader to beginning
+		_, err = bodyReader.Seek(0, io.SeekStart) // Reset reader to beginning
+		if err != nil {
+			return nil, nil
+		}
 		var getResp struct {
-			PermissionSystem models.PermissionSystem `json:"permissionSystem"`
+			PermissionsSystem models.PermissionsSystem `json:"permissionsSystem"`
 		}
 		if err := json.NewDecoder(bodyReader).Decode(&getResp); err != nil {
 			return nil, fmt.Errorf("failed to decode response: %w", err)
 		}
-		return &getResp.PermissionSystem, nil
+		return &getResp.PermissionsSystem, nil
 	}
 
-	return &permissionSystem, nil
+	return &permissionsSystem, nil
 }

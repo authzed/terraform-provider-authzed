@@ -10,8 +10,8 @@ import (
 )
 
 // ListRoles retrieves all roles for a ps
-func (c *CloudClient) ListRoles(permissionSystemID string) ([]models.Role, error) {
-	path := fmt.Sprintf("/ps/%s/access/roles", permissionSystemID)
+func (c *CloudClient) ListRoles(permissionsSystemID string) ([]models.Role, error) {
+	path := fmt.Sprintf("/ps/%s/access/roles", permissionsSystemID)
 
 	req, err := c.NewRequest(http.MethodGet, path, nil)
 	if err != nil {
@@ -22,7 +22,10 @@ func (c *CloudClient) ListRoles(permissionSystemID string) ([]models.Role, error
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		// ignore the error
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, NewAPIError(resp)
@@ -39,8 +42,8 @@ func (c *CloudClient) ListRoles(permissionSystemID string) ([]models.Role, error
 }
 
 // GetRole retrieves a role by ID
-func (c *CloudClient) GetRole(permissionSystemID, roleID string) (*models.Role, error) {
-	path := fmt.Sprintf("/ps/%s/access/roles/%s", permissionSystemID, roleID)
+func (c *CloudClient) GetRole(permissionsSystemID, roleID string) (*models.Role, error) {
+	path := fmt.Sprintf("/ps/%s/access/roles/%s", permissionsSystemID, roleID)
 
 	req, err := c.NewRequest(http.MethodGet, path, nil)
 	if err != nil {
@@ -51,7 +54,10 @@ func (c *CloudClient) GetRole(permissionSystemID, roleID string) (*models.Role, 
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		// ignore the error
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, NewAPIError(resp)
@@ -66,7 +72,7 @@ func (c *CloudClient) GetRole(permissionSystemID, roleID string) (*models.Role, 
 }
 
 func (c *CloudClient) CreateRole(role *models.Role) (*models.Role, error) {
-	path := fmt.Sprintf("/ps/%s/access/roles", role.PermissionSystemID)
+	path := fmt.Sprintf("/ps/%s/access/roles", role.PermissionsSystemID)
 
 	req, err := c.NewRequest(http.MethodPost, path, role)
 	if err != nil {
@@ -77,7 +83,10 @@ func (c *CloudClient) CreateRole(role *models.Role) (*models.Role, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		// ignore the error
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusCreated {
 		// Read the response body to check for specific error messages
@@ -85,7 +94,7 @@ func (c *CloudClient) CreateRole(role *models.Role) (*models.Role, error) {
 		if resp.StatusCode == http.StatusInternalServerError {
 			// Check if the error message indicates a duplicate name
 			if strings.Contains(string(body), "duplicate") || strings.Contains(string(body), "already exists") {
-				return nil, fmt.Errorf("role with name '%s' already exists in permission system '%s'", role.Name, role.PermissionSystemID)
+				return nil, fmt.Errorf("role with name '%s' already exists in permission system '%s'", role.Name, role.PermissionsSystemID)
 			}
 		}
 		// If it's not a duplicate name error, return the original API error
@@ -100,8 +109,8 @@ func (c *CloudClient) CreateRole(role *models.Role) (*models.Role, error) {
 	return &createdRole, nil
 }
 
-func (c *CloudClient) DeleteRole(permissionSystemID, roleID string) error {
-	path := fmt.Sprintf("/ps/%s/access/roles/%s", permissionSystemID, roleID)
+func (c *CloudClient) DeleteRole(permissionsSystemID, roleID string) error {
+	path := fmt.Sprintf("/ps/%s/access/roles/%s", permissionsSystemID, roleID)
 
 	req, err := c.NewRequest(http.MethodDelete, path, nil)
 	if err != nil {
@@ -112,7 +121,10 @@ func (c *CloudClient) DeleteRole(permissionSystemID, roleID string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		// ignore the error
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusNoContent {
 		return NewAPIError(resp)

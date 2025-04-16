@@ -1,15 +1,15 @@
 package models
 
-type PermissionSystem struct {
-	ID            string                `json:"id"`
-	Name          string                `json:"name"`
-	GlobalDnsPath string                `json:"globalDnsPath"`
-	SystemType    string                `json:"systemType"`
-	SystemState   PermissionSystemState `json:"systemState"`
-	Version       SystemVersion         `json:"version"`
+type PermissionsSystem struct {
+	ID            string                 `json:"id"`
+	Name          string                 `json:"name"`
+	GlobalDnsPath string                 `json:"globalDnsPath"`
+	SystemType    string                 `json:"systemType"`
+	SystemState   PermissionsSystemState `json:"systemState"`
+	Version       SystemVersion          `json:"version"`
 }
 
-type PermissionSystemState struct {
+type PermissionsSystemState struct {
 	Status  string `json:"status"`
 	Message string `json:"message"`
 }

@@ -23,9 +23,9 @@ type serviceAccountsDataSource struct {
 
 // serviceAccountsDataSourceModel maps the data source schema to values
 type serviceAccountsDataSourceModel struct {
-	ID                 types.String                 `tfsdk:"id"`
-	PermissionSystemID types.String                 `tfsdk:"permission_system_id"`
-	ServiceAccounts    []serviceAccountModelForList `tfsdk:"service_accounts"`
+	ID                  types.String                 `tfsdk:"id"`
+	PermissionsSystemID types.String                 `tfsdk:"permission_system_id"`
+	ServiceAccounts     []serviceAccountModelForList `tfsdk:"service_accounts"`
 }
 
 type serviceAccountModelForList struct {
@@ -109,14 +109,14 @@ func (d *serviceAccountsDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	serviceAccounts, err := d.client.ListServiceAccounts(data.PermissionSystemID.ValueString())
+	serviceAccounts, err := d.client.ListServiceAccounts(data.PermissionsSystemID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to list service accounts, got error: %s", err))
 		return
 	}
 
 	// Set ID for the data source
-	data.ID = types.StringValue("service_accounts_for_" + data.PermissionSystemID.ValueString())
+	data.ID = types.StringValue("service_accounts_for_" + data.PermissionsSystemID.ValueString())
 
 	serviceAccountsList := []serviceAccountModelForList{}
 	for _, sa := range serviceAccounts {

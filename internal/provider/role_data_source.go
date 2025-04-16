@@ -22,14 +22,14 @@ type roleDataSource struct {
 }
 
 type roleDataSourceModel struct {
-	ID                 types.String `tfsdk:"id"`
-	RoleID             types.String `tfsdk:"role_id"`
-	Name               types.String `tfsdk:"name"`
-	Description        types.String `tfsdk:"description"`
-	PermissionSystemID types.String `tfsdk:"permission_system_id"`
-	Permissions        types.Map    `tfsdk:"permissions"`
-	CreatedAt          types.String `tfsdk:"created_at"`
-	Creator            types.String `tfsdk:"creator"`
+	ID                  types.String `tfsdk:"id"`
+	RoleID              types.String `tfsdk:"role_id"`
+	Name                types.String `tfsdk:"name"`
+	Description         types.String `tfsdk:"description"`
+	PermissionsSystemID types.String `tfsdk:"permission_system_id"`
+	Permissions         types.Map    `tfsdk:"permissions"`
+	CreatedAt           types.String `tfsdk:"created_at"`
+	Creator             types.String `tfsdk:"creator"`
 }
 
 func (d *roleDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -101,7 +101,7 @@ func (d *roleDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		return
 	}
 
-	role, err := d.client.GetRole(data.PermissionSystemID.ValueString(), data.RoleID.ValueString())
+	role, err := d.client.GetRole(data.PermissionsSystemID.ValueString(), data.RoleID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read role, got error: %s", err))
 		return

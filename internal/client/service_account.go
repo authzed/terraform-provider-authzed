@@ -8,8 +8,8 @@ import (
 	"terraform-provider-authzed/internal/models"
 )
 
-func (c *CloudClient) ListServiceAccounts(permissionSystemID string) ([]models.ServiceAccount, error) {
-	path := fmt.Sprintf("/ps/%s/access/service-accounts", permissionSystemID)
+func (c *CloudClient) ListServiceAccounts(permissionsSystemID string) ([]models.ServiceAccount, error) {
+	path := fmt.Sprintf("/ps/%s/access/service-accounts", permissionsSystemID)
 
 	req, err := c.NewRequest(http.MethodGet, path, nil)
 	if err != nil {
@@ -20,7 +20,10 @@ func (c *CloudClient) ListServiceAccounts(permissionSystemID string) ([]models.S
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		// ignore the error
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, NewAPIError(resp)
@@ -48,8 +51,8 @@ func (c *CloudClient) ListServiceAccounts(permissionSystemID string) ([]models.S
 	return serviceAccounts, nil
 }
 
-func (c *CloudClient) GetServiceAccount(permissionSystemID, serviceAccountID string) (*models.ServiceAccount, error) {
-	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s", permissionSystemID, serviceAccountID)
+func (c *CloudClient) GetServiceAccount(permissionsSystemID, serviceAccountID string) (*models.ServiceAccount, error) {
+	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s", permissionsSystemID, serviceAccountID)
 
 	req, err := c.NewRequest(http.MethodGet, path, nil)
 	if err != nil {
@@ -60,7 +63,10 @@ func (c *CloudClient) GetServiceAccount(permissionSystemID, serviceAccountID str
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		// ignore the error
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, NewAPIError(resp)
@@ -75,14 +81,14 @@ func (c *CloudClient) GetServiceAccount(permissionSystemID, serviceAccountID str
 }
 
 func (c *CloudClient) CreateServiceAccount(serviceAccount *models.ServiceAccount) (*models.ServiceAccount, error) {
-	path := fmt.Sprintf("/ps/%s/access/service-accounts", serviceAccount.PermissionSystemID)
+	path := fmt.Sprintf("/ps/%s/access/service-accounts", serviceAccount.PermissionsSystemID)
 
 	// Debug logging
 	fmt.Printf("CreateServiceAccount called with:\n")
 	fmt.Printf("  - Host: %s\n", c.Host)
 	fmt.Printf("  - Path: %s\n", path)
 	fmt.Printf("  - Full URL will be: %s%s\n", c.Host, path)
-	fmt.Printf("  - PermissionSystemID: %s\n", serviceAccount.PermissionSystemID)
+	fmt.Printf("  - PermissionsSystemID: %s\n", serviceAccount.PermissionsSystemID)
 	fmt.Printf("  - Name: %s\n", serviceAccount.Name)
 	fmt.Printf("  - Description: %s\n", serviceAccount.Description)
 
@@ -103,7 +109,10 @@ func (c *CloudClient) CreateServiceAccount(serviceAccount *models.ServiceAccount
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		// ignore the error
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusCreated {
 		return nil, NewAPIError(resp)
@@ -117,8 +126,8 @@ func (c *CloudClient) CreateServiceAccount(serviceAccount *models.ServiceAccount
 	return &createdServiceAccount, nil
 }
 
-func (c *CloudClient) DeleteServiceAccount(permissionSystemID, serviceAccountID string) error {
-	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s", permissionSystemID, serviceAccountID)
+func (c *CloudClient) DeleteServiceAccount(permissionsSystemID, serviceAccountID string) error {
+	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s", permissionsSystemID, serviceAccountID)
 
 	req, err := c.NewRequest(http.MethodDelete, path, nil)
 	if err != nil {
@@ -129,7 +138,10 @@ func (c *CloudClient) DeleteServiceAccount(permissionSystemID, serviceAccountID 
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		// ignore the error
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusNoContent {
 		return NewAPIError(resp)

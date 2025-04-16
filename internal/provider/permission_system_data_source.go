@@ -12,17 +12,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-var _ datasource.DataSource = &permissionSystemDataSource{}
+var _ datasource.DataSource = &permissionsSystemDataSource{}
 
-func NewPermissionSystemDataSource() datasource.DataSource {
-	return &permissionSystemDataSource{}
+func NewPermissionsSystemDataSource() datasource.DataSource {
+	return &permissionsSystemDataSource{}
 }
 
-type permissionSystemDataSource struct {
+type permissionsSystemDataSource struct {
 	client *client.CloudClient
 }
 
-type permissionSystemDataSourceModel struct {
+type permissionsSystemDataSourceModel struct {
 	ID            types.String `tfsdk:"id"`
 	Name          types.String `tfsdk:"name"`
 	GlobalDnsPath types.String `tfsdk:"global_dns_path"`
@@ -31,11 +31,11 @@ type permissionSystemDataSourceModel struct {
 	Version       types.Object `tfsdk:"version"`
 }
 
-func (d *permissionSystemDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *permissionsSystemDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_permission_system"
 }
 
-func (d *permissionSystemDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *permissionsSystemDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Fetches a permission system by ID",
 		Attributes: map[string]schema.Attribute{
@@ -114,7 +114,7 @@ func (d *permissionSystemDataSource) Schema(_ context.Context, _ datasource.Sche
 	}
 }
 
-func (d *permissionSystemDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *permissionsSystemDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -132,26 +132,26 @@ func (d *permissionSystemDataSource) Configure(_ context.Context, req datasource
 }
 
 // Read refreshes the Terraform state with the latest data
-func (d *permissionSystemDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var data permissionSystemDataSourceModel
+func (d *permissionsSystemDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var data permissionsSystemDataSourceModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	permissionSystem, err := d.client.GetPermissionSystem(data.ID.ValueString())
+	permissionsSystem, err := d.client.GetPermissionsSystem(data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read permission system, got error: %s", err))
 		return
 	}
 
-	data.Name = types.StringValue(permissionSystem.Name)
-	data.GlobalDnsPath = types.StringValue(permissionSystem.GlobalDnsPath)
-	data.SystemType = types.StringValue(permissionSystem.SystemType)
+	data.Name = types.StringValue(permissionsSystem.Name)
+	data.GlobalDnsPath = types.StringValue(permissionsSystem.GlobalDnsPath)
+	data.SystemType = types.StringValue(permissionsSystem.SystemType)
 
 	systemStateMap := map[string]attr.Value{
-		"status":  types.StringValue(permissionSystem.SystemState.Status),
-		"message": types.StringValue(permissionSystem.SystemState.Message),
+		"status":  types.StringValue(permissionsSystem.SystemState.Status),
+		"message": types.StringValue(permissionsSystem.SystemState.Message),
 	}
 	systemStateObj, diags := types.ObjectValue(
 		map[string]attr.Type{
@@ -167,7 +167,7 @@ func (d *permissionSystemDataSource) Read(ctx context.Context, req datasource.Re
 	data.SystemState = systemStateObj
 
 	supportedFeatureNames := []attr.Value{}
-	for _, feature := range permissionSystem.Version.CurrentVersion.SupportedFeatureNames {
+	for _, feature := range permissionsSystem.Version.CurrentVersion.SupportedFeatureNames {
 		supportedFeatureNames = append(supportedFeatureNames, types.StringValue(feature))
 	}
 
@@ -178,9 +178,9 @@ func (d *permissionSystemDataSource) Read(ctx context.Context, req datasource.Re
 	resp.Diagnostics.Append(diags...)
 
 	currentVersionMap := map[string]attr.Value{
-		"display_name":            types.StringValue(permissionSystem.Version.CurrentVersion.DisplayName),
+		"display_name":            types.StringValue(permissionsSystem.Version.CurrentVersion.DisplayName),
 		"supported_feature_names": supportedFeaturesList,
-		"version":                 types.StringValue(permissionSystem.Version.CurrentVersion.Version),
+		"version":                 types.StringValue(permissionsSystem.Version.CurrentVersion.Version),
 	}
 
 	currentVersionObj, diags := types.ObjectValue(
@@ -196,10 +196,10 @@ func (d *permissionSystemDataSource) Read(ctx context.Context, req datasource.Re
 	// Map full Version object
 	versionMap := map[string]attr.Value{
 		"current_version":      currentVersionObj,
-		"has_update_available": types.BoolValue(permissionSystem.Version.HasUpdateAvailable),
-		"is_locked_to_version": types.BoolValue(permissionSystem.Version.IsLockedToVersion),
-		"override_image":       types.StringValue(permissionSystem.Version.OverrideImage),
-		"selected_channel":     types.StringValue(permissionSystem.Version.SelectedChannel),
+		"has_update_available": types.BoolValue(permissionsSystem.Version.HasUpdateAvailable),
+		"is_locked_to_version": types.BoolValue(permissionsSystem.Version.IsLockedToVersion),
+		"override_image":       types.StringValue(permissionsSystem.Version.OverrideImage),
+		"selected_channel":     types.StringValue(permissionsSystem.Version.SelectedChannel),
 	}
 
 	versionObj, diags := types.ObjectValue(

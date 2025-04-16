@@ -21,14 +21,14 @@ type TokenDataSource struct {
 }
 
 type TokenDataSourceModel struct {
-	ID                 types.String `tfsdk:"id"`
-	TokenID            types.String `tfsdk:"token_id"`
-	Name               types.String `tfsdk:"name"`
-	Description        types.String `tfsdk:"description"`
-	PermissionSystemID types.String `tfsdk:"permission_system_id"`
-	ServiceAccountID   types.String `tfsdk:"service_account_id"`
-	CreatedAt          types.String `tfsdk:"created_at"`
-	Creator            types.String `tfsdk:"creator"`
+	ID                  types.String `tfsdk:"id"`
+	TokenID             types.String `tfsdk:"token_id"`
+	Name                types.String `tfsdk:"name"`
+	Description         types.String `tfsdk:"description"`
+	PermissionsSystemID types.String `tfsdk:"permission_system_id"`
+	ServiceAccountID    types.String `tfsdk:"service_account_id"`
+	CreatedAt           types.String `tfsdk:"created_at"`
+	Creator             types.String `tfsdk:"creator"`
 }
 
 func (d *TokenDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -101,7 +101,7 @@ func (d *TokenDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	}
 
 	token, err := d.client.GetToken(
-		config.PermissionSystemID.ValueString(),
+		config.PermissionsSystemID.ValueString(),
 		config.ServiceAccountID.ValueString(),
 		config.TokenID.ValueString(),
 	)
@@ -115,7 +115,7 @@ func (d *TokenDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 
 	// Populate the model
 	config.ID = types.StringValue(fmt.Sprintf("%s:%s:%s",
-		token.PermissionSystemID, token.ServiceAccountID, token.ID))
+		token.PermissionsSystemID, token.ServiceAccountID, token.ID))
 	config.Name = types.StringValue(token.Name)
 	config.Description = types.StringValue(token.Description)
 	config.CreatedAt = types.StringValue(token.CreatedAt)

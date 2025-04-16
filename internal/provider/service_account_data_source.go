@@ -22,13 +22,13 @@ type serviceAccountDataSource struct {
 }
 
 type serviceAccountDataSourceModel struct {
-	ID                 types.String `tfsdk:"id"`
-	Name               types.String `tfsdk:"name"`
-	Description        types.String `tfsdk:"description"`
-	PermissionSystemID types.String `tfsdk:"permission_system_id"`
-	ServiceAccountID   types.String `tfsdk:"service_account_id"`
-	CreatedAt          types.String `tfsdk:"created_at"`
-	Creator            types.String `tfsdk:"creator"`
+	ID                  types.String `tfsdk:"id"`
+	Name                types.String `tfsdk:"name"`
+	Description         types.String `tfsdk:"description"`
+	PermissionsSystemID types.String `tfsdk:"permission_system_id"`
+	ServiceAccountID    types.String `tfsdk:"service_account_id"`
+	CreatedAt           types.String `tfsdk:"created_at"`
+	Creator             types.String `tfsdk:"creator"`
 }
 
 func (d *serviceAccountDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -97,7 +97,7 @@ func (d *serviceAccountDataSource) Read(ctx context.Context, req datasource.Read
 	}
 
 	serviceAccount, err := d.client.GetServiceAccount(
-		data.PermissionSystemID.ValueString(),
+		data.PermissionsSystemID.ValueString(),
 		data.ServiceAccountID.ValueString(),
 	)
 	if err != nil {

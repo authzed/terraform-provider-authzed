@@ -22,20 +22,20 @@ type policiesDataSource struct {
 }
 
 type policiesDataSourceModel struct {
-	ID                 types.String      `tfsdk:"id"`
-	PermissionSystemID types.String      `tfsdk:"permission_system_id"`
-	Policies           []policyListModel `tfsdk:"policies"`
+	ID                  types.String      `tfsdk:"id"`
+	PermissionsSystemID types.String      `tfsdk:"permission_system_id"`
+	Policies            []policyListModel `tfsdk:"policies"`
 }
 
 type policyListModel struct {
-	ID                 types.String `tfsdk:"id"`
-	Name               types.String `tfsdk:"name"`
-	Description        types.String `tfsdk:"description"`
-	PermissionSystemID types.String `tfsdk:"permission_system_id"`
-	PrincipalID        types.String `tfsdk:"principal_id"`
-	RoleIDs            types.List   `tfsdk:"role_ids"`
-	CreatedAt          types.String `tfsdk:"created_at"`
-	Creator            types.String `tfsdk:"creator"`
+	ID                  types.String `tfsdk:"id"`
+	Name                types.String `tfsdk:"name"`
+	Description         types.String `tfsdk:"description"`
+	PermissionsSystemID types.String `tfsdk:"permission_system_id"`
+	PrincipalID         types.String `tfsdk:"principal_id"`
+	RoleIDs             types.List   `tfsdk:"role_ids"`
+	CreatedAt           types.String `tfsdk:"created_at"`
+	Creator             types.String `tfsdk:"creator"`
 }
 
 func (d *policiesDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -124,9 +124,9 @@ func (d *policiesDataSource) Read(ctx context.Context, req datasource.ReadReques
 	}
 
 	// Use permission system ID as the data source ID
-	data.ID = data.PermissionSystemID
+	data.ID = data.PermissionsSystemID
 
-	policies, err := d.client.ListPolicies(data.PermissionSystemID.ValueString())
+	policies, err := d.client.ListPolicies(data.PermissionsSystemID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to list policies, got error: %s", err))
 		return
@@ -143,14 +143,14 @@ func (d *policiesDataSource) Read(ctx context.Context, req datasource.ReadReques
 		}
 
 		policyList = append(policyList, policyListModel{
-			ID:                 types.StringValue(policy.ID),
-			Name:               types.StringValue(policy.Name),
-			Description:        types.StringValue(policy.Description),
-			PermissionSystemID: types.StringValue(policy.PermissionSystemID),
-			PrincipalID:        types.StringValue(policy.PrincipalID),
-			RoleIDs:            roleIDList,
-			CreatedAt:          types.StringValue(policy.CreatedAt),
-			Creator:            types.StringValue(policy.Creator),
+			ID:                  types.StringValue(policy.ID),
+			Name:                types.StringValue(policy.Name),
+			Description:         types.StringValue(policy.Description),
+			PermissionsSystemID: types.StringValue(policy.PermissionsSystemID),
+			PrincipalID:         types.StringValue(policy.PrincipalID),
+			RoleIDs:             roleIDList,
+			CreatedAt:           types.StringValue(policy.CreatedAt),
+			Creator:             types.StringValue(policy.Creator),
 		})
 	}
 

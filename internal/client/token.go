@@ -8,7 +8,7 @@ import (
 )
 
 func (c *CloudClient) CreateToken(token *models.Token) (*models.Token, error) {
-	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s/tokens", token.PermissionSystemID, token.ServiceAccountID)
+	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s/tokens", token.PermissionsSystemID, token.ServiceAccountID)
 	req, err := c.NewRequest(http.MethodPost, path, token)
 	if err != nil {
 		return nil, err
@@ -18,7 +18,10 @@ func (c *CloudClient) CreateToken(token *models.Token) (*models.Token, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		// ignore the error
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusCreated {
 		return nil, NewAPIError(resp)
@@ -32,8 +35,8 @@ func (c *CloudClient) CreateToken(token *models.Token) (*models.Token, error) {
 	return &createdToken, nil
 }
 
-func (c *CloudClient) GetToken(permissionSystemID, serviceAccountID, tokenID string) (*models.Token, error) {
-	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s/tokens/%s", permissionSystemID, serviceAccountID, tokenID)
+func (c *CloudClient) GetToken(permissionsSystemID, serviceAccountID, tokenID string) (*models.Token, error) {
+	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s/tokens/%s", permissionsSystemID, serviceAccountID, tokenID)
 	req, err := c.NewRequest(http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
@@ -43,7 +46,10 @@ func (c *CloudClient) GetToken(permissionSystemID, serviceAccountID, tokenID str
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		// ignore the error
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, NewAPIError(resp)
@@ -57,8 +63,8 @@ func (c *CloudClient) GetToken(permissionSystemID, serviceAccountID, tokenID str
 	return &token, nil
 }
 
-func (c *CloudClient) ListTokens(permissionSystemID, serviceAccountID string) ([]models.Token, error) {
-	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s/tokens", permissionSystemID, serviceAccountID)
+func (c *CloudClient) ListTokens(permissionsSystemID, serviceAccountID string) ([]models.Token, error) {
+	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s/tokens", permissionsSystemID, serviceAccountID)
 	req, err := c.NewRequest(http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
@@ -68,7 +74,10 @@ func (c *CloudClient) ListTokens(permissionSystemID, serviceAccountID string) ([
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		// ignore the error
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, NewAPIError(resp)
@@ -85,8 +94,8 @@ func (c *CloudClient) ListTokens(permissionSystemID, serviceAccountID string) ([
 }
 
 // DeleteToken deletes a token by ID for a service account
-func (c *CloudClient) DeleteToken(permissionSystemID, serviceAccountID, tokenID string) error {
-	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s/tokens/%s", permissionSystemID, serviceAccountID, tokenID)
+func (c *CloudClient) DeleteToken(permissionsSystemID, serviceAccountID, tokenID string) error {
+	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s/tokens/%s", permissionsSystemID, serviceAccountID, tokenID)
 	req, err := c.NewRequest(http.MethodDelete, path, nil)
 	if err != nil {
 		return err
@@ -96,7 +105,10 @@ func (c *CloudClient) DeleteToken(permissionSystemID, serviceAccountID, tokenID 
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		// ignore the error
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusNoContent {
 		return NewAPIError(resp)

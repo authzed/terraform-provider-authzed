@@ -9,20 +9,20 @@ import (
 	"time"
 )
 
-// PlatformClient is the HTTP client 
+// PlatformClient is the HTTP client
 type PlatformClient struct {
-	Host string
-	Token string
+	Host       string
+	Token      string
 	APIVersion string
 	HTTPClient *http.Client
 }
 
 // PlatformClientConfig represents the config for the client
 type PlatformClientConfig struct {
-	Host string
-	Token string
+	Host       string
+	Token      string
 	APIVersion string
-	Timeout time.Duration
+	Timeout    time.Duration
 }
 
 // NewPlatformClient creates a new api client

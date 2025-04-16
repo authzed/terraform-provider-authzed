@@ -23,14 +23,14 @@ type policyResource struct {
 }
 
 type policyResourceModel struct {
-	ID                 types.String `tfsdk:"id"`
-	Name               types.String `tfsdk:"name"`
-	Description        types.String `tfsdk:"description"`
-	PermissionSystemID types.String `tfsdk:"permission_system_id"`
-	PrincipalID        types.String `tfsdk:"principal_id"`
-	RoleIDs            types.List   `tfsdk:"role_ids"`
-	CreatedAt          types.String `tfsdk:"created_at"`
-	Creator            types.String `tfsdk:"creator"`
+	ID                  types.String `tfsdk:"id"`
+	Name                types.String `tfsdk:"name"`
+	Description         types.String `tfsdk:"description"`
+	PermissionsSystemID types.String `tfsdk:"permission_system_id"`
+	PrincipalID         types.String `tfsdk:"principal_id"`
+	RoleIDs             types.List   `tfsdk:"role_ids"`
+	CreatedAt           types.String `tfsdk:"created_at"`
+	Creator             types.String `tfsdk:"creator"`
 }
 
 func (r *policyResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -111,11 +111,11 @@ func (r *policyResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	// Create policy
 	policy := &models.Policy{
-		Name:               data.Name.ValueString(),
-		Description:        data.Description.ValueString(),
-		PermissionSystemID: data.PermissionSystemID.ValueString(),
-		PrincipalID:        data.PrincipalID.ValueString(),
-		RoleIDs:            roleIDs,
+		Name:                data.Name.ValueString(),
+		Description:         data.Description.ValueString(),
+		PermissionsSystemID: data.PermissionsSystemID.ValueString(),
+		PrincipalID:         data.PrincipalID.ValueString(),
+		RoleIDs:             roleIDs,
 	}
 
 	createdPolicy, err := r.client.CreatePolicy(policy)
@@ -146,7 +146,7 @@ func (r *policyResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	policy, err := r.client.GetPolicy(data.PermissionSystemID.ValueString(), data.ID.ValueString())
+	policy, err := r.client.GetPolicy(data.PermissionsSystemID.ValueString(), data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read policy, got error: %s", err))
 		return
@@ -184,7 +184,7 @@ func (r *policyResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	err := r.client.DeletePolicy(data.PermissionSystemID.ValueString(), data.ID.ValueString())
+	err := r.client.DeletePolicy(data.PermissionsSystemID.ValueString(), data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete policy, got error: %s", err))
 		return

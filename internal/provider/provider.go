@@ -88,8 +88,8 @@ func (p *CloudProvider) Resources(_ context.Context) []func() resource.Resource 
 
 func (p *CloudProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	dataSources := []func() datasource.DataSource{
-		NewPermissionSystemDataSource,
-		NewPermissionSystemsDataSource,
+		NewPermissionsSystemDataSource,
+		NewPermissionsSystemsDataSource,
 		NewRoleDataSource,
 		NewRolesDataSource,
 		NewPolicyDataSource,

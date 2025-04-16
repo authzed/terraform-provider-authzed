@@ -23,13 +23,13 @@ type roleResource struct {
 }
 
 type roleResourceModel struct {
-	ID                 types.String `tfsdk:"id"`
-	Name               types.String `tfsdk:"name"`
-	Description        types.String `tfsdk:"description"`
-	PermissionSystemID types.String `tfsdk:"permission_system_id"`
-	Permissions        types.Map    `tfsdk:"permissions"`
-	CreatedAt          types.String `tfsdk:"created_at"`
-	Creator            types.String `tfsdk:"creator"`
+	ID                  types.String `tfsdk:"id"`
+	Name                types.String `tfsdk:"name"`
+	Description         types.String `tfsdk:"description"`
+	PermissionsSystemID types.String `tfsdk:"permission_system_id"`
+	Permissions         types.Map    `tfsdk:"permissions"`
+	CreatedAt           types.String `tfsdk:"created_at"`
+	Creator             types.String `tfsdk:"creator"`
 }
 
 func (r *roleResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -103,10 +103,10 @@ func (r *roleResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 	// Create role
 	role := &models.Role{
-		Name:               data.Name.ValueString(),
-		Description:        data.Description.ValueString(),
-		PermissionSystemID: data.PermissionSystemID.ValueString(),
-		Permissions:        permissionsMap,
+		Name:                data.Name.ValueString(),
+		Description:         data.Description.ValueString(),
+		PermissionsSystemID: data.PermissionsSystemID.ValueString(),
+		Permissions:         permissionsMap,
 	}
 
 	createdRole, err := r.client.CreateRole(role)
@@ -130,7 +130,7 @@ func (r *roleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 
-	role, err := r.client.GetRole(data.PermissionSystemID.ValueString(), data.ID.ValueString())
+	role, err := r.client.GetRole(data.PermissionsSystemID.ValueString(), data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read role, got error: %s", err))
 		return
@@ -164,7 +164,7 @@ func (r *roleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
-	err := r.client.DeleteRole(data.PermissionSystemID.ValueString(), data.ID.ValueString())
+	err := r.client.DeleteRole(data.PermissionsSystemID.ValueString(), data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete role during update, got error: %s", err))
 		return
@@ -175,10 +175,10 @@ func (r *roleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 
 	// Create role with updated data, since we
 	role := &models.Role{
-		Name:               data.Name.ValueString(),
-		Description:        data.Description.ValueString(),
-		PermissionSystemID: data.PermissionSystemID.ValueString(),
-		Permissions:        permissionsMap,
+		Name:                data.Name.ValueString(),
+		Description:         data.Description.ValueString(),
+		PermissionsSystemID: data.PermissionsSystemID.ValueString(),
+		Permissions:         permissionsMap,
 	}
 
 	createdRole, err := r.client.CreateRole(role)
@@ -201,7 +201,7 @@ func (r *roleResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		return
 	}
 
-	err := r.client.DeleteRole(data.PermissionSystemID.ValueString(), data.ID.ValueString())
+	err := r.client.DeleteRole(data.PermissionsSystemID.ValueString(), data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete role, got error: %s", err))
 		return

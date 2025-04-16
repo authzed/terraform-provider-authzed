@@ -21,11 +21,11 @@ type TokensDataSource struct {
 }
 
 type TokensDataSourceModel struct {
-	ID                 types.String    `tfsdk:"id"`
-	PermissionSystemID types.String    `tfsdk:"permission_system_id"`
-	ServiceAccountID   types.String    `tfsdk:"service_account_id"`
-	Tokens             []TokenDataItem `tfsdk:"tokens"`
-	TokensCount        types.Int64     `tfsdk:"tokens_count"`
+	ID                  types.String    `tfsdk:"id"`
+	PermissionsSystemID types.String    `tfsdk:"permission_system_id"`
+	ServiceAccountID    types.String    `tfsdk:"service_account_id"`
+	Tokens              []TokenDataItem `tfsdk:"tokens"`
+	TokensCount         types.Int64     `tfsdk:"tokens_count"`
 }
 
 type TokenDataItem struct {
@@ -117,10 +117,10 @@ func (d *TokensDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
-	permissionSystemID := config.PermissionSystemID.ValueString()
+	permissionsSystemID := config.PermissionsSystemID.ValueString()
 	serviceAccountID := config.ServiceAccountID.ValueString()
 
-	tokens, err := d.client.ListTokens(permissionSystemID, serviceAccountID)
+	tokens, err := d.client.ListTokens(permissionsSystemID, serviceAccountID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading tokens",
@@ -130,7 +130,7 @@ func (d *TokensDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	}
 
 	// Generate the ID
-	config.ID = types.StringValue(fmt.Sprintf("%s:%s", permissionSystemID, serviceAccountID))
+	config.ID = types.StringValue(fmt.Sprintf("%s:%s", permissionsSystemID, serviceAccountID))
 
 	// Convert the tokens into the model
 	tokensList := make([]TokenDataItem, 0, len(tokens))

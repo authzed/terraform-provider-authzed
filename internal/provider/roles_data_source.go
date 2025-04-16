@@ -23,9 +23,9 @@ type rolesDataSource struct {
 }
 
 type rolesDataSourceModel struct {
-	ID                 types.String    `tfsdk:"id"`
-	PermissionSystemID types.String    `tfsdk:"permission_system_id"`
-	Roles              []roleDataModel `tfsdk:"roles"`
+	ID                  types.String    `tfsdk:"id"`
+	PermissionsSystemID types.String    `tfsdk:"permission_system_id"`
+	Roles               []roleDataModel `tfsdk:"roles"`
 }
 
 // roleDataModel describes a single role in the roles list
@@ -111,14 +111,14 @@ func (d *rolesDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	}
 
 	// Get roles from API
-	roles, err := d.client.ListRoles(data.PermissionSystemID.ValueString())
+	roles, err := d.client.ListRoles(data.PermissionsSystemID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to list roles, got error: %s", err))
 		return
 	}
 
 	// Map response to model
-	data.ID = types.StringValue(data.PermissionSystemID.ValueString())
+	data.ID = types.StringValue(data.PermissionsSystemID.ValueString())
 
 	// Map roles
 	rolesList := make([]roleDataModel, 0, len(roles))

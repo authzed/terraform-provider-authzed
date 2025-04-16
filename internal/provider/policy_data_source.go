@@ -22,15 +22,15 @@ type policyDataSource struct {
 }
 
 type policyDataSourceModel struct {
-	ID                 types.String `tfsdk:"id"`
-	PolicyID           types.String `tfsdk:"policy_id"`
-	Name               types.String `tfsdk:"name"`
-	Description        types.String `tfsdk:"description"`
-	PermissionSystemID types.String `tfsdk:"permission_system_id"`
-	PrincipalID        types.String `tfsdk:"principal_id"`
-	RoleIDs            types.List   `tfsdk:"role_ids"`
-	CreatedAt          types.String `tfsdk:"created_at"`
-	Creator            types.String `tfsdk:"creator"`
+	ID                  types.String `tfsdk:"id"`
+	PolicyID            types.String `tfsdk:"policy_id"`
+	Name                types.String `tfsdk:"name"`
+	Description         types.String `tfsdk:"description"`
+	PermissionsSystemID types.String `tfsdk:"permission_system_id"`
+	PrincipalID         types.String `tfsdk:"principal_id"`
+	RoleIDs             types.List   `tfsdk:"role_ids"`
+	CreatedAt           types.String `tfsdk:"created_at"`
+	Creator             types.String `tfsdk:"creator"`
 }
 
 func (d *policyDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -106,7 +106,7 @@ func (d *policyDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
-	policy, err := d.client.GetPolicy(data.PermissionSystemID.ValueString(), data.PolicyID.ValueString())
+	policy, err := d.client.GetPolicy(data.PermissionsSystemID.ValueString(), data.PolicyID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read policy, got error: %s", err))
 		return

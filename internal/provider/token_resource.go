@@ -25,14 +25,14 @@ type TokenResource struct {
 }
 
 type TokenResourceModel struct {
-	ID                 types.String `tfsdk:"id"`
-	Name               types.String `tfsdk:"name"`
-	Description        types.String `tfsdk:"description"`
-	PermissionSystemID types.String `tfsdk:"permission_system_id"`
-	ServiceAccountID   types.String `tfsdk:"service_account_id"`
-	CreatedAt          types.String `tfsdk:"created_at"`
-	Creator            types.String `tfsdk:"creator"`
-	Secret             types.String `tfsdk:"secret"`
+	ID                  types.String `tfsdk:"id"`
+	Name                types.String `tfsdk:"name"`
+	Description         types.String `tfsdk:"description"`
+	PermissionsSystemID types.String `tfsdk:"permission_system_id"`
+	ServiceAccountID    types.String `tfsdk:"service_account_id"`
+	CreatedAt           types.String `tfsdk:"created_at"`
+	Creator             types.String `tfsdk:"creator"`
+	Secret              types.String `tfsdk:"secret"`
 }
 
 func (r *TokenResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -111,15 +111,15 @@ func (r *TokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	// Create new token
 	token := &models.Token{
-		Name:               plan.Name.ValueString(),
-		Description:        plan.Description.ValueString(),
-		PermissionSystemID: plan.PermissionSystemID.ValueString(),
-		ServiceAccountID:   plan.ServiceAccountID.ValueString(),
+		Name:                plan.Name.ValueString(),
+		Description:         plan.Description.ValueString(),
+		PermissionsSystemID: plan.PermissionsSystemID.ValueString(),
+		ServiceAccountID:    plan.ServiceAccountID.ValueString(),
 	}
 
 	tflog.Info(ctx, "Creating token", map[string]interface{}{
 		"name":                 token.Name,
-		"permission_system_id": token.PermissionSystemID,
+		"permission_system_id": token.PermissionsSystemID,
 		"service_account_id":   token.ServiceAccountID,
 	})
 
@@ -135,7 +135,7 @@ func (r *TokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	plan.ID = types.StringValue(createdToken.ID)
 	plan.Name = types.StringValue(createdToken.Name)
 	plan.Description = types.StringValue(createdToken.Description)
-	plan.PermissionSystemID = types.StringValue(createdToken.PermissionSystemID)
+	plan.PermissionsSystemID = types.StringValue(createdToken.PermissionsSystemID)
 	plan.ServiceAccountID = types.StringValue(createdToken.ServiceAccountID)
 	plan.CreatedAt = types.StringValue(createdToken.CreatedAt)
 	plan.Creator = types.StringValue(createdToken.Creator)
@@ -164,7 +164,7 @@ func (r *TokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 
 	token, err := r.client.GetToken(
-		state.PermissionSystemID.ValueString(),
+		state.PermissionsSystemID.ValueString(),
 		state.ServiceAccountID.ValueString(),
 		state.ID.ValueString(),
 	)
@@ -187,7 +187,7 @@ func (r *TokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	state.ID = types.StringValue(token.ID)
 	state.Name = types.StringValue(token.Name)
 	state.Description = types.StringValue(token.Description)
-	state.PermissionSystemID = types.StringValue(token.PermissionSystemID)
+	state.PermissionsSystemID = types.StringValue(token.PermissionsSystemID)
 	state.ServiceAccountID = types.StringValue(token.ServiceAccountID)
 	state.CreatedAt = types.StringValue(token.CreatedAt)
 	state.Creator = types.StringValue(token.Creator)
@@ -220,7 +220,7 @@ func (r *TokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	}
 
 	err := r.client.DeleteToken(
-		state.PermissionSystemID.ValueString(),
+		state.PermissionsSystemID.ValueString(),
 		state.ServiceAccountID.ValueString(),
 		state.ID.ValueString(),
 	)

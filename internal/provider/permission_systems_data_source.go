@@ -11,34 +11,34 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-var _ datasource.DataSource = &permissionSystemsDataSource{}
+var _ datasource.DataSource = &permissionsSystemsDataSource{}
 
-func NewPermissionSystemsDataSource() datasource.DataSource {
-	return &permissionSystemsDataSource{}
+func NewPermissionsSystemsDataSource() datasource.DataSource {
+	return &permissionsSystemsDataSource{}
 }
 
-type permissionSystemsDataSource struct {
+type permissionsSystemsDataSource struct {
 	client *client.CloudClient
 }
 
-// permissionSystemsDataSourceModel maps the data source schema to values
-type permissionSystemsDataSourceModel struct {
-	ID                types.String                   `tfsdk:"id"`
-	PermissionSystems []permissionSystemModelForList `tfsdk:"permission_systems"`
+// permissionsSystemsDataSourceModel maps the data source schema to values
+type permissionsSystemsDataSourceModel struct {
+	ID                 types.String                    `tfsdk:"id"`
+	PermissionsSystems []permissionsSystemModelForList `tfsdk:"permission_systems"`
 }
 
-type permissionSystemModelForList struct {
+type permissionsSystemModelForList struct {
 	ID            types.String `tfsdk:"id"`
 	Name          types.String `tfsdk:"name"`
 	GlobalDnsPath types.String `tfsdk:"global_dns_path"`
 	SystemType    types.String `tfsdk:"system_type"`
 }
 
-func (d *permissionSystemsDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *permissionsSystemsDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_permission_systems"
 }
 
-func (d *permissionSystemsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *permissionsSystemsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Fetches a list of all permission systems",
 		Attributes: map[string]schema.Attribute{
@@ -74,7 +74,7 @@ func (d *permissionSystemsDataSource) Schema(_ context.Context, _ datasource.Sch
 	}
 }
 
-func (d *permissionSystemsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *permissionsSystemsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -92,15 +92,15 @@ func (d *permissionSystemsDataSource) Configure(_ context.Context, req datasourc
 }
 
 // Read refreshes the Terraform state with the latest data
-func (d *permissionSystemsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var data permissionSystemsDataSourceModel
+func (d *permissionsSystemsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var data permissionsSystemsDataSourceModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// List permission systems from API
-	permissionSystems, err := d.client.ListPermissionSystems()
+	permissionsSystems, err := d.client.ListPermissionsSystems()
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to list permission systems, got error: %s", err))
 		return
@@ -109,9 +109,9 @@ func (d *permissionSystemsDataSource) Read(ctx context.Context, req datasource.R
 	// Set ID for the data source
 	data.ID = types.StringValue("all_permission_systems")
 
-	permissionSystemsList := []permissionSystemModelForList{}
-	for _, ps := range permissionSystems {
-		permissionSystemsList = append(permissionSystemsList, permissionSystemModelForList{
+	permissionsSystemsList := []permissionsSystemModelForList{}
+	for _, ps := range permissionsSystems {
+		permissionsSystemsList = append(permissionsSystemsList, permissionsSystemModelForList{
 			ID:            types.StringValue(ps.ID),
 			Name:          types.StringValue(ps.Name),
 			GlobalDnsPath: types.StringValue(ps.GlobalDnsPath),
@@ -119,7 +119,7 @@ func (d *permissionSystemsDataSource) Read(ctx context.Context, req datasource.R
 		})
 	}
 
-	data.PermissionSystems = permissionSystemsList
+	data.PermissionsSystems = permissionsSystemsList
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

@@ -23,12 +23,12 @@ type serviceAccountResource struct {
 }
 
 type serviceAccountResourceModel struct {
-	ID                 types.String `tfsdk:"id"`
-	Name               types.String `tfsdk:"name"`
-	Description        types.String `tfsdk:"description"`
-	PermissionSystemID types.String `tfsdk:"permission_system_id"`
-	CreatedAt          types.String `tfsdk:"created_at"`
-	Creator            types.String `tfsdk:"creator"`
+	ID                  types.String `tfsdk:"id"`
+	Name                types.String `tfsdk:"name"`
+	Description         types.String `tfsdk:"description"`
+	PermissionsSystemID types.String `tfsdk:"permission_system_id"`
+	CreatedAt           types.String `tfsdk:"created_at"`
+	Creator             types.String `tfsdk:"creator"`
 }
 
 func (r *serviceAccountResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -92,20 +92,20 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 	}
 
 	// More detailed debug output
-	fmt.Printf("DEBUG TERRAFORM: Creating service account with Permission System ID: %s\n", data.PermissionSystemID.ValueString())
+	fmt.Printf("DEBUG TERRAFORM: Creating service account with Permissions System ID: %s\n", data.PermissionsSystemID.ValueString())
 	fmt.Printf("DEBUG TERRAFORM: Service account name: %s\n", data.Name.ValueString())
 	fmt.Printf("DEBUG TERRAFORM: Service account description: %s\n", data.Description.ValueString())
 
 	// Create service account
 	serviceAccount := &models.ServiceAccount{
-		Name:               data.Name.ValueString(),
-		Description:        data.Description.ValueString(),
-		PermissionSystemID: data.PermissionSystemID.ValueString(),
+		Name:                data.Name.ValueString(),
+		Description:         data.Description.ValueString(),
+		PermissionsSystemID: data.PermissionsSystemID.ValueString(),
 	}
 
 	// Try force setting the permission system ID for request building
 	// This is for API path construction only, not the JSON body
-	fmt.Printf("DEBUG: Force setting permissionSystemID to %s\n", data.PermissionSystemID.ValueString())
+	fmt.Printf("DEBUG: Force setting permissionsSystemID to %s\n", data.PermissionsSystemID.ValueString())
 
 	createdServiceAccount, err := r.client.CreateServiceAccount(serviceAccount)
 	if err != nil {
@@ -127,7 +127,7 @@ func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	serviceAccount, err := r.client.GetServiceAccount(data.PermissionSystemID.ValueString(), data.ID.ValueString())
+	serviceAccount, err := r.client.GetServiceAccount(data.PermissionsSystemID.ValueString(), data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read service account, got error: %s", err))
 		return
@@ -150,7 +150,7 @@ func (r *serviceAccountResource) Update(ctx context.Context, req resource.Update
 	}
 
 	// The API  doesn't support direct updates, so we need to delete and recreate
-	err := r.client.DeleteServiceAccount(data.PermissionSystemID.ValueString(), data.ID.ValueString())
+	err := r.client.DeleteServiceAccount(data.PermissionsSystemID.ValueString(), data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete service account during update, got error: %s", err))
 		return
@@ -158,9 +158,9 @@ func (r *serviceAccountResource) Update(ctx context.Context, req resource.Update
 
 	// Create service account with updated data
 	serviceAccount := &models.ServiceAccount{
-		Name:               data.Name.ValueString(),
-		Description:        data.Description.ValueString(),
-		PermissionSystemID: data.PermissionSystemID.ValueString(),
+		Name:                data.Name.ValueString(),
+		Description:         data.Description.ValueString(),
+		PermissionsSystemID: data.PermissionsSystemID.ValueString(),
 	}
 
 	createdServiceAccount, err := r.client.CreateServiceAccount(serviceAccount)
@@ -183,7 +183,7 @@ func (r *serviceAccountResource) Delete(ctx context.Context, req resource.Delete
 		return
 	}
 
-	err := r.client.DeleteServiceAccount(data.PermissionSystemID.ValueString(), data.ID.ValueString())
+	err := r.client.DeleteServiceAccount(data.PermissionsSystemID.ValueString(), data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete service account, got error: %s", err))
 		return

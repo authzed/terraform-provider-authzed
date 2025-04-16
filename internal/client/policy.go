@@ -8,8 +8,8 @@ import (
 )
 
 // ListPolicies retrieves all policies for a permission system
-func (c *CloudClient) ListPolicies(permissionSystemID string) ([]models.Policy, error) {
-	path := fmt.Sprintf("/ps/%s/access/policies", permissionSystemID)
+func (c *CloudClient) ListPolicies(permissionsSystemID string) ([]models.Policy, error) {
+	path := fmt.Sprintf("/ps/%s/access/policies", permissionsSystemID)
 	req, err := c.NewRequest(http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
@@ -19,7 +19,10 @@ func (c *CloudClient) ListPolicies(permissionSystemID string) ([]models.Policy, 
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		// ignore the error
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, NewAPIError(resp)
@@ -36,8 +39,8 @@ func (c *CloudClient) ListPolicies(permissionSystemID string) ([]models.Policy, 
 }
 
 // GetPolicy retrieves a policy by its ID
-func (c *CloudClient) GetPolicy(permissionSystemID, policyID string) (*models.Policy, error) {
-	path := fmt.Sprintf("/ps/%s/access/policies/%s", permissionSystemID, policyID)
+func (c *CloudClient) GetPolicy(permissionsSystemID, policyID string) (*models.Policy, error) {
+	path := fmt.Sprintf("/ps/%s/access/policies/%s", permissionsSystemID, policyID)
 	req, err := c.NewRequest(http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
@@ -47,7 +50,10 @@ func (c *CloudClient) GetPolicy(permissionSystemID, policyID string) (*models.Po
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		// ignore the error
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, NewAPIError(resp)
@@ -62,7 +68,7 @@ func (c *CloudClient) GetPolicy(permissionSystemID, policyID string) (*models.Po
 }
 
 func (c *CloudClient) CreatePolicy(policy *models.Policy) (*models.Policy, error) {
-	path := fmt.Sprintf("/ps/%s/access/policies", policy.PermissionSystemID)
+	path := fmt.Sprintf("/ps/%s/access/policies", policy.PermissionsSystemID)
 	req, err := c.NewRequest(http.MethodPost, path, policy)
 	if err != nil {
 		return nil, err
@@ -72,7 +78,10 @@ func (c *CloudClient) CreatePolicy(policy *models.Policy) (*models.Policy, error
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		// ignore the error
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusCreated {
 		return nil, NewAPIError(resp)
@@ -86,8 +95,8 @@ func (c *CloudClient) CreatePolicy(policy *models.Policy) (*models.Policy, error
 	return &createdPolicy, nil
 }
 
-func (c *CloudClient) DeletePolicy(permissionSystemID, policyID string) error {
-	path := fmt.Sprintf("/ps/%s/access/policies/%s", permissionSystemID, policyID)
+func (c *CloudClient) DeletePolicy(permissionsSystemID, policyID string) error {
+	path := fmt.Sprintf("/ps/%s/access/policies/%s", permissionsSystemID, policyID)
 	req, err := c.NewRequest(http.MethodDelete, path, nil)
 	if err != nil {
 		return err
@@ -97,7 +106,10 @@ func (c *CloudClient) DeletePolicy(permissionSystemID, policyID string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		// ignore the error
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusNoContent {
 		return NewAPIError(resp)
