@@ -11,3 +11,6 @@ dist/
 *.dylib
 *.test
 *.out
+# Terraform state
+*.tfstate
+*.tfstate.backup

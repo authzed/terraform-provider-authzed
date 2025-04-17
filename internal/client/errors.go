@@ -28,7 +28,7 @@ func NewAPIError(resp *http.Response) *APIError {
 
 	var errMsg string
 	// Try to parse as JSON if possible
-	var jsonErr map[string]interface{}
+	var jsonErr map[string]any
 	if err := json.Unmarshal(body, &jsonErr); err == nil {
 		if msg, ok := jsonErr["message"].(string); ok {
 			errMsg = msg

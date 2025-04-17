@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-var _ datasource.DataSource = &permissionsSystemsDataSource{}
+var _ datasource.DataSourceWithConfigure = &permissionsSystemsDataSource{}
 
 func NewPermissionsSystemsDataSource() datasource.DataSource {
 	return &permissionsSystemsDataSource{}

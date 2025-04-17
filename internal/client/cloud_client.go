@@ -48,7 +48,7 @@ func NewCloudClient(cfg *CloudClientConfig) *CloudClient {
 }
 
 // NewRequest creates a new HTTP request with the necessary headers
-func (c *CloudClient) NewRequest(method, path string, body interface{}) (*http.Request, error) {
+func (c *CloudClient) NewRequest(method, path string, body any) (*http.Request, error) {
 	// Fix URL construction to handle trailing slashes properly
 	host := c.Host
 	// Remove trailing slash from host if path starts with slash

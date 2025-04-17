@@ -117,7 +117,7 @@ func (r *TokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		ServiceAccountID:    plan.ServiceAccountID.ValueString(),
 	}
 
-	tflog.Info(ctx, "Creating token", map[string]interface{}{
+	tflog.Info(ctx, "Creating token", map[string]any{
 		"name":                 token.Name,
 		"permission_system_id": token.PermissionsSystemID,
 		"service_account_id":   token.ServiceAccountID,
