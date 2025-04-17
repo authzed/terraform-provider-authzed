@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-var _ datasource.DataSource = &rolesDataSource{}
+var _ datasource.DataSourceWithConfigure = &rolesDataSource{}
 
 // NewRolesDataSource creates a new data source for listing roles
 func NewRolesDataSource() datasource.DataSource {

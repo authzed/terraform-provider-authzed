@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-var _ datasource.DataSource = &serviceAccountsDataSource{}
+var _ datasource.DataSourceWithConfigure = &serviceAccountsDataSource{}
 
 func NewServiceAccountsDataSource() datasource.DataSource {
 	return &serviceAccountsDataSource{}

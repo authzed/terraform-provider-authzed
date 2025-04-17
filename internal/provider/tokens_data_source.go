@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-var _ datasource.DataSource = &TokensDataSource{}
+var _ datasource.DataSourceWithConfigure = &TokensDataSource{}
 
 func NewTokensDataSource() datasource.DataSource {
 	return &TokensDataSource{}

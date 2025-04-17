@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-var _ datasource.DataSource = &policiesDataSource{}
+var _ datasource.DataSourceWithConfigure = &policiesDataSource{}
 
 func NewPoliciesDataSource() datasource.DataSource {
 	return &policiesDataSource{}
