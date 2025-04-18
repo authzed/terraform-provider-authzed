@@ -24,12 +24,12 @@ func (l Lint) Go() error {
 
 // Gofumpt Run gofumpt
 func (Lint) Gofumpt() error {
-	fmt.Println("formatting go")
-	return RunSh("go", Tool())("run", "mvdan.cc/gofumpt", "-l", "-w", "..")
+	fmt.Println("running golangci-lint fmt")
+	return RunSh("go", WithV())("run", "github.com/golangci/golangci-lint/v2/cmd/golangci-lint", "fmt")
 }
 
 // Golangcilint Run golangci-lint
 func (Lint) Golangcilint() error {
-	fmt.Println("running golangci-lint")
+	fmt.Println("running golangci-lint check")
 	return RunSh("go", WithV())("run", "github.com/golangci/golangci-lint/v2/cmd/golangci-lint", "run", "--fix")
 }
