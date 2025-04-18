@@ -1,0 +1,25 @@
+---
+name: "Lint"
+on:  # yamllint disable-line rule:truthy
+  push:
+    branches:
+      - "!dependabot/*"
+      - "main"
+  pull_request:
+    branches: ["*"]
+  merge_group:
+    types:
+      - "checks_requested"
+jobs:
+  go-lint:
+    name: "Lint Go"
+    runs-on: "depot-ubuntu-24.04"
+    steps:
+      - uses: "actions/checkout@v4"
+      - uses: "authzed/actions/setup-go@main"
+      - name: "Lint Go"
+        run: "go run mage.go lint:go"
+      - uses: "chainguard-dev/actions/nodiff@main"
+        with:
+          path: ""
+          fixup-command: "go run mage.go lint:go"
