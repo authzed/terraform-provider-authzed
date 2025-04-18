@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
 	"terraform-provider-authzed/internal/models"
 )
 

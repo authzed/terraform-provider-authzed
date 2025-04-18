@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+
 	"terraform-provider-authzed/internal/client"
 	"terraform-provider-authzed/internal/models"
 
