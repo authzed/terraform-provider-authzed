@@ -11,9 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 )
 
-var (
-	version = "dev"
-)
+var version = "dev"
 
 func init() {
 	log.SetOutput(os.Stderr)
