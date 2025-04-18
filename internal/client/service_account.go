@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
 	"terraform-provider-authzed/internal/models"
 )
 

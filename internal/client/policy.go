@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
 	"terraform-provider-authzed/internal/models"
 )
 
