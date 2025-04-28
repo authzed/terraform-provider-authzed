@@ -5,19 +5,17 @@ info:
   description: Cloud API for AuthZed Dedicated
   termsOfService: https://authzed.com/terms-conditions
   title: AuthZed Cloud API
-  version: ""
+  version: 25r1
 externalDocs:
   description: Find out more at the official Authzed Docs site
   url: https://authzed.com/docs
-servers:
-- url: https://api.admin.stage.aws.authzed.net
 tags:
-- description: A permission system defines a managed SpiceDB instance
+- description: A permissions system defines a managed SpiceDB instance
   externalDocs:
     description: Find out more at the official Authzed Docs site
     url: https://authzed.com/docs
-  name: permission system
-- description: Set of APIs to for the fine-grained access management of a Permission
+  name: permissions system
+- description: Set of APIs to for the fine-grained access management of a Permissions
     System
   externalDocs:
     description: Find out more at the official Authzed Docs site
@@ -26,8 +24,8 @@ tags:
 paths:
   /ps:
     get:
-      description: list all permission systems
-      operationId: ListPermissionSystems
+      description: list all permissions systems
+      operationId: ListPermissionsSystems
       parameters:
       - description: The version of the API to use. Must be specified.
         in: header
@@ -41,19 +39,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ListPermissionSystemsResponse'
+                $ref: '#/components/schemas/ListPermissionsSystemsResponse'
           description: OK
       security:
       - auth: []
       tags:
-      - permission system
-  /ps/{permissionSystemID}:
+      - permissions system
+  /ps/{permissionsSystemID}:
     get:
-      description: get a permission system by its ID
-      operationId: GetPermissionSystem
+      description: get a permissions system by its ID
+      operationId: GetPermissionsSystem
       parameters:
       - in: path
-        name: permissionSystemID
+        name: permissionsSystemID
         required: true
         schema:
           type: string
@@ -69,19 +67,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetPermissionSystemResponse'
+                $ref: '#/components/schemas/GetPermissionsSystemResponse'
           description: OK
       security:
       - auth: []
       tags:
-      - permission system
-  /ps/{permissionSystemID}/access/policies:
+      - permissions system
+  /ps/{permissionsSystemID}/access/policies:
     get:
       description: list all permission system access-management polices
       operationId: ListPolicies
       parameters:
       - in: path
-        name: permissionSystemID
+        name: permissionsSystemID
         required: true
         schema:
           pattern: ^ps-[a-zA-Z0-9-]+$
@@ -108,12 +106,12 @@ paths:
       description: create a permission system access-management policy
       operationId: CreatePolicy
       parameters:
-      - description: The globally unique ID for the Permission System
+      - description: The globally unique ID for the Permissions System
         in: path
-        name: permissionSystemID
+        name: permissionsSystemID
         required: true
         schema:
-          description: The globally unique ID for the Permission System
+          description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
           readOnly: true
           type: string
@@ -136,11 +134,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/CreatePolicyResponse'
           description: Created
+          headers:
+            ETag:
+              description: The ETag of the configuration after the update.
+              schema:
+                description: The ETag of the configuration after the update.
+                type: string
+              style: simple
       security:
       - auth: []
       tags:
       - access management
-  /ps/{permissionSystemID}/access/policies/{policyID}:
+  /ps/{permissionsSystemID}/access/policies/{policyID}:
     delete:
       description: delete a permission system access-management policy by its ID
       operationId: DeletePolicy
@@ -152,7 +157,7 @@ paths:
           pattern: ^apc-[a-zA-Z0-9-]+$
           type: string
       - in: path
-        name: permissionSystemID
+        name: permissionsSystemID
         required: true
         schema:
           pattern: ^ps-[a-zA-Z0-9-]+$
@@ -182,7 +187,7 @@ paths:
           pattern: ^apc-[a-zA-Z0-9-]+$
           type: string
       - in: path
-        name: permissionSystemID
+        name: permissionsSystemID
         required: true
         schema:
           pattern: ^ps-[a-zA-Z0-9-]+$
@@ -201,17 +206,78 @@ paths:
               schema:
                 $ref: '#/components/schemas/GetPolicyResponse'
           description: OK
+          headers:
+            ETag:
+              description: The ETag of the configuration after the update.
+              schema:
+                description: The ETag of the configuration after the update.
+                type: string
+              style: simple
       security:
       - auth: []
       tags:
       - access management
-  /ps/{permissionSystemID}/access/roles:
+    put:
+      description: update a permission system access-management policy
+      operationId: UpdatePolicy
+      parameters:
+      - in: path
+        name: policyID
+        required: true
+        schema:
+          pattern: ^apc-[a-zA-Z0-9-]+$
+          type: string
+      - in: path
+        name: permissionsSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - description: The ETag of the Policy to update. If this does not match the
+          current ETag, the update will be rejected.
+        in: header
+        name: If-Match
+        schema:
+          description: The ETag of the Policy to update. If this does not match the
+            current ETag, the update will be rejected.
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePolicyRequest'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdatePolicyResponse'
+          description: OK
+          headers:
+            ETag:
+              description: The ETag of the configuration after the update.
+              schema:
+                description: The ETag of the configuration after the update.
+                type: string
+              style: simple
+      security:
+      - auth: []
+      tags:
+      - access management
+  /ps/{permissionsSystemID}/access/roles:
     get:
       description: list all permission system access-management roles
       operationId: ListRoles
       parameters:
       - in: path
-        name: permissionSystemID
+        name: permissionsSystemID
         required: true
         schema:
           pattern: ^ps-[a-zA-Z0-9-]+$
@@ -238,12 +304,12 @@ paths:
       description: create a permission system access-management role
       operationId: CreateRole
       parameters:
-      - description: The globally unique ID for the Permission System
+      - description: The globally unique ID for the Permissions System
         in: path
-        name: permissionSystemID
+        name: permissionsSystemID
         required: true
         schema:
-          description: The globally unique ID for the Permission System
+          description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
           readOnly: true
           type: string
@@ -266,11 +332,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/CreateRoleResponse'
           description: Created
+          headers:
+            ETag:
+              description: The ETag of the configuration after the update.
+              schema:
+                description: The ETag of the configuration after the update.
+                type: string
+              style: simple
       security:
       - auth: []
       tags:
       - access management
-  /ps/{permissionSystemID}/access/roles/{roleID}:
+  /ps/{permissionsSystemID}/access/roles/{roleID}:
     delete:
       description: delete a permission system access-management role by its ID
       operationId: DeleteRole
@@ -282,7 +355,7 @@ paths:
           pattern: ^arl-[a-zA-Z0-9-]+$
           type: string
       - in: path
-        name: permissionSystemID
+        name: permissionsSystemID
         required: true
         schema:
           pattern: ^ps-[a-zA-Z0-9-]+$
@@ -312,7 +385,7 @@ paths:
           pattern: ^arl-[a-zA-Z0-9-]+$
           type: string
       - in: path
-        name: permissionSystemID
+        name: permissionsSystemID
         required: true
         schema:
           pattern: ^ps-[a-zA-Z0-9-]+$
@@ -331,17 +404,78 @@ paths:
               schema:
                 $ref: '#/components/schemas/GetRoleResponse'
           description: OK
+          headers:
+            ETag:
+              description: The ETag of the configuration after the update.
+              schema:
+                description: The ETag of the configuration after the update.
+                type: string
+              style: simple
       security:
       - auth: []
       tags:
       - access management
-  /ps/{permissionSystemID}/access/service-accounts:
+    put:
+      description: update a permission system access-management role
+      operationId: UpdateRole
+      parameters:
+      - in: path
+        name: roleID
+        required: true
+        schema:
+          pattern: ^arl-[a-zA-Z0-9-]+$
+          type: string
+      - in: path
+        name: permissionsSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - description: The ETag of the Role to update. If this does not match the current
+          ETag, the update will be rejected.
+        in: header
+        name: If-Match
+        schema:
+          description: The ETag of the Role to update. If this does not match the
+            current ETag, the update will be rejected.
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRoleRequest'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateRoleResponse'
+          description: OK
+          headers:
+            ETag:
+              description: The ETag of the configuration after the update.
+              schema:
+                description: The ETag of the configuration after the update.
+                type: string
+              style: simple
+      security:
+      - auth: []
+      tags:
+      - access management
+  /ps/{permissionsSystemID}/access/service-accounts:
     get:
       description: list all permission system access-management service accounts
       operationId: ListServiceAccounts
       parameters:
       - in: path
-        name: permissionSystemID
+        name: permissionsSystemID
         required: true
         schema:
           pattern: ^ps-[a-zA-Z0-9-]+$
@@ -368,12 +502,12 @@ paths:
       description: create a permission system access-management service account
       operationId: CreateServiceAccount
       parameters:
-      - description: The globally unique ID for the Permission System
+      - description: The globally unique ID for the Permissions System
         in: path
-        name: permissionSystemID
+        name: permissionsSystemID
         required: true
         schema:
-          description: The globally unique ID for the Permission System
+          description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
           readOnly: true
           type: string
@@ -396,14 +530,21 @@ paths:
               schema:
                 $ref: '#/components/schemas/CreateServiceAccountResponse'
           description: Created
+          headers:
+            ETag:
+              description: The ETag of the configuration after the update.
+              schema:
+                description: The ETag of the configuration after the update.
+                type: string
+              style: simple
       security:
       - auth: []
       tags:
       - access management
-  /ps/{permissionSystemID}/access/service-accounts/{serviceAccountID}:
+  /ps/{permissionsSystemID}/access/service-accounts/{serviceAccountID}:
     delete:
       description: delete a permission system access-management service account by
-        its ID
+        its ID. All referencing policies and associated tokens will be deleted.
       operationId: DeleteServiceAccount
       parameters:
       - in: path
@@ -413,7 +554,7 @@ paths:
           pattern: ^asa-[a-zA-Z0-9-]+$
           type: string
       - in: path
-        name: permissionSystemID
+        name: permissionsSystemID
         required: true
         schema:
           pattern: ^ps-[a-zA-Z0-9-]+$
@@ -444,7 +585,7 @@ paths:
           pattern: ^asa-[a-zA-Z0-9-]+$
           type: string
       - in: path
-        name: permissionSystemID
+        name: permissionsSystemID
         required: true
         schema:
           pattern: ^ps-[a-zA-Z0-9-]+$
@@ -463,18 +604,84 @@ paths:
               schema:
                 $ref: '#/components/schemas/GetServiceAccountResponse'
           description: OK
+          headers:
+            ETag:
+              description: The ETag of the configuration after the update.
+              schema:
+                description: The ETag of the configuration after the update.
+                type: string
+              style: simple
       security:
       - auth: []
       tags:
       - access management
-  /ps/{permissionSystemID}/access/service-accounts/{serviceAccountID}/tokens:
+    put:
+      description: update a permission system access-management service account
+      operationId: UpdateServiceAccount
+      parameters:
+      - description: The globally unique ID for this Service Account
+        in: path
+        name: serviceAccountID
+        required: true
+        schema:
+          description: The globally unique ID for this Service Account
+          readOnly: true
+          type: string
+      - description: The globally unique ID for the Permissions System
+        in: path
+        name: permissionsSystemID
+        required: true
+        schema:
+          description: The globally unique ID for the Permissions System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
+          type: string
+      - description: The ETag of the Service Account to update. If this does not match
+          the current ETag, the update will be rejected.
+        in: header
+        name: If-Match
+        schema:
+          description: The ETag of the Service Account to update. If this does not
+            match the current ETag, the update will be rejected.
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateServiceAccountRequest'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateServiceAccountResponse'
+          description: OK
+          headers:
+            ETag:
+              description: The ETag of the configuration after the update.
+              schema:
+                description: The ETag of the configuration after the update.
+                type: string
+              style: simple
+      security:
+      - auth: []
+      tags:
+      - access management
+  /ps/{permissionsSystemID}/access/service-accounts/{serviceAccountID}/tokens:
     get:
       description: list all permission system access-management tokens under a service
         account
       operationId: ListTokens
       parameters:
       - in: path
-        name: permissionSystemID
+        name: permissionsSystemID
         required: true
         schema:
           pattern: ^ps-[a-zA-Z0-9-]+$
@@ -508,12 +715,12 @@ paths:
         account
       operationId: CreateToken
       parameters:
-      - description: The globally unique ID for the Permission System
+      - description: The globally unique ID for the Permissions System
         in: path
-        name: permissionSystemID
+        name: permissionsSystemID
         required: true
         schema:
-          description: The globally unique ID for the Permission System
+          description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
           readOnly: true
           type: string
@@ -544,11 +751,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/CreateTokenResponse'
           description: Created
+          headers:
+            ETag:
+              description: The ETag of the configuration after the update.
+              schema:
+                description: The ETag of the configuration after the update.
+                type: string
+              style: simple
       security:
       - auth: []
       tags:
       - access management
-  /ps/{permissionSystemID}/access/service-accounts/{serviceAccountID}/tokens/{tokenID}:
+  /ps/{permissionsSystemID}/access/service-accounts/{serviceAccountID}/tokens/{tokenID}:
     delete:
       description: delete a permission system access-management token by its ID, under
         a service account
@@ -567,7 +781,7 @@ paths:
           pattern: ^asa-[a-zA-Z0-9-]+$
           type: string
       - in: path
-        name: permissionSystemID
+        name: permissionsSystemID
         required: true
         schema:
           pattern: ^ps-[a-zA-Z0-9-]+$
@@ -604,7 +818,7 @@ paths:
           pattern: ^asa-[a-zA-Z0-9-]+$
           type: string
       - in: path
-        name: permissionSystemID
+        name: permissionsSystemID
         required: true
         schema:
           pattern: ^ps-[a-zA-Z0-9-]+$
@@ -623,10 +837,140 @@ paths:
               schema:
                 $ref: '#/components/schemas/GetTokenResponse'
           description: OK
+          headers:
+            ETag:
+              description: The ETag of the configuration after the update.
+              schema:
+                description: The ETag of the configuration after the update.
+                type: string
+              style: simple
       security:
       - auth: []
       tags:
       - access management
+    put:
+      description: update a permission system access-management token
+      operationId: UpdateToken
+      parameters:
+      - in: path
+        name: tokenID
+        required: true
+        schema:
+          pattern: ^atk-[a-zA-Z0-9-]+$
+          type: string
+      - in: path
+        name: serviceAccountID
+        required: true
+        schema:
+          pattern: ^asa-[a-zA-Z0-9-]+$
+          type: string
+      - in: path
+        name: permissionsSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - description: The ETag of the Token to update. If this does not match the current
+          ETag, the update will be rejected.
+        in: header
+        name: If-Match
+        schema:
+          description: The ETag of the Token to update. If this does not match the
+            current ETag, the update will be rejected.
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTokenRequest'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateTokenResponse'
+          description: OK
+          headers:
+            ETag:
+              description: The ETag of the configuration after the update.
+              schema:
+                description: The ETag of the configuration after the update.
+                type: string
+              style: simple
+      security:
+      - auth: []
+      tags:
+      - access management
+  /ps/{permissionsSystemID}/features/datadog-export:
+    get:
+      description: get the current configuration of the datadog export feature
+      operationId: GetFeatureDatadogExport
+      parameters:
+      - in: path
+        name: permissionsSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetFeatureDatadogExportResponse'
+          description: OK
+      security:
+      - auth: []
+      tags:
+      - permissions system
+    put:
+      description: set the configuration for the datadog export feature and enable
+        the feature
+      operationId: SetFeatureDatadogExport
+      parameters:
+      - in: path
+        name: permissionsSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetFeatureDatadogExportRequest'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetFeatureDatadogExportResponse'
+          description: OK
+      security:
+      - auth: []
+      tags:
+      - permissions system
 components:
   schemas:
     CreatePolicyRequest:
@@ -655,8 +999,8 @@ components:
           maxLength: 50
           minLength: 1
           type: string
-        permissionSystemID:
-          description: The globally unique ID for the Permission System
+        permissionsSystemID:
+          description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
           readOnly: true
           type: string
@@ -671,6 +1015,18 @@ components:
           maxLength: 1
           minLength: 1
           type: array
+        updatedAt:
+          description: The timestamp when the Policy was last updated (RFC 3339).
+            May not be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        updater:
+          description: The name of the user that last updated this Policy. May be
+            empty.
+          readOnly: true
+          type: string
       required:
       - name
       - principalID
@@ -702,8 +1058,8 @@ components:
           maxLength: 50
           minLength: 1
           type: string
-        permissionSystemID:
-          description: The globally unique ID for the Permission System
+        permissionsSystemID:
+          description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
           readOnly: true
           type: string
@@ -718,6 +1074,18 @@ components:
           maxLength: 1
           minLength: 1
           type: array
+        updatedAt:
+          description: The timestamp when the Policy was last updated (RFC 3339).
+            May not be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        updater:
+          description: The name of the user that last updated this Policy. May be
+            empty.
+          readOnly: true
+          type: string
       required:
       - name
       - principalID
@@ -749,13 +1117,24 @@ components:
           maxLength: 50
           minLength: 1
           type: string
-        permissionSystemID:
-          description: The globally unique ID for the Permission System
+        permissions:
+          $ref: '#/components/schemas/PermissionExprMap'
+        permissionsSystemID:
+          description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
           readOnly: true
           type: string
-        permissions:
-          $ref: '#/components/schemas/PermissionExprMap'
+        updatedAt:
+          description: The timestamp when the Role was last updated (RFC 3339). May
+            not be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        updater:
+          description: The name of the user that last updated this Role. May be empty.
+          readOnly: true
+          type: string
       required:
       - name
       - permissions
@@ -786,13 +1165,24 @@ components:
           maxLength: 50
           minLength: 1
           type: string
-        permissionSystemID:
-          description: The globally unique ID for the Permission System
+        permissions:
+          $ref: '#/components/schemas/PermissionExprMap'
+        permissionsSystemID:
+          description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
           readOnly: true
           type: string
-        permissions:
-          $ref: '#/components/schemas/PermissionExprMap'
+        updatedAt:
+          description: The timestamp when the Role was last updated (RFC 3339). May
+            not be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        updater:
+          description: The name of the user that last updated this Role. May be empty.
+          readOnly: true
+          type: string
       required:
       - name
       - permissions
@@ -825,8 +1215,8 @@ components:
           maxLength: 50
           minLength: 1
           type: string
-        permissionSystemID:
-          description: The globally unique ID for the Permission System
+        permissionsSystemID:
+          description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
           readOnly: true
           type: string
@@ -836,6 +1226,18 @@ components:
             $ref: '#/components/schemas/Token'
           readOnly: true
           type: array
+        updatedAt:
+          description: The timestamp when the Service Account was last updated (RFC
+            3339). May not be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        updater:
+          description: The name of the user that last updated this Service Account.
+            May be empty.
+          readOnly: true
+          type: string
       required:
       - name
       type: object
@@ -867,8 +1269,8 @@ components:
           maxLength: 50
           minLength: 1
           type: string
-        permissionSystemID:
-          description: The globally unique ID for the Permission System
+        permissionsSystemID:
+          description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
           readOnly: true
           type: string
@@ -878,6 +1280,18 @@ components:
             $ref: '#/components/schemas/Token'
           readOnly: true
           type: array
+        updatedAt:
+          description: The timestamp when the Service Account was last updated (RFC
+            3339). May not be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        updater:
+          description: The name of the user that last updated this Service Account.
+            May be empty.
+          readOnly: true
+          type: string
       required:
       - name
       type: object
@@ -912,13 +1326,24 @@ components:
           maxLength: 50
           minLength: 1
           type: string
-        permissionSystemID:
-          description: The globally unique ID for the Permission System
+        permissionsSystemID:
+          description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
           readOnly: true
           type: string
         serviceAccountID:
           description: The globally unique ID for the containing Service Account
+          readOnly: true
+          type: string
+        updatedAt:
+          description: The timestamp when the Token was last updated (RFC 3339). May
+            not be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        updater:
+          description: The name of the user that last updated this Token. May be empty.
           readOnly: true
           type: string
       required:
@@ -955,8 +1380,8 @@ components:
           maxLength: 50
           minLength: 1
           type: string
-        permissionSystemID:
-          description: The globally unique ID for the Permission System
+        permissionsSystemID:
+          description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
           readOnly: true
           type: string
@@ -966,6 +1391,17 @@ components:
           type: string
         serviceAccountID:
           description: The globally unique ID for the containing Service Account
+          readOnly: true
+          type: string
+        updatedAt:
+          description: The timestamp when the Token was last updated (RFC 3339). May
+            not be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        updater:
+          description: The name of the user that last updated this Token. May be empty.
           readOnly: true
           type: string
       required:
@@ -983,25 +1419,35 @@ components:
           description: The feature identifier
           type: string
       type: object
-    GetPermissionSystemResponse:
+    GetFeatureDatadogExportResponse:
+      properties:
+        displayName:
+          description: The display name for the Feature
+          type: string
+        enabled:
+          description: Whether a specific feature is enabled or disabled
+          type: boolean
+        id:
+          description: The feature identifier
+          type: string
+      type: object
+    GetPermissionsSystemResponse:
       properties:
         features:
-          description: The features enabled in this Permission System
+          description: The features enabled in this Permissions System
           items:
             $ref: '#/components/schemas/Feature'
           type: array
         id:
-          description: The globally unique ID for this Permission System
+          description: The globally unique ID for this Permissions System
           type: string
         name:
-          description: The name of the Permission System
+          description: The name of the Permissions System
           type: string
         systemState:
           $ref: '#/components/schemas/PermissionsSystemState'
         systemType:
-          description: The type of the Permission System, either 'development' or
-            'production'
-          type: string
+          $ref: '#/components/schemas/SystemType'
         version:
           $ref: '#/components/schemas/SystemVersion'
       type: object
@@ -1031,8 +1477,8 @@ components:
           maxLength: 50
           minLength: 1
           type: string
-        permissionSystemID:
-          description: The globally unique ID for the Permission System
+        permissionsSystemID:
+          description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
           readOnly: true
           type: string
@@ -1047,6 +1493,18 @@ components:
           maxLength: 1
           minLength: 1
           type: array
+        updatedAt:
+          description: The timestamp when the Policy was last updated (RFC 3339).
+            May not be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        updater:
+          description: The name of the user that last updated this Policy. May be
+            empty.
+          readOnly: true
+          type: string
       required:
       - name
       - principalID
@@ -1078,13 +1536,24 @@ components:
           maxLength: 50
           minLength: 1
           type: string
-        permissionSystemID:
-          description: The globally unique ID for the Permission System
+        permissions:
+          $ref: '#/components/schemas/PermissionExprMap'
+        permissionsSystemID:
+          description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
           readOnly: true
           type: string
-        permissions:
-          $ref: '#/components/schemas/PermissionExprMap'
+        updatedAt:
+          description: The timestamp when the Role was last updated (RFC 3339). May
+            not be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        updater:
+          description: The name of the user that last updated this Role. May be empty.
+          readOnly: true
+          type: string
       required:
       - name
       - permissions
@@ -1117,8 +1586,8 @@ components:
           maxLength: 50
           minLength: 1
           type: string
-        permissionSystemID:
-          description: The globally unique ID for the Permission System
+        permissionsSystemID:
+          description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
           readOnly: true
           type: string
@@ -1128,6 +1597,18 @@ components:
             $ref: '#/components/schemas/Token'
           readOnly: true
           type: array
+        updatedAt:
+          description: The timestamp when the Service Account was last updated (RFC
+            3339). May not be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        updater:
+          description: The name of the user that last updated this Service Account.
+            May be empty.
+          readOnly: true
+          type: string
       required:
       - name
       type: object
@@ -1162,8 +1643,8 @@ components:
           maxLength: 50
           minLength: 1
           type: string
-        permissionSystemID:
-          description: The globally unique ID for the Permission System
+        permissionsSystemID:
+          description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
           readOnly: true
           type: string
@@ -1171,12 +1652,23 @@ components:
           description: The globally unique ID for the containing Service Account
           readOnly: true
           type: string
+        updatedAt:
+          description: The timestamp when the Token was last updated (RFC 3339). May
+            not be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        updater:
+          description: The name of the user that last updated this Token. May be empty.
+          readOnly: true
+          type: string
       required:
       - name
       type: object
-    ListPermissionSystemsResponse:
+    ListPermissionsSystemsResponse:
       items:
-        $ref: '#/components/schemas/PermissionSystem'
+        $ref: '#/components/schemas/PermissionsSystem'
       nullable: true
       type: array
     ListPoliciesResponse:
@@ -1255,25 +1747,23 @@ components:
           type: string
         authzed.v1/WriteSchema:
           type: string
-    PermissionSystem:
+    PermissionsSystem:
       properties:
         features:
-          description: The features enabled in this Permission System
+          description: The features enabled in this Permissions System
           items:
             $ref: '#/components/schemas/Feature'
           type: array
         id:
-          description: The globally unique ID for this Permission System
+          description: The globally unique ID for this Permissions System
           type: string
         name:
-          description: The name of the Permission System
+          description: The name of the Permissions System
           type: string
         systemState:
           $ref: '#/components/schemas/PermissionsSystemState'
         systemType:
-          description: The type of the Permission System, either 'development' or
-            'production'
-          type: string
+          $ref: '#/components/schemas/SystemType'
         version:
           $ref: '#/components/schemas/SystemVersion'
       type: object
@@ -1283,9 +1773,21 @@ components:
           description: The message associated with the status
           type: string
         status:
-          description: The status of the Permission System
-          type: string
+          $ref: '#/components/schemas/PermissionsSystemStatus'
       type: object
+    PermissionsSystemStatus:
+      enum:
+      - CLUSTER_ISSUE
+      - DEGRADED
+      - MODIFYING
+      - PAUSED
+      - PROVISIONING
+      - PROVISION_ERROR
+      - RUNNING
+      - UNKNOWN
+      - UPGRADE_ERROR
+      - UPGRADING
+      type: string
     Policy:
       properties:
         createdAt:
@@ -1312,8 +1814,8 @@ components:
           maxLength: 50
           minLength: 1
           type: string
-        permissionSystemID:
-          description: The globally unique ID for the Permission System
+        permissionsSystemID:
+          description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
           readOnly: true
           type: string
@@ -1328,6 +1830,18 @@ components:
           maxLength: 1
           minLength: 1
           type: array
+        updatedAt:
+          description: The timestamp when the Policy was last updated (RFC 3339).
+            May not be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        updater:
+          description: The name of the user that last updated this Policy. May be
+            empty.
+          readOnly: true
+          type: string
       required:
       - name
       - principalID
@@ -1359,13 +1873,24 @@ components:
           maxLength: 50
           minLength: 1
           type: string
-        permissionSystemID:
-          description: The globally unique ID for the Permission System
+        permissions:
+          $ref: '#/components/schemas/PermissionExprMap'
+        permissionsSystemID:
+          description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
           readOnly: true
           type: string
-        permissions:
-          $ref: '#/components/schemas/PermissionExprMap'
+        updatedAt:
+          description: The timestamp when the Role was last updated (RFC 3339). May
+            not be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        updater:
+          description: The name of the user that last updated this Role. May be empty.
+          readOnly: true
+          type: string
       required:
       - name
       - permissions
@@ -1398,8 +1923,8 @@ components:
           maxLength: 50
           minLength: 1
           type: string
-        permissionSystemID:
-          description: The globally unique ID for the Permission System
+        permissionsSystemID:
+          description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
           readOnly: true
           type: string
@@ -1409,8 +1934,44 @@ components:
             $ref: '#/components/schemas/Token'
           readOnly: true
           type: array
+        updatedAt:
+          description: The timestamp when the Service Account was last updated (RFC
+            3339). May not be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        updater:
+          description: The name of the user that last updated this Service Account.
+            May be empty.
+          readOnly: true
+          type: string
       required:
       - name
+      type: object
+    SetFeatureDatadogExportRequest:
+      properties:
+        apiKey:
+          description: The Datadog API key. Will not be returned after writing.
+          type: string
+        site:
+          description: The Datadog Site associated with your API key.
+          type: string
+      required:
+      - apiKey
+      - site
+      type: object
+    SetFeatureDatadogExportResponse:
+      properties:
+        displayName:
+          description: The display name for the Feature
+          type: string
+        enabled:
+          description: Whether a specific feature is enabled or disabled
+          type: boolean
+        id:
+          description: The feature identifier
+          type: string
       type: object
     SpiceDBVersion:
       properties:
@@ -1426,6 +1987,11 @@ components:
           description: The version of SpiceDB
           type: string
       type: object
+    SystemType:
+      enum:
+      - development
+      - production
+      type: string
     SystemVersion:
       properties:
         currentVersion:
@@ -1478,13 +2044,319 @@ components:
           maxLength: 50
           minLength: 1
           type: string
-        permissionSystemID:
-          description: The globally unique ID for the Permission System
+        permissionsSystemID:
+          description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
           readOnly: true
           type: string
         serviceAccountID:
           description: The globally unique ID for the containing Service Account
+          readOnly: true
+          type: string
+        updatedAt:
+          description: The timestamp when the Token was last updated (RFC 3339). May
+            not be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        updater:
+          description: The name of the user that last updated this Token. May be empty.
+          readOnly: true
+          type: string
+      required:
+      - name
+      type: object
+    UpdatePolicyRequest:
+      properties:
+        description:
+          description: The human-supplied description of the Service Account. May
+            be empty.
+          maxLength: 200
+          type: string
+        name:
+          description: The name of the Policy
+          maxLength: 50
+          minLength: 1
+          type: string
+        principalID:
+          description: The ID of the Principal that this Policy is associated with
+          type: string
+        roleIDs:
+          description: The IDs of the Roles that this Policy is associated with. Currently
+            only allowed to be a single ID
+          items:
+            type: string
+          maxLength: 1
+          minLength: 1
+          type: array
+      required:
+      - name
+      type: object
+    UpdatePolicyResponse:
+      properties:
+        createdAt:
+          description: The timestamp when the Policy was created (RFC 3339). May not
+            be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        creator:
+          description: The name of the user that created this Policy. May be empty.
+          readOnly: true
+          type: string
+        description:
+          description: The human-supplied description of the Policy. May be empty.
+          maxLength: 200
+          type: string
+        id:
+          description: The globally unique ID for this Policy
+          readOnly: true
+          type: string
+        name:
+          description: The name of the Policy
+          maxLength: 50
+          minLength: 1
+          type: string
+        permissionsSystemID:
+          description: The globally unique ID for the Permissions System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
+          type: string
+        principalID:
+          description: The ID of the Principal that this Policy is associated with
+          type: string
+        roleIDs:
+          description: The IDs of the Roles that this Policy is associated with. Currently
+            only allowed to be a single ID
+          items:
+            type: string
+          maxLength: 1
+          minLength: 1
+          type: array
+        updatedAt:
+          description: The timestamp when the Policy was last updated (RFC 3339).
+            May not be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        updater:
+          description: The name of the user that last updated this Policy. May be
+            empty.
+          readOnly: true
+          type: string
+      required:
+      - name
+      - principalID
+      - roleIDs
+      type: object
+    UpdateRoleRequest:
+      properties:
+        description:
+          description: The human-supplied description of the Role. May be empty.
+          maxLength: 200
+          type: string
+        name:
+          description: The name of the Role
+          maxLength: 50
+          minLength: 1
+          type: string
+        permissions:
+          $ref: '#/components/schemas/PermissionExprMap'
+      required:
+      - name
+      type: object
+    UpdateRoleResponse:
+      properties:
+        createdAt:
+          description: The timestamp when the Role was created (RFC 3339). May not
+            be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        creator:
+          description: The name of the user that created this Role. May be empty.
+          readOnly: true
+          type: string
+        description:
+          description: The human-supplied description of the Role. May be empty.
+          maxLength: 200
+          type: string
+        id:
+          description: The globally unique ID for this Role
+          readOnly: true
+          type: string
+        name:
+          description: The name of the Role
+          maxLength: 50
+          minLength: 1
+          type: string
+        permissions:
+          $ref: '#/components/schemas/PermissionExprMap'
+        permissionsSystemID:
+          description: The globally unique ID for the Permissions System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
+          type: string
+        updatedAt:
+          description: The timestamp when the Role was last updated (RFC 3339). May
+            not be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        updater:
+          description: The name of the user that last updated this Role. May be empty.
+          readOnly: true
+          type: string
+      required:
+      - name
+      - permissions
+      type: object
+    UpdateServiceAccountRequest:
+      properties:
+        description:
+          description: The human-supplied description of the Service Account. May
+            be empty.
+          maxLength: 200
+          type: string
+        id:
+          description: The globally unique ID for this Service Account
+          readOnly: true
+          type: string
+        name:
+          description: The name of the Service Account
+          maxLength: 50
+          minLength: 1
+          type: string
+        permissionsSystemID:
+          description: The globally unique ID for the Permissions System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
+          type: string
+      required:
+      - name
+      type: object
+    UpdateServiceAccountResponse:
+      properties:
+        createdAt:
+          description: The timestamp when the Service Account was created (RFC 3339).
+            May not be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        creator:
+          description: The name of the user that created this Service Account. May
+            be empty.
+          readOnly: true
+          type: string
+        description:
+          description: The human-supplied description of the Service Account. May
+            be empty.
+          maxLength: 200
+          type: string
+        id:
+          description: The globally unique ID for this Service Account
+          readOnly: true
+          type: string
+        name:
+          description: The name of the Service Account
+          maxLength: 50
+          minLength: 1
+          type: string
+        permissionsSystemID:
+          description: The globally unique ID for the Permissions System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
+          type: string
+        token:
+          description: The Tokens associated with this Service Account
+          items:
+            $ref: '#/components/schemas/Token'
+          readOnly: true
+          type: array
+        updatedAt:
+          description: The timestamp when the Service Account was last updated (RFC
+            3339). May not be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        updater:
+          description: The name of the user that last updated this Service Account.
+            May be empty.
+          readOnly: true
+          type: string
+      required:
+      - name
+      type: object
+    UpdateTokenRequest:
+      properties:
+        description:
+          description: The human-supplied description of the Token. May be empty.
+          maxLength: 200
+          type: string
+        name:
+          description: The name of the Token
+          maxLength: 50
+          minLength: 1
+          type: string
+      required:
+      - name
+      type: object
+    UpdateTokenResponse:
+      properties:
+        createdAt:
+          description: The timestamp when the Token was created (RFC 3339). May not
+            be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        creator:
+          description: The name of the user that created this Token. May be empty.
+          readOnly: true
+          type: string
+        description:
+          description: The human-supplied description of the Token. May be empty.
+          maxLength: 200
+          type: string
+        hash:
+          description: The SHA256 hash of the secret part of the token, without the
+            prefix
+          readOnly: true
+          type: string
+        id:
+          description: The globally unique ID for this Token
+          readOnly: true
+          type: string
+        name:
+          description: The name of the Token
+          maxLength: 50
+          minLength: 1
+          type: string
+        permissionsSystemID:
+          description: The globally unique ID for the Permissions System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
+          type: string
+        serviceAccountID:
+          description: The globally unique ID for the containing Service Account
+          readOnly: true
+          type: string
+        updatedAt:
+          description: The timestamp when the Token was last updated (RFC 3339). May
+            not be specified.
+          format: date-time
+          nullable: true
+          readOnly: true
+          type: string
+        updater:
+          description: The name of the user that last updated this Token. May be empty.
           readOnly: true
           type: string
       required:
