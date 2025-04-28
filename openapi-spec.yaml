@@ -5,10 +5,12 @@ info:
   description: Cloud API for AuthZed Dedicated
   termsOfService: https://authzed.com/terms-conditions
   title: AuthZed Cloud API
-  version: 25r1
+  version: ""
 externalDocs:
   description: Find out more at the official Authzed Docs site
   url: https://authzed.com/docs
+servers:
+- url: https://api.admin.stage.aws.authzed.net
 tags:
 - description: A permission system defines a managed SpiceDB instance
   externalDocs:
@@ -25,7 +27,7 @@ paths:
   /ps:
     get:
       description: list all permission systems
-      operationId: ListPermissionsSystems
+      operationId: ListPermissionSystems
       parameters:
       - description: The version of the API to use. Must be specified.
         in: header
@@ -39,7 +41,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ListPermissionsSystemsResponse'
+                $ref: '#/components/schemas/ListPermissionSystemsResponse'
           description: OK
       security:
       - auth: []
@@ -48,7 +50,7 @@ paths:
   /ps/{permissionSystemID}:
     get:
       description: get a permission system by its ID
-      operationId: GetPermissionsSystem
+      operationId: GetPermissionSystem
       parameters:
       - in: path
         name: permissionSystemID
@@ -67,7 +69,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetPermissionsSystemResponse'
+                $ref: '#/components/schemas/GetPermissionSystemResponse'
           description: OK
       security:
       - auth: []
@@ -981,7 +983,7 @@ components:
           description: The feature identifier
           type: string
       type: object
-    GetPermissionsSystemResponse:
+    GetPermissionSystemResponse:
       properties:
         features:
           description: The features enabled in this Permission System
@@ -997,7 +999,9 @@ components:
         systemState:
           $ref: '#/components/schemas/PermissionsSystemState'
         systemType:
-          $ref: '#/components/schemas/SystemType'
+          description: The type of the Permission System, either 'development' or
+            'production'
+          type: string
         version:
           $ref: '#/components/schemas/SystemVersion'
       type: object
@@ -1170,9 +1174,9 @@ components:
       required:
       - name
       type: object
-    ListPermissionsSystemsResponse:
+    ListPermissionSystemsResponse:
       items:
-        $ref: '#/components/schemas/PermissionsSystem'
+        $ref: '#/components/schemas/PermissionSystem'
       nullable: true
       type: array
     ListPoliciesResponse:
@@ -1251,7 +1255,7 @@ components:
           type: string
         authzed.v1/WriteSchema:
           type: string
-    PermissionsSystem:
+    PermissionSystem:
       properties:
         features:
           description: The features enabled in this Permission System
@@ -1267,7 +1271,9 @@ components:
         systemState:
           $ref: '#/components/schemas/PermissionsSystemState'
         systemType:
-          $ref: '#/components/schemas/SystemType'
+          description: The type of the Permission System, either 'development' or
+            'production'
+          type: string
         version:
           $ref: '#/components/schemas/SystemVersion'
       type: object
@@ -1277,21 +1283,9 @@ components:
           description: The message associated with the status
           type: string
         status:
-          $ref: '#/components/schemas/PermissionsSystemStatus'
+          description: The status of the Permission System
+          type: string
       type: object
-    PermissionsSystemStatus:
-      enum:
-      - CLUSTER_ISSUE
-      - DEGRADED
-      - MODIFYING
-      - PAUSED
-      - PROVISIONING
-      - PROVISION_ERROR
-      - RUNNING
-      - UNKNOWN
-      - UPGRADE_ERROR
-      - UPGRADING
-      type: string
     Policy:
       properties:
         createdAt:
@@ -1432,11 +1426,6 @@ components:
           description: The version of SpiceDB
           type: string
       type: object
-    SystemType:
-      enum:
-      - development
-      - production
-      type: string
     SystemVersion:
       properties:
         currentVersion:
