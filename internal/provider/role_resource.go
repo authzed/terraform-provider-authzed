@@ -30,6 +30,7 @@ type roleResourceModel struct {
 	Permissions         types.Map    `tfsdk:"permissions"`
 	CreatedAt           types.String `tfsdk:"created_at"`
 	Creator             types.String `tfsdk:"creator"`
+	ETag                types.String `tfsdk:"etag"`
 }
 
 func (r *roleResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -68,6 +69,10 @@ func (r *roleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			"creator": schema.StringAttribute{
 				Computed:    true,
 				Description: "User who created the role",
+			},
+			"etag": schema.StringAttribute{
+				Computed:    true,
+				Description: "Version identifier used to prevent conflicts from concurrent updates, ensuring safe resource modifications",
 			},
 		},
 	}
@@ -109,15 +114,16 @@ func (r *roleResource) Create(ctx context.Context, req resource.CreateRequest, r
 		Permissions:         permissionsMap,
 	}
 
-	createdRole, err := r.client.CreateRole(role)
+	createdRoleWithETag, err := r.client.CreateRole(role)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create role, got error: %s", err))
 		return
 	}
 
-	data.ID = types.StringValue(createdRole.ID)
-	data.CreatedAt = types.StringValue(createdRole.CreatedAt)
-	data.Creator = types.StringValue(createdRole.Creator)
+	data.ID = types.StringValue(createdRoleWithETag.Role.ID)
+	data.CreatedAt = types.StringValue(createdRoleWithETag.Role.CreatedAt)
+	data.Creator = types.StringValue(createdRoleWithETag.Role.Creator)
+	data.ETag = types.StringValue(createdRoleWithETag.ETag)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -130,21 +136,22 @@ func (r *roleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 
-	role, err := r.client.GetRole(data.PermissionsSystemID.ValueString(), data.ID.ValueString())
+	roleWithETag, err := r.client.GetRole(data.PermissionsSystemID.ValueString(), data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read role, got error: %s", err))
 		return
 	}
 
 	// Map response to model
-	data.Name = types.StringValue(role.Name)
-	data.Description = types.StringValue(role.Description)
-	data.CreatedAt = types.StringValue(role.CreatedAt)
-	data.Creator = types.StringValue(role.Creator)
+	data.Name = types.StringValue(roleWithETag.Role.Name)
+	data.Description = types.StringValue(roleWithETag.Role.Description)
+	data.CreatedAt = types.StringValue(roleWithETag.Role.CreatedAt)
+	data.Creator = types.StringValue(roleWithETag.Role.Creator)
+	data.ETag = types.StringValue(roleWithETag.ETag)
 
 	// Map permissions
 	permissions := make(map[string]types.String)
-	for k, v := range role.Permissions {
+	for k, v := range roleWithETag.Role.Permissions {
 		permissions[k] = types.StringValue(v)
 	}
 	permissionsValue, diags := types.MapValueFrom(ctx, types.StringType, permissions)
@@ -164,32 +171,37 @@ func (r *roleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
-	err := r.client.DeleteRole(data.PermissionsSystemID.ValueString(), data.ID.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete role during update, got error: %s", err))
+	// Get the current state to get the ETag
+	var state roleResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
+	// Extract permissions from the model
 	permissionsMap := make(models.PermissionExprMap)
 	data.Permissions.ElementsAs(ctx, &permissionsMap, false)
 
-	// Create role with updated data, since we
+	// Create role with updated data
 	role := &models.Role{
+		ID:                  data.ID.ValueString(),
 		Name:                data.Name.ValueString(),
 		Description:         data.Description.ValueString(),
 		PermissionsSystemID: data.PermissionsSystemID.ValueString(),
 		Permissions:         permissionsMap,
 	}
 
-	createdRole, err := r.client.CreateRole(role)
+	// Use the ETag from state for optimistic concurrency control
+	updatedRoleWithETag, err := r.client.UpdateRole(role, state.ETag.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to recreate role during update, got error: %s", err))
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update role, got error: %s", err))
 		return
 	}
 
-	data.ID = types.StringValue(createdRole.ID)
-	data.CreatedAt = types.StringValue(createdRole.CreatedAt)
-	data.Creator = types.StringValue(createdRole.Creator)
+	// Update resource data with the response
+	data.CreatedAt = types.StringValue(updatedRoleWithETag.Role.CreatedAt)
+	data.Creator = types.StringValue(updatedRoleWithETag.Role.Creator)
+	data.ETag = types.StringValue(updatedRoleWithETag.ETag)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

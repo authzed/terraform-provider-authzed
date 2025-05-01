@@ -30,6 +30,7 @@ type roleDataSourceModel struct {
 	Permissions         types.Map    `tfsdk:"permissions"`
 	CreatedAt           types.String `tfsdk:"created_at"`
 	Creator             types.String `tfsdk:"creator"`
+	ETag                types.String `tfsdk:"etag"`
 }
 
 func (d *roleDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -73,6 +74,10 @@ func (d *roleDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 				Computed:    true,
 				Description: "User who created the role",
 			},
+			"etag": schema.StringAttribute{
+				Computed:    true,
+				Description: "Version identifier for the resource, used by update operations to prevent conflicts",
+			},
 		},
 	}
 }
@@ -101,20 +106,21 @@ func (d *roleDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		return
 	}
 
-	role, err := d.client.GetRole(data.PermissionsSystemID.ValueString(), data.RoleID.ValueString())
+	roleWithETag, err := d.client.GetRole(data.PermissionsSystemID.ValueString(), data.RoleID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read role, got error: %s", err))
 		return
 	}
 
-	data.ID = types.StringValue(role.ID)
-	data.Name = types.StringValue(role.Name)
-	data.Description = types.StringValue(role.Description)
-	data.CreatedAt = types.StringValue(role.CreatedAt)
-	data.Creator = types.StringValue(role.Creator)
+	data.ID = types.StringValue(roleWithETag.Role.ID)
+	data.Name = types.StringValue(roleWithETag.Role.Name)
+	data.Description = types.StringValue(roleWithETag.Role.Description)
+	data.CreatedAt = types.StringValue(roleWithETag.Role.CreatedAt)
+	data.Creator = types.StringValue(roleWithETag.Role.Creator)
+	data.ETag = types.StringValue(roleWithETag.ETag)
 
 	permissions := make(map[string]types.String)
-	for k, v := range role.Permissions {
+	for k, v := range roleWithETag.Role.Permissions {
 		permissions[k] = types.StringValue(v)
 	}
 	permissionsValue, diags := types.MapValueFrom(ctx, types.StringType, permissions)

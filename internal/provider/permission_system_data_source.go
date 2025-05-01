@@ -61,11 +61,11 @@ func (d *permissionsSystemDataSource) Schema(_ context.Context, _ datasource.Sch
 				Attributes: map[string]schema.Attribute{
 					"status": schema.StringAttribute{
 						Computed:    true,
-						Description: "Status of the permission system",
+						Description: "Operational status of the permission system (e.g., RUNNING, PROVISIONING, UPGRADING, DEGRADED)",
 					},
 					"message": schema.StringAttribute{
 						Computed:    true,
-						Description: "Status message for the permission system",
+						Description: "Human-readable explanation of the current system state, including error details or operational status information",
 					},
 				},
 			},
@@ -139,12 +139,13 @@ func (d *permissionsSystemDataSource) Read(ctx context.Context, req datasource.R
 		return
 	}
 
-	permissionsSystem, err := d.client.GetPermissionsSystem(data.ID.ValueString())
+	permissionsSystemWithETag, err := d.client.GetPermissionsSystem(data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read permission system, got error: %s", err))
 		return
 	}
 
+	permissionsSystem := permissionsSystemWithETag.PermissionsSystem
 	data.Name = types.StringValue(permissionsSystem.Name)
 	data.GlobalDnsPath = types.StringValue(permissionsSystem.GlobalDnsPath)
 	data.SystemType = types.StringValue(permissionsSystem.SystemType)

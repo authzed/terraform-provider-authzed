@@ -31,6 +31,7 @@ type policyResourceModel struct {
 	RoleIDs             types.List   `tfsdk:"role_ids"`
 	CreatedAt           types.String `tfsdk:"created_at"`
 	Creator             types.String `tfsdk:"creator"`
+	ETag                types.String `tfsdk:"etag"`
 }
 
 func (r *policyResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -73,6 +74,10 @@ func (r *policyResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"creator": schema.StringAttribute{
 				Computed:    true,
 				Description: "User who created the policy",
+			},
+			"etag": schema.StringAttribute{
+				Computed:    true,
+				Description: "Version identifier used to prevent conflicts from concurrent updates, ensuring safe resource modifications",
 			},
 		},
 	}
@@ -118,15 +123,17 @@ func (r *policyResource) Create(ctx context.Context, req resource.CreateRequest,
 		RoleIDs:             roleIDs,
 	}
 
-	createdPolicy, err := r.client.CreatePolicy(policy)
+	createdPolicyWithETag, err := r.client.CreatePolicy(policy)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create policy, got error: %s", err))
 		return
 	}
 
+	createdPolicy := createdPolicyWithETag.Policy
 	data.ID = types.StringValue(createdPolicy.ID)
 	data.CreatedAt = types.StringValue(createdPolicy.CreatedAt)
 	data.Creator = types.StringValue(createdPolicy.Creator)
+	data.ETag = types.StringValue(createdPolicyWithETag.ETag)
 
 	// Update role IDs in case the order or values changed
 	roleIDList, diags := types.ListValueFrom(ctx, types.StringType, createdPolicy.RoleIDs)
@@ -146,11 +153,13 @@ func (r *policyResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	policy, err := r.client.GetPolicy(data.PermissionsSystemID.ValueString(), data.ID.ValueString())
+	policyWithETag, err := r.client.GetPolicy(data.PermissionsSystemID.ValueString(), data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read policy, got error: %s", err))
 		return
 	}
+
+	policy := policyWithETag.Policy
 
 	// Map response to model
 	data.Name = types.StringValue(policy.Name)
@@ -158,6 +167,7 @@ func (r *policyResource) Read(ctx context.Context, req resource.ReadRequest, res
 	data.PrincipalID = types.StringValue(policy.PrincipalID)
 	data.CreatedAt = types.StringValue(policy.CreatedAt)
 	data.Creator = types.StringValue(policy.Creator)
+	data.ETag = types.StringValue(policyWithETag.ETag)
 
 	// Map role IDs
 	roleIDList, diags := types.ListValueFrom(ctx, types.StringType, policy.RoleIDs)
@@ -171,10 +181,57 @@ func (r *policyResource) Read(ctx context.Context, req resource.ReadRequest, res
 }
 
 func (r *policyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.Diagnostics.AddError(
-		"Policy Update Not Supported",
-		"Platform API does not support updating policies. To change a policy, you need to delete it and create a new one.",
-	)
+	var data policyResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Get the current state to get the ETag
+	var state policyResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Extract role IDs from types.List
+	var roleIDs []string
+	resp.Diagnostics.Append(data.RoleIDs.ElementsAs(ctx, &roleIDs, false)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Create policy with updated data
+	policy := &models.Policy{
+		ID:                  data.ID.ValueString(),
+		Name:                data.Name.ValueString(),
+		Description:         data.Description.ValueString(),
+		PermissionsSystemID: data.PermissionsSystemID.ValueString(),
+		PrincipalID:         data.PrincipalID.ValueString(),
+		RoleIDs:             roleIDs,
+	}
+
+	// Use the ETag from state for optimistic concurrency control
+	updatedPolicyWithETag, err := r.client.UpdatePolicy(policy, state.ETag.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update policy, got error: %s", err))
+		return
+	}
+
+	// Update resource data with the response
+	data.CreatedAt = types.StringValue(updatedPolicyWithETag.Policy.CreatedAt)
+	data.Creator = types.StringValue(updatedPolicyWithETag.Policy.Creator)
+	data.ETag = types.StringValue(updatedPolicyWithETag.ETag)
+
+	// Update role IDs in case the order or values changed
+	roleIDList, diags := types.ListValueFrom(ctx, types.StringType, updatedPolicyWithETag.Policy.RoleIDs)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	data.RoleIDs = roleIDList
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *policyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
