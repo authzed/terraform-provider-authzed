@@ -44,7 +44,8 @@ func TestETagSupport(t *testing.T) {
 			// Set ETag header in response
 			w.Header().Set("ETag", testETag)
 
-			if r.Method == http.MethodGet {
+			switch r.Method {
+			case http.MethodGet:
 				// Return service account for GET
 				w.WriteHeader(http.StatusOK)
 				_, err := w.Write([]byte(`{
@@ -58,7 +59,7 @@ func TestETagSupport(t *testing.T) {
 				if err != nil {
 					t.Errorf("Failed to write response: %v", err)
 				}
-			} else if r.Method == http.MethodPut {
+			case http.MethodPut:
 				// Return updated service account for PUT with new ETag
 				w.Header().Set("ETag", updatedETag)
 				w.WriteHeader(http.StatusOK)
