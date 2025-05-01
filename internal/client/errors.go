@@ -7,6 +7,25 @@ import (
 	"net/http"
 )
 
+// HTTPResponder interface for any type that can provide an HTTP response
+type HTTPResponder interface {
+	GetResponse() *http.Response
+}
+
+// Make http.Response implement HTTPResponder
+type HTTPResponseWrapper struct {
+	*http.Response
+}
+
+func (r *HTTPResponseWrapper) GetResponse() *http.Response {
+	return r.Response
+}
+
+// Make ResponseWithETag implement HTTPResponder
+func (r *ResponseWithETag) GetResponse() *http.Response {
+	return r.Response
+}
+
 type APIError struct {
 	StatusCode int
 	Message    string
@@ -22,8 +41,9 @@ func (e *APIError) Error() string {
 	return fmt.Sprintf("API error (status %d)", e.StatusCode)
 }
 
-// NewAPIError creates a new APIError from an HTTP response
-func NewAPIError(resp *http.Response) *APIError {
+// NewAPIError creates a new APIError from an HTTPResponder
+func NewAPIError(responder HTTPResponder) *APIError {
+	resp := responder.GetResponse()
 	body, _ := io.ReadAll(resp.Body)
 
 	var errMsg string

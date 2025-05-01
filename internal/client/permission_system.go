@@ -10,6 +10,32 @@ import (
 	"terraform-provider-authzed/internal/models"
 )
 
+// PermissionsSystemWithETag represents a permissions system resource with its ETag
+type PermissionsSystemWithETag struct {
+	PermissionsSystem *models.PermissionsSystem
+	ETag              string
+}
+
+// GetID returns the permissions system's ID
+func (ps *PermissionsSystemWithETag) GetID() string {
+	return ps.PermissionsSystem.ID
+}
+
+// GetETag returns the ETag value
+func (ps *PermissionsSystemWithETag) GetETag() string {
+	return ps.ETag
+}
+
+// SetETag sets the ETag value
+func (ps *PermissionsSystemWithETag) SetETag(etag string) {
+	ps.ETag = etag
+}
+
+// GetResource returns the underlying permissions system
+func (ps *PermissionsSystemWithETag) GetResource() interface{} {
+	return ps.PermissionsSystem
+}
+
 // ListPermissionsSystems retrieves all permission systems
 func (c *CloudClient) ListPermissionsSystems() ([]models.PermissionsSystem, error) {
 	path := "/ps"
@@ -18,21 +44,21 @@ func (c *CloudClient) ListPermissionsSystems() ([]models.PermissionsSystem, erro
 		return nil, err
 	}
 
-	resp, err := c.Do(req)
+	respWithETag, err := c.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
 		// Ignore the error
-		_ = resp.Body.Close()
+		_ = respWithETag.Response.Body.Close()
 	}()
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, NewAPIError(resp)
+	if respWithETag.Response.StatusCode != http.StatusOK {
+		return nil, NewAPIError(respWithETag)
 	}
 
 	// Read response body for debugging
-	bodyBytes, err := io.ReadAll(resp.Body)
+	bodyBytes, err := io.ReadAll(respWithETag.Response.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
@@ -64,54 +90,17 @@ func (c *CloudClient) ListPermissionsSystems() ([]models.PermissionsSystem, erro
 }
 
 // GetPermissionsSystem retrieves a permission system by ID
-func (c *CloudClient) GetPermissionsSystem(permissionsSystemID string) (*models.PermissionsSystem, error) {
+func (c *CloudClient) GetPermissionsSystem(permissionsSystemID string) (*PermissionsSystemWithETag, error) {
 	path := fmt.Sprintf("/ps/%s", permissionsSystemID)
-	req, err := c.NewRequest(http.MethodGet, path, nil)
+
+	var permissionsSystem models.PermissionsSystem
+	resource, err := c.GetResourceWithFactory(path, &permissionsSystem, NewPermissionsSystemResource)
 	if err != nil {
 		return nil, err
-	}
-
-	resp, err := c.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		// Ignore the error
-		_ = resp.Body.Close()
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, NewAPIError(resp)
-	}
-
-	// Read response body for debugging
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
 	// Log the raw response for debugging
-	fmt.Printf("DEBUG: Raw API response for permission system %s: %s\n", permissionsSystemID, string(bodyBytes))
+	fmt.Printf("DEBUG: Successfully retrieved permission system %s\n", permissionsSystemID)
 
-	// Create a new reader from the bytes for JSON decoding
-	bodyReader := bytes.NewReader(bodyBytes)
-
-	// Try direct decoding first
-	var permissionsSystem models.PermissionsSystem
-	if err := json.NewDecoder(bodyReader).Decode(&permissionsSystem); err != nil {
-		// If direct decoding fails, try with the wrapper
-		_, err = bodyReader.Seek(0, io.SeekStart) // Reset reader to beginning
-		if err != nil {
-			return nil, nil
-		}
-		var getResp struct {
-			PermissionsSystem models.PermissionsSystem `json:"permissionsSystem"`
-		}
-		if err := json.NewDecoder(bodyReader).Decode(&getResp); err != nil {
-			return nil, fmt.Errorf("failed to decode response: %w", err)
-		}
-		return &getResp.PermissionsSystem, nil
-	}
-
-	return &permissionsSystem, nil
+	return resource.(*PermissionsSystemWithETag), nil
 }

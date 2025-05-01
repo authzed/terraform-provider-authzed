@@ -8,6 +8,32 @@ import (
 	"terraform-provider-authzed/internal/models"
 )
 
+// PolicyWithETag represents a policy resource with its ETag
+type PolicyWithETag struct {
+	Policy *models.Policy
+	ETag   string
+}
+
+// GetID returns the policy's ID
+func (p *PolicyWithETag) GetID() string {
+	return p.Policy.ID
+}
+
+// GetETag returns the ETag value
+func (p *PolicyWithETag) GetETag() string {
+	return p.ETag
+}
+
+// SetETag sets the ETag value
+func (p *PolicyWithETag) SetETag(etag string) {
+	p.ETag = etag
+}
+
+// GetResource returns the underlying policy
+func (p *PolicyWithETag) GetResource() interface{} {
+	return p.Policy
+}
+
 // ListPolicies retrieves all policies for a permission system
 func (c *CloudClient) ListPolicies(permissionsSystemID string) ([]models.Policy, error) {
 	path := fmt.Sprintf("/ps/%s/access/policies", permissionsSystemID)
@@ -16,23 +42,23 @@ func (c *CloudClient) ListPolicies(permissionsSystemID string) ([]models.Policy,
 		return nil, err
 	}
 
-	resp, err := c.Do(req)
+	respWithETag, err := c.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
 		// ignore the error
-		_ = resp.Body.Close()
+		_ = respWithETag.Response.Body.Close()
 	}()
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, NewAPIError(resp)
+	if respWithETag.Response.StatusCode != http.StatusOK {
+		return nil, NewAPIError(respWithETag)
 	}
 
 	var listResp struct {
 		Items []models.Policy `json:"items"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
+	if err := json.NewDecoder(respWithETag.Response.Body).Decode(&listResp); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
@@ -40,81 +66,50 @@ func (c *CloudClient) ListPolicies(permissionsSystemID string) ([]models.Policy,
 }
 
 // GetPolicy retrieves a policy by its ID
-func (c *CloudClient) GetPolicy(permissionsSystemID, policyID string) (*models.Policy, error) {
+func (c *CloudClient) GetPolicy(permissionsSystemID, policyID string) (*PolicyWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/policies/%s", permissionsSystemID, policyID)
-	req, err := c.NewRequest(http.MethodGet, path, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := c.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		// ignore the error
-		_ = resp.Body.Close()
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, NewAPIError(resp)
-	}
 
 	var policy models.Policy
-	if err := json.NewDecoder(resp.Body).Decode(&policy); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+	resource, err := c.GetResourceWithFactory(path, &policy, NewPolicyResource)
+	if err != nil {
+		return nil, err
 	}
 
-	return &policy, nil
+	return resource.(*PolicyWithETag), nil
 }
 
-func (c *CloudClient) CreatePolicy(policy *models.Policy) (*models.Policy, error) {
+// CreatePolicy creates a new policy
+func (c *CloudClient) CreatePolicy(policy *models.Policy) (*PolicyWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/policies", policy.PermissionsSystemID)
-	req, err := c.NewRequest(http.MethodPost, path, policy)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := c.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		// ignore the error
-		_ = resp.Body.Close()
-	}()
-
-	if resp.StatusCode != http.StatusCreated {
-		return nil, NewAPIError(resp)
-	}
 
 	var createdPolicy models.Policy
-	if err := json.NewDecoder(resp.Body).Decode(&createdPolicy); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+	resource, err := c.CreateResourceWithFactory(path, policy, &createdPolicy, NewPolicyResource)
+	if err != nil {
+		return nil, err
 	}
 
-	return &createdPolicy, nil
+	return resource.(*PolicyWithETag), nil
 }
 
+// UpdatePolicy updates an existing policy using the PUT method
+func (c *CloudClient) UpdatePolicy(policy *models.Policy, etag string) (*PolicyWithETag, error) {
+	path := fmt.Sprintf("/ps/%s/access/policies/%s", policy.PermissionsSystemID, policy.ID)
+
+	resourceWrapper := &PolicyWithETag{
+		Policy: policy,
+		ETag:   etag,
+	}
+
+	updatedResource, err := c.UpdateResource(resourceWrapper, path, policy)
+	if err != nil {
+		return nil, err
+	}
+
+	return updatedResource.(*PolicyWithETag), nil
+}
+
+// DeletePolicy deletes a policy by its ID
 func (c *CloudClient) DeletePolicy(permissionsSystemID, policyID string) error {
 	path := fmt.Sprintf("/ps/%s/access/policies/%s", permissionsSystemID, policyID)
-	req, err := c.NewRequest(http.MethodDelete, path, nil)
-	if err != nil {
-		return err
-	}
-
-	resp, err := c.Do(req)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		// ignore the error
-		_ = resp.Body.Close()
-	}()
-
-	if resp.StatusCode != http.StatusNoContent {
-		return NewAPIError(resp)
-	}
-
-	return nil
+	return c.DeleteResource(path)
 }
