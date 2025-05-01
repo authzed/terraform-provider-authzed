@@ -30,7 +30,10 @@ func TestETagSupport(t *testing.T) {
 			// Simulate concurrency detection
 			if receivedETag != testETag && receivedETag != "" {
 				w.WriteHeader(http.StatusPreconditionFailed)
-				w.Write([]byte(`{"error":"Precondition failed: resource has been modified"}`))
+				_, err := w.Write([]byte(`{"error":"Precondition failed: resource has been modified"}`))
+				if err != nil {
+					t.Errorf("Failed to write response: %v", err)
+				}
 				return
 			}
 		}
@@ -44,7 +47,7 @@ func TestETagSupport(t *testing.T) {
 			if r.Method == http.MethodGet {
 				// Return service account for GET
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{
+				_, err := w.Write([]byte(`{
 					"id": "asa-test123",
 					"permissionsSystemId": "ps-test123",
 					"name": "Test Service Account",
@@ -52,11 +55,14 @@ func TestETagSupport(t *testing.T) {
 					"createdAt": "2023-05-01T12:00:00Z",
 					"creator": "test-user"
 				}`))
+				if err != nil {
+					t.Errorf("Failed to write response: %v", err)
+				}
 			} else if r.Method == http.MethodPut {
 				// Return updated service account for PUT with new ETag
 				w.Header().Set("ETag", updatedETag)
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{
+				_, err := w.Write([]byte(`{
 					"id": "asa-test123",
 					"permissionsSystemId": "ps-test123",
 					"name": "Updated Service Account",
@@ -64,6 +70,9 @@ func TestETagSupport(t *testing.T) {
 					"createdAt": "2023-05-01T12:00:00Z",
 					"creator": "test-user"
 				}`))
+				if err != nil {
+					t.Errorf("Failed to write response: %v", err)
+				}
 			}
 		}
 	}))
