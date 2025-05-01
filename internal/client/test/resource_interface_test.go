@@ -140,7 +140,10 @@ func TestUpdateResource(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("ETag", "W/\"new-etag\"")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"id":"asa-123abc456def","name":"Updated Service Account"}`))
+		_, err := w.Write([]byte(`{"id":"asa-123abc456def","name":"Updated Service Account"}`))
+		if err != nil {
+			t.Errorf("Failed to write response: %v", err)
+		}
 	}))
 	defer server.Close()
 
