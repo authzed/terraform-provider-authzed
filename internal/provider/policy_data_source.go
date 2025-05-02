@@ -31,6 +31,7 @@ type policyDataSourceModel struct {
 	RoleIDs             types.List   `tfsdk:"role_ids"`
 	CreatedAt           types.String `tfsdk:"created_at"`
 	Creator             types.String `tfsdk:"creator"`
+	ETag                types.String `tfsdk:"etag"`
 }
 
 func (d *policyDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -78,6 +79,10 @@ func (d *policyDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				Computed:    true,
 				Description: "User who created the policy",
 			},
+			"etag": schema.StringAttribute{
+				Computed:    true,
+				Description: "Version identifier for the resource, used by update operations to prevent conflicts",
+			},
 		},
 	}
 }
@@ -106,22 +111,23 @@ func (d *policyDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
-	policy, err := d.client.GetPolicy(data.PermissionsSystemID.ValueString(), data.PolicyID.ValueString())
+	policyWithETag, err := d.client.GetPolicy(data.PermissionsSystemID.ValueString(), data.PolicyID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read policy, got error: %s", err))
 		return
 	}
 
 	// Map response to model
-	data.ID = types.StringValue(policy.ID)
-	data.Name = types.StringValue(policy.Name)
-	data.Description = types.StringValue(policy.Description)
-	data.PrincipalID = types.StringValue(policy.PrincipalID)
-	data.CreatedAt = types.StringValue(policy.CreatedAt)
-	data.Creator = types.StringValue(policy.Creator)
+	data.ID = types.StringValue(policyWithETag.Policy.ID)
+	data.Name = types.StringValue(policyWithETag.Policy.Name)
+	data.Description = types.StringValue(policyWithETag.Policy.Description)
+	data.PrincipalID = types.StringValue(policyWithETag.Policy.PrincipalID)
+	data.CreatedAt = types.StringValue(policyWithETag.Policy.CreatedAt)
+	data.Creator = types.StringValue(policyWithETag.Policy.Creator)
+	data.ETag = types.StringValue(policyWithETag.ETag)
 
 	// Map role IDs
-	roleIDList, diags := types.ListValueFrom(ctx, types.StringType, policy.RoleIDs)
+	roleIDList, diags := types.ListValueFrom(ctx, types.StringType, policyWithETag.Policy.RoleIDs)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

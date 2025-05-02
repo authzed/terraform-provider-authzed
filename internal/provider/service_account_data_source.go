@@ -29,6 +29,7 @@ type serviceAccountDataSourceModel struct {
 	ServiceAccountID    types.String `tfsdk:"service_account_id"`
 	CreatedAt           types.String `tfsdk:"created_at"`
 	Creator             types.String `tfsdk:"creator"`
+	ETag                types.String `tfsdk:"etag"`
 }
 
 func (d *serviceAccountDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -67,6 +68,10 @@ func (d *serviceAccountDataSource) Schema(_ context.Context, _ datasource.Schema
 				Computed:    true,
 				Description: "User who created the service account",
 			},
+			"etag": schema.StringAttribute{
+				Computed:    true,
+				Description: "Version identifier for the resource, used by update operations to prevent conflicts",
+			},
 		},
 	}
 }
@@ -96,7 +101,7 @@ func (d *serviceAccountDataSource) Read(ctx context.Context, req datasource.Read
 		return
 	}
 
-	serviceAccount, err := d.client.GetServiceAccount(
+	serviceAccountWithETag, err := d.client.GetServiceAccount(
 		data.PermissionsSystemID.ValueString(),
 		data.ServiceAccountID.ValueString(),
 	)
@@ -105,11 +110,12 @@ func (d *serviceAccountDataSource) Read(ctx context.Context, req datasource.Read
 		return
 	}
 
-	data.ID = types.StringValue(serviceAccount.ID)
-	data.Name = types.StringValue(serviceAccount.Name)
-	data.Description = types.StringValue(serviceAccount.Description)
-	data.CreatedAt = types.StringValue(serviceAccount.CreatedAt)
-	data.Creator = types.StringValue(serviceAccount.Creator)
+	data.ID = types.StringValue(serviceAccountWithETag.ServiceAccount.ID)
+	data.Name = types.StringValue(serviceAccountWithETag.ServiceAccount.Name)
+	data.Description = types.StringValue(serviceAccountWithETag.ServiceAccount.Description)
+	data.CreatedAt = types.StringValue(serviceAccountWithETag.ServiceAccount.CreatedAt)
+	data.Creator = types.StringValue(serviceAccountWithETag.ServiceAccount.Creator)
+	data.ETag = types.StringValue(serviceAccountWithETag.ETag)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

@@ -30,6 +30,7 @@ type TokenDataSourceModel struct {
 	ServiceAccountID    types.String `tfsdk:"service_account_id"`
 	CreatedAt           types.String `tfsdk:"created_at"`
 	Creator             types.String `tfsdk:"creator"`
+	ETag                types.String `tfsdk:"etag"`
 }
 
 func (d *TokenDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -72,6 +73,10 @@ func (d *TokenDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 				Description: "The name of the user that created this token",
 				Computed:    true,
 			},
+			"etag": schema.StringAttribute{
+				Computed:    true,
+				Description: "Version identifier for the resource, used by update operations to prevent conflicts",
+			},
 		},
 	}
 }
@@ -101,7 +106,7 @@ func (d *TokenDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 		return
 	}
 
-	token, err := d.client.GetToken(
+	tokenWithETag, err := d.client.GetToken(
 		config.PermissionsSystemID.ValueString(),
 		config.ServiceAccountID.ValueString(),
 		config.TokenID.ValueString(),
@@ -116,11 +121,12 @@ func (d *TokenDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 
 	// Populate the model
 	config.ID = types.StringValue(fmt.Sprintf("%s:%s:%s",
-		token.PermissionsSystemID, token.ServiceAccountID, token.ID))
-	config.Name = types.StringValue(token.Name)
-	config.Description = types.StringValue(token.Description)
-	config.CreatedAt = types.StringValue(token.CreatedAt)
-	config.Creator = types.StringValue(token.Creator)
+		tokenWithETag.Token.PermissionsSystemID, tokenWithETag.Token.ServiceAccountID, tokenWithETag.Token.ID))
+	config.Name = types.StringValue(tokenWithETag.Token.Name)
+	config.Description = types.StringValue(tokenWithETag.Token.Description)
+	config.CreatedAt = types.StringValue(tokenWithETag.Token.CreatedAt)
+	config.Creator = types.StringValue(tokenWithETag.Token.Creator)
+	config.ETag = types.StringValue(tokenWithETag.ETag)
 
 	// Save the data into Terraform state
 	diags = resp.State.Set(ctx, config)

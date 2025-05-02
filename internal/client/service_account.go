@@ -9,6 +9,32 @@ import (
 	"terraform-provider-authzed/internal/models"
 )
 
+// ServiceAccountWithETag represents a service account resource with its ETag
+type ServiceAccountWithETag struct {
+	ServiceAccount *models.ServiceAccount
+	ETag           string
+}
+
+// GetID returns the service account's ID
+func (sa *ServiceAccountWithETag) GetID() string {
+	return sa.ServiceAccount.ID
+}
+
+// GetETag returns the ETag value
+func (sa *ServiceAccountWithETag) GetETag() string {
+	return sa.ETag
+}
+
+// SetETag sets the ETag value
+func (sa *ServiceAccountWithETag) SetETag(etag string) {
+	sa.ETag = etag
+}
+
+// GetResource returns the underlying service account
+func (sa *ServiceAccountWithETag) GetResource() interface{} {
+	return sa.ServiceAccount
+}
+
 func (c *CloudClient) ListServiceAccounts(permissionsSystemID string) ([]models.ServiceAccount, error) {
 	path := fmt.Sprintf("/ps/%s/access/service-accounts", permissionsSystemID)
 
@@ -17,21 +43,21 @@ func (c *CloudClient) ListServiceAccounts(permissionsSystemID string) ([]models.
 		return nil, err
 	}
 
-	resp, err := c.Do(req)
+	respWithETag, err := c.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
 		// ignore the error
-		_ = resp.Body.Close()
+		_ = respWithETag.Response.Body.Close()
 	}()
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, NewAPIError(resp)
+	if respWithETag.Response.StatusCode != http.StatusOK {
+		return nil, NewAPIError(respWithETag)
 	}
 
 	// Read the entire body
-	bodyBytes, err := io.ReadAll(resp.Body)
+	bodyBytes, err := io.ReadAll(respWithETag.Response.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
@@ -52,36 +78,21 @@ func (c *CloudClient) ListServiceAccounts(permissionsSystemID string) ([]models.
 	return serviceAccounts, nil
 }
 
-func (c *CloudClient) GetServiceAccount(permissionsSystemID, serviceAccountID string) (*models.ServiceAccount, error) {
+// GetServiceAccount retrieves a service account by ID
+func (c *CloudClient) GetServiceAccount(permissionsSystemID, serviceAccountID string) (*ServiceAccountWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s", permissionsSystemID, serviceAccountID)
 
-	req, err := c.NewRequest(http.MethodGet, path, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := c.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		// ignore the error
-		_ = resp.Body.Close()
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, NewAPIError(resp)
-	}
-
 	var serviceAccount models.ServiceAccount
-	if err := json.NewDecoder(resp.Body).Decode(&serviceAccount); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+	resource, err := c.GetResourceWithFactory(path, &serviceAccount, NewServiceAccountResource)
+	if err != nil {
+		return nil, err
 	}
 
-	return &serviceAccount, nil
+	// Type assertion to convert Resource back to the concrete type
+	return resource.(*ServiceAccountWithETag), nil
 }
 
-func (c *CloudClient) CreateServiceAccount(serviceAccount *models.ServiceAccount) (*models.ServiceAccount, error) {
+func (c *CloudClient) CreateServiceAccount(serviceAccount *models.ServiceAccount) (*ServiceAccountWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/service-accounts", serviceAccount.PermissionsSystemID)
 
 	// Debug logging
@@ -97,56 +108,39 @@ func (c *CloudClient) CreateServiceAccount(serviceAccount *models.ServiceAccount
 	jsonBytes, _ := json.Marshal(serviceAccount)
 	fmt.Printf("Request body: %s\n", string(jsonBytes))
 
-	req, err := c.NewRequest(http.MethodPost, path, serviceAccount)
-	if err != nil {
-		return nil, err
-	}
-
-	// Log the fully constructed URL
-	fmt.Printf("Final request URL: %s\n", req.URL.String())
-	fmt.Printf("Request headers: %+v\n", req.Header)
-
-	resp, err := c.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		// ignore the error
-		_ = resp.Body.Close()
-	}()
-
-	if resp.StatusCode != http.StatusCreated {
-		return nil, NewAPIError(resp)
-	}
-
 	var createdServiceAccount models.ServiceAccount
-	if err := json.NewDecoder(resp.Body).Decode(&createdServiceAccount); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+	resource, err := c.CreateResourceWithFactory(path, serviceAccount, &createdServiceAccount, NewServiceAccountResource)
+	if err != nil {
+		return nil, err
 	}
 
-	return &createdServiceAccount, nil
+	// Log the request URL
+	fmt.Printf("Request was successful\n")
+
+	return resource.(*ServiceAccountWithETag), nil
+}
+
+// UpdateServiceAccount updates an existing service account using the PUT method
+func (c *CloudClient) UpdateServiceAccount(serviceAccount *models.ServiceAccount, etag string) (*ServiceAccountWithETag, error) {
+	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s", serviceAccount.PermissionsSystemID, serviceAccount.ID)
+
+	// Create a resource wrapper with the provided ETag
+	resourceWrapper := &ServiceAccountWithETag{
+		ServiceAccount: serviceAccount,
+		ETag:           etag,
+	}
+
+	// Use the generic UpdateResource method
+	updatedResource, err := c.UpdateResource(resourceWrapper, path, serviceAccount)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert back to concrete type
+	return updatedResource.(*ServiceAccountWithETag), nil
 }
 
 func (c *CloudClient) DeleteServiceAccount(permissionsSystemID, serviceAccountID string) error {
 	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s", permissionsSystemID, serviceAccountID)
-
-	req, err := c.NewRequest(http.MethodDelete, path, nil)
-	if err != nil {
-		return err
-	}
-
-	resp, err := c.Do(req)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		// ignore the error
-		_ = resp.Body.Close()
-	}()
-
-	if resp.StatusCode != http.StatusNoContent {
-		return NewAPIError(resp)
-	}
-
-	return nil
+	return c.DeleteResource(path)
 }

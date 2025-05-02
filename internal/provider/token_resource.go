@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
+// Ensure the implementation satisfies the expected interfaces.
 var _ resource.Resource = &TokenResource{}
 
 func NewTokenResource() resource.Resource {
@@ -34,6 +35,7 @@ type TokenResourceModel struct {
 	CreatedAt           types.String `tfsdk:"created_at"`
 	Creator             types.String `tfsdk:"creator"`
 	Secret              types.String `tfsdk:"secret"`
+	ETag                types.String `tfsdk:"etag"` // Added for ETag support
 }
 
 func (r *TokenResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -80,6 +82,10 @@ func (r *TokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Computed:    true,
 				Sensitive:   true,
 			},
+			"etag": schema.StringAttribute{
+				Computed:    true,
+				Description: "Version identifier used to prevent conflicts from concurrent updates, ensuring safe resource modifications",
+			},
 		},
 	}
 }
@@ -124,7 +130,7 @@ func (r *TokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		"service_account_id":   token.ServiceAccountID,
 	})
 
-	createdToken, err := r.client.CreateToken(token)
+	createdTokenWithETag, err := r.client.CreateToken(token)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating token",
@@ -133,17 +139,18 @@ func (r *TokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	plan.ID = types.StringValue(createdToken.ID)
-	plan.Name = types.StringValue(createdToken.Name)
-	plan.Description = types.StringValue(createdToken.Description)
-	plan.PermissionsSystemID = types.StringValue(createdToken.PermissionsSystemID)
-	plan.ServiceAccountID = types.StringValue(createdToken.ServiceAccountID)
-	plan.CreatedAt = types.StringValue(createdToken.CreatedAt)
-	plan.Creator = types.StringValue(createdToken.Creator)
+	plan.ID = types.StringValue(createdTokenWithETag.Token.ID)
+	plan.Name = types.StringValue(createdTokenWithETag.Token.Name)
+	plan.Description = types.StringValue(createdTokenWithETag.Token.Description)
+	plan.PermissionsSystemID = types.StringValue(createdTokenWithETag.Token.PermissionsSystemID)
+	plan.ServiceAccountID = types.StringValue(createdTokenWithETag.Token.ServiceAccountID)
+	plan.CreatedAt = types.StringValue(createdTokenWithETag.Token.CreatedAt)
+	plan.Creator = types.StringValue(createdTokenWithETag.Token.Creator)
+	plan.ETag = types.StringValue(createdTokenWithETag.ETag)
 
 	// Set the secret (only available during creation)
-	if createdToken.Hash != "" {
-		plan.Secret = types.StringValue(createdToken.Hash)
+	if createdTokenWithETag.Token.Hash != "" {
+		plan.Secret = types.StringValue(createdTokenWithETag.Token.Hash)
 	}
 
 	// Save data into Terraform state
@@ -164,7 +171,7 @@ func (r *TokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
-	token, err := r.client.GetToken(
+	tokenWithETag, err := r.client.GetToken(
 		state.PermissionsSystemID.ValueString(),
 		state.ServiceAccountID.ValueString(),
 		state.ID.ValueString(),
@@ -185,13 +192,14 @@ func (r *TokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 
 	// Update state
-	state.ID = types.StringValue(token.ID)
-	state.Name = types.StringValue(token.Name)
-	state.Description = types.StringValue(token.Description)
-	state.PermissionsSystemID = types.StringValue(token.PermissionsSystemID)
-	state.ServiceAccountID = types.StringValue(token.ServiceAccountID)
-	state.CreatedAt = types.StringValue(token.CreatedAt)
-	state.Creator = types.StringValue(token.Creator)
+	state.ID = types.StringValue(tokenWithETag.Token.ID)
+	state.Name = types.StringValue(tokenWithETag.Token.Name)
+	state.Description = types.StringValue(tokenWithETag.Token.Description)
+	state.PermissionsSystemID = types.StringValue(tokenWithETag.Token.PermissionsSystemID)
+	state.ServiceAccountID = types.StringValue(tokenWithETag.Token.ServiceAccountID)
+	state.CreatedAt = types.StringValue(tokenWithETag.Token.CreatedAt)
+	state.Creator = types.StringValue(tokenWithETag.Token.Creator)
+	state.ETag = types.StringValue(tokenWithETag.ETag)
 
 	// The secret isn't returned during Read operations, but we want to keep it
 
@@ -202,13 +210,54 @@ func (r *TokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 }
 
-// Update updates the token (not supported for tokens)
+// Update updates the token
 func (r *TokenResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// Tokens cannot be updated, only created and deleted
-	resp.Diagnostics.AddError(
-		"Error updating token",
-		"Tokens cannot be updated. Delete and create a new token instead.",
-	)
+	// Get planned changes
+	var plan TokenResourceModel
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Get current state to retrieve ETag
+	var state TokenResourceModel
+	diags = req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Create token with updated data
+	token := &models.Token{
+		ID:                  plan.ID.ValueString(),
+		Name:                plan.Name.ValueString(),
+		Description:         plan.Description.ValueString(),
+		PermissionsSystemID: plan.PermissionsSystemID.ValueString(),
+		ServiceAccountID:    plan.ServiceAccountID.ValueString(),
+	}
+
+	// Use the ETag from state for optimistic concurrency control
+	updatedTokenWithETag, err := r.client.UpdateToken(token, state.ETag.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error updating token",
+			fmt.Sprintf("Unable to update token, got error: %s", err),
+		)
+		return
+	}
+
+	// Update resource data with the response
+	plan.CreatedAt = types.StringValue(updatedTokenWithETag.Token.CreatedAt)
+	plan.Creator = types.StringValue(updatedTokenWithETag.Token.Creator)
+	plan.ETag = types.StringValue(updatedTokenWithETag.ETag)
+
+	// Preserve the secret value from state since it won't be returned in updates
+	plan.Secret = state.Secret
+
+	// Save updated data into Terraform state
+	diags = resp.State.Set(ctx, plan)
+	resp.Diagnostics.Append(diags...)
 }
 
 func (r *TokenResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
