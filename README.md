@@ -3,6 +3,7 @@
 A Terraform provider for managing administrative access to [AuthZed](https://authzed.com/) through its Cloud API.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Terraform Registry](https://img.shields.io/badge/Terraform%20Registry-AuthZed-blue.svg)](https://registry.terraform.io/providers/authzed/authzed/latest/docs)
 
 ## Overview
 
@@ -37,6 +38,12 @@ go build
 mkdir -p ~/.terraform.d/plugins/registry.terraform.io/authzed/authzed/0.1.0/$(go env GOOS)_$(go env GOARCH)
 cp terraform-provider-authzed ~/.terraform.d/plugins/registry.terraform.io/authzed/authzed/0.1.0/$(go env GOOS)_$(go env GOARCH)/
 ```
+
+## Working with Development Containers
+
+This repository includes a `.devcontainer` directory for use with [Visual Studio Code](https://code.visualstudio.com/) and the [Remote - Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers).
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/authzed/terraform-provider-authzed?quickstart=1)
 
 ### Testing Changes
 
