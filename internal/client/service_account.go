@@ -1,11 +1,11 @@
 package client
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-
 	"terraform-provider-authzed/internal/models"
 )
 
@@ -124,20 +124,97 @@ func (c *CloudClient) CreateServiceAccount(serviceAccount *models.ServiceAccount
 func (c *CloudClient) UpdateServiceAccount(serviceAccount *models.ServiceAccount, etag string) (*ServiceAccountWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s", serviceAccount.PermissionsSystemID, serviceAccount.ID)
 
-	// Create a resource wrapper with the provided ETag
-	resourceWrapper := &ServiceAccountWithETag{
-		ServiceAccount: serviceAccount,
-		ETag:           etag,
-	}
-
-	// Use the generic UpdateResource method
-	updatedResource, err := c.UpdateResource(resourceWrapper, path, serviceAccount)
+	// Create a direct PUT request without using UpdateResource
+	req, err := c.NewRequest(http.MethodPut, path, serviceAccount)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	// Convert back to concrete type
-	return updatedResource.(*ServiceAccountWithETag), nil
+	// Only set If-Match header if we have a non-empty ETag
+	if etag != "" {
+		req.Header.Set("If-Match", etag)
+	}
+
+	respWithETag, err := c.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+
+	// Keep the response body for potential error reporting
+	var respBody []byte
+	if respWithETag.Response.Body != nil {
+		respBody, _ = io.ReadAll(respWithETag.Response.Body)
+		// Replace the body for further use
+		respWithETag.Response.Body = io.NopCloser(bytes.NewBuffer(respBody))
+	}
+
+	defer func() {
+		if respWithETag.Response.Body != nil {
+			_ = respWithETag.Response.Body.Close()
+		}
+	}()
+
+	if respWithETag.Response.StatusCode != http.StatusOK {
+		// If it's a 404 error, attempt to recreate the resource
+		if respWithETag.Response.StatusCode == http.StatusNotFound {
+			// Recreate the service account using POST to the base endpoint
+			createPath := fmt.Sprintf("/ps/%s/access/service-accounts", serviceAccount.PermissionsSystemID)
+			originalID := serviceAccount.ID
+
+			createReq, err := c.NewRequest(http.MethodPost, createPath, serviceAccount)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create request for recreation: %w", err)
+			}
+
+			createResp, err := c.Do(createReq)
+			if err != nil {
+				return nil, fmt.Errorf("failed to send create request for recreation: %w", err)
+			}
+
+			defer func() {
+				if createResp.Response.Body != nil {
+					_ = createResp.Response.Body.Close()
+				}
+			}()
+
+			if createResp.Response.StatusCode != http.StatusCreated {
+				return nil, fmt.Errorf("failed to recreate service account: %s", NewAPIError(createResp))
+			}
+
+			// Decode the created service account
+			var createdServiceAccount models.ServiceAccount
+			if err := json.NewDecoder(createResp.Response.Body).Decode(&createdServiceAccount); err != nil {
+				return nil, fmt.Errorf("failed to decode recreated service account: %w", err)
+			}
+
+			// Create the result with the original ID to maintain consistency
+			result := &ServiceAccountWithETag{
+				ServiceAccount: &createdServiceAccount,
+				ETag:           createResp.ETag,
+			}
+
+			// Force the right ID to maintain Terraform state consistency
+			if result.ServiceAccount.ID != originalID {
+				result.ServiceAccount.ID = originalID
+			}
+
+			return result, nil
+		}
+
+		return nil, fmt.Errorf("failed to update service account: %s", NewAPIError(respWithETag))
+	}
+
+	// Decode the updated service account from the response
+	var updatedServiceAccount models.ServiceAccount
+	if err := json.NewDecoder(io.NopCloser(bytes.NewBuffer(respBody))).Decode(&updatedServiceAccount); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	// Create and return the wrapped service account with ETag
+	return &ServiceAccountWithETag{
+		ServiceAccount: &updatedServiceAccount,
+		ETag:           respWithETag.ETag,
+	}, nil
 }
 
 func (c *CloudClient) DeleteServiceAccount(permissionsSystemID, serviceAccountID string) error {

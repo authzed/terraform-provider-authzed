@@ -1,8 +1,10 @@
 package client
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -100,21 +102,101 @@ func (c *CloudClient) CreateRole(role *models.Role) (*RoleWithETag, error) {
 	return resource.(*RoleWithETag), nil
 }
 
-// UpdateRole updates an existing role using the PUT method
+// UpdateRole updates an existing role
 func (c *CloudClient) UpdateRole(role *models.Role, etag string) (*RoleWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/roles/%s", role.PermissionsSystemID, role.ID)
 
-	resourceWrapper := &RoleWithETag{
-		Role: role,
-		ETag: etag,
-	}
-
-	updatedResource, err := c.UpdateResource(resourceWrapper, path, role)
+	// Create a direct PUT request without using UpdateResource
+	req, err := c.NewRequest(http.MethodPut, path, role)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	return updatedResource.(*RoleWithETag), nil
+	// Only set If-Match header if we have a non-empty ETag
+	if etag != "" {
+		req.Header.Set("If-Match", etag)
+	}
+
+	respWithETag, err := c.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+
+	// Keep the response body for potential error reporting
+	var respBody []byte
+	if respWithETag.Response.Body != nil {
+		respBody, _ = io.ReadAll(respWithETag.Response.Body)
+		// Replace the body for further use
+		respWithETag.Response.Body = io.NopCloser(bytes.NewBuffer(respBody))
+	}
+
+	defer func() {
+		if respWithETag.Response.Body != nil {
+			_ = respWithETag.Response.Body.Close()
+		}
+	}()
+
+	if respWithETag.Response.StatusCode != http.StatusOK {
+		// If it's a 404 error, attempt to recreate the resource
+		if respWithETag.Response.StatusCode == http.StatusNotFound {
+			// Recreate the role using POST to the base endpoint
+			createPath := fmt.Sprintf("/ps/%s/access/roles", role.PermissionsSystemID)
+			originalID := role.ID
+
+			createReq, err := c.NewRequest(http.MethodPost, createPath, role)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create request for recreation: %w", err)
+			}
+
+			createResp, err := c.Do(createReq)
+			if err != nil {
+				return nil, fmt.Errorf("failed to send create request for recreation: %w", err)
+			}
+
+			defer func() {
+				if createResp.Response.Body != nil {
+					_ = createResp.Response.Body.Close()
+				}
+			}()
+
+			if createResp.Response.StatusCode != http.StatusCreated {
+				return nil, fmt.Errorf("failed to recreate role: %s", NewAPIError(createResp))
+			}
+
+			// Decode the created role
+			var createdRole models.Role
+			if err := json.NewDecoder(createResp.Response.Body).Decode(&createdRole); err != nil {
+				return nil, fmt.Errorf("failed to decode recreated role: %w", err)
+			}
+
+			// Create the result with the original ID to maintain consistency
+			result := &RoleWithETag{
+				Role: &createdRole,
+				ETag: createResp.ETag,
+			}
+
+			// Force the right ID to maintain Terraform state consistency
+			if result.Role.ID != originalID {
+				result.Role.ID = originalID
+			}
+
+			return result, nil
+		}
+
+		return nil, fmt.Errorf("failed to update role: %s", NewAPIError(respWithETag))
+	}
+
+	// Decode the updated role from the response
+	var updatedRole models.Role
+	if err := json.NewDecoder(io.NopCloser(bytes.NewBuffer(respBody))).Decode(&updatedRole); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	// Create and return the wrapped role with ETag
+	return &RoleWithETag{
+		Role: &updatedRole,
+		ETag: respWithETag.ETag,
+	}, nil
 }
 
 // DeleteRole deletes a role by its ID
