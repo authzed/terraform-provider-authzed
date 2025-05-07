@@ -102,7 +102,7 @@ func (c *CloudClient) CreateRole(role *models.Role) (*RoleWithETag, error) {
 	return resource.(*RoleWithETag), nil
 }
 
-// UpdateRole updates an existing role
+// UpdateRole updates an existing role using the PUT method
 func (c *CloudClient) UpdateRole(role *models.Role, etag string) (*RoleWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/roles/%s", role.PermissionsSystemID, role.ID)
 
@@ -160,7 +160,7 @@ func (c *CloudClient) UpdateRole(role *models.Role, etag string) (*RoleWithETag,
 			}()
 
 			if createResp.Response.StatusCode != http.StatusCreated {
-				return nil, fmt.Errorf("failed to recreate role: %s", NewAPIError(createResp))
+				return nil, NewAPIError(createResp)
 			}
 
 			// Decode the created role
@@ -183,7 +183,7 @@ func (c *CloudClient) UpdateRole(role *models.Role, etag string) (*RoleWithETag,
 			return result, nil
 		}
 
-		return nil, fmt.Errorf("failed to update role: %s", NewAPIError(respWithETag))
+		return nil, NewAPIError(respWithETag)
 	}
 
 	// Decode the updated role from the response

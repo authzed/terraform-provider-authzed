@@ -137,9 +137,12 @@ func TestETagSupport(t *testing.T) {
 		assert.True(t, ifMatchHeaderReceived, "If-Match header should be sent")
 		assert.Equal(t, "W/\"wrong-etag\"", receivedETag, "Wrong ETag should be sent")
 
-		// Check error type
 		apiErr, ok := err.(*client.APIError)
 		assert.True(t, ok, "Error should be an APIError")
-		assert.Equal(t, http.StatusPreconditionFailed, apiErr.StatusCode, "Should receive 412 Precondition Failed")
+
+		// Only check status code if we have a valid APIError
+		if ok && apiErr != nil {
+			assert.Equal(t, http.StatusPreconditionFailed, apiErr.StatusCode, "Should receive 412 Precondition Failed")
+		}
 	})
 }

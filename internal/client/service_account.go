@@ -178,7 +178,7 @@ func (c *CloudClient) UpdateServiceAccount(serviceAccount *models.ServiceAccount
 			}()
 
 			if createResp.Response.StatusCode != http.StatusCreated {
-				return nil, fmt.Errorf("failed to recreate service account: %s", NewAPIError(createResp))
+				return nil, NewAPIError(createResp)
 			}
 
 			// Decode the created service account
@@ -201,7 +201,7 @@ func (c *CloudClient) UpdateServiceAccount(serviceAccount *models.ServiceAccount
 			return result, nil
 		}
 
-		return nil, fmt.Errorf("failed to update service account: %s", NewAPIError(respWithETag))
+		return nil, NewAPIError(respWithETag)
 	}
 
 	// Decode the updated service account from the response

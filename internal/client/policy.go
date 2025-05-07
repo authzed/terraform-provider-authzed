@@ -93,7 +93,7 @@ func (c *CloudClient) CreatePolicy(policy *models.Policy) (*PolicyWithETag, erro
 	return resource.(*PolicyWithETag), nil
 }
 
-// UpdatePolicy updates an existing policy
+// UpdatePolicy updates an existing policy using the PUT method
 func (c *CloudClient) UpdatePolicy(policy *models.Policy, etag string) (*PolicyWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/policies/%s", policy.PermissionsSystemID, policy.ID)
 
@@ -151,7 +151,7 @@ func (c *CloudClient) UpdatePolicy(policy *models.Policy, etag string) (*PolicyW
 			}()
 
 			if createResp.Response.StatusCode != http.StatusCreated {
-				return nil, fmt.Errorf("failed to recreate policy: %s", NewAPIError(createResp))
+				return nil, NewAPIError(createResp)
 			}
 
 			// Decode the created policy
@@ -174,7 +174,7 @@ func (c *CloudClient) UpdatePolicy(policy *models.Policy, etag string) (*PolicyW
 			return result, nil
 		}
 
-		return nil, fmt.Errorf("failed to update policy: %s", NewAPIError(respWithETag))
+		return nil, NewAPIError(respWithETag)
 	}
 
 	// Decode the updated policy from the response
