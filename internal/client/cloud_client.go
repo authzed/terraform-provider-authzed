@@ -9,7 +9,6 @@ import (
 	"time"
 )
 
-// CloudClient is the HTTP client for the AuthZed Cloud API
 type CloudClient struct {
 	Host       string
 	Token      string
@@ -17,7 +16,6 @@ type CloudClient struct {
 	HTTPClient *http.Client
 }
 
-// CloudClientConfig represents the config for the Cloud API client
 type CloudClientConfig struct {
 	Host       string
 	Token      string
@@ -91,52 +89,8 @@ func (c *CloudClient) Do(req *http.Request) (*ResponseWithETag, error) {
 		return nil, err
 	}
 
-	// Extract the ETag - check multiple possible header names
-	var etag string
-
-	// Check standard ETag header (case-insensitive)
-	etag = resp.Header.Get("ETag")
-
-	// If not found, check for other variations
-	if etag == "" {
-		etag = resp.Header.Get("etag")
-	}
-	if etag == "" {
-		etag = resp.Header.Get("Etag")
-	}
-
-	// Sometimes ETags are returned with quotes, clean those if present
-	if len(etag) > 0 && (etag[0] == '"' && etag[len(etag)-1] == '"') {
-		etag = etag[1 : len(etag)-1]
-	}
-
-	// If ETag is still not found, try to extract it from the response body
-	if etag == "" && (resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusCreated) {
-		// Only attempt this for successful responses
-		bodyBytes, err := io.ReadAll(resp.Body)
-		if err == nil {
-			// Create a copy of the body for later use
-			resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-
-			// Try to find ETag in a common field pattern
-			var respMap map[string]interface{}
-			if err := json.Unmarshal(bodyBytes, &respMap); err == nil {
-				// Check for common ETag field patterns in the response
-				if etagVal, ok := respMap["etag"].(string); ok {
-					etag = etagVal
-				} else if etagVal, ok := respMap["ETag"].(string); ok {
-					etag = etagVal
-				} else if etagVal, ok := respMap["e_tag"].(string); ok {
-					etag = etagVal
-				} else if etagVal, ok := respMap["_etag"].(string); ok {
-					etag = etagVal
-				} else if etagVal, ok := respMap["ConfigETag"].(string); ok {
-					// This is the format used by the AuthZed API
-					etag = etagVal
-				}
-			}
-		}
-	}
+	// Extract the ETag from standard header
+	etag := resp.Header.Get("ETag")
 
 	return &ResponseWithETag{
 		Response: resp,
@@ -148,8 +102,6 @@ func (c *CloudClient) Do(req *http.Request) (*ResponseWithETag, error) {
 func (c *CloudClient) UpdateResource(resource Resource, endpoint string, body any) (Resource, error) {
 	// Check if the ETag is empty
 	if resource.GetETag() == "" {
-		fmt.Printf("Warning: Empty ETag provided for update operation. Attempting to fetch current ETag first.\n")
-
 		// Get the current resource to obtain an ETag
 		req, err := c.NewRequest(http.MethodGet, endpoint, nil)
 		if err != nil {
@@ -168,7 +120,6 @@ func (c *CloudClient) UpdateResource(resource Resource, endpoint string, body an
 
 		// Extract the ETag from the GET response
 		etag := respWithETag.ETag
-		fmt.Printf("Retrieved ETag %q for update operation\n", etag)
 
 		// Set the ETag on the resource
 		resource.SetETag(etag)
@@ -336,40 +287,7 @@ func (c *CloudClient) CreateResourceWithFactory(endpoint string, body any, dest 
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	// If no ETag was extracted, try to get it directly from the resource after creation
-	if respWithETag.ETag == "" {
-		fmt.Printf("No ETag found in response headers after resource creation. Attempting to fetch resource to get ETag.\n")
-
-		// Extract ID from the created resource to fetch it
-		// This requires some reflection or type assertion to get the ID
-		// For simplicity, we'll use the factory to create a resource first
-		resource := factory(dest, "")
-
-		// Get the resource ID
-		resID := resource.GetID()
-
-		if resID != "" {
-			// Use the ID to construct the GET endpoint
-			// This is a bit of a hack, since we're assuming the GET endpoint is the same as the POST endpoint + /{id}
-			getEndpoint := fmt.Sprintf("%s/%s", endpoint, resID)
-
-			// Make a GET request to fetch the resource with its ETag
-			getReq, err := c.NewRequest(http.MethodGet, getEndpoint, nil)
-			if err == nil {
-				getResp, err := c.Do(getReq)
-				if err == nil && getResp.Response.StatusCode == http.StatusOK {
-					// Successfully fetched, use the ETag from this response
-					if getResp.ETag != "" {
-						respWithETag.ETag = getResp.ETag
-						fmt.Printf("Retrieved ETag %q after fetching created resource\n", getResp.ETag)
-					}
-
-					_ = getResp.Response.Body.Close()
-				}
-			}
-		}
-	}
-
 	// Use the factory to create a Resource from the decoded object
+	// The factory will handle extracting ConfigETag from the response body if needed
 	return factory(dest, respWithETag.ETag), nil
 }
