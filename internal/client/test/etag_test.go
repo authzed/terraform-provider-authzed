@@ -17,7 +17,7 @@ func TestETagSupport(t *testing.T) {
 	var receivedETag string
 	var firstReceivedETag string // Track the first ETag received for verification
 	var ifMatchHeaderReceived bool
-	var firstPUTRequest bool = true // Track first PUT request for retry test
+	var firstPUTRequest = true // Track first PUT request for retry test
 
 	// Create test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
