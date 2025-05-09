@@ -15,6 +15,7 @@ func TestETagSupport(t *testing.T) {
 	const testETag = "W/\"etag-service-account\""
 	const updatedETag = "W/\"etag-updated\""
 	var receivedETag string
+	var firstReceivedETag string // Track the first ETag received for verification
 	var ifMatchHeaderReceived bool
 	var firstPUTRequest bool = true // Track first PUT request for retry test
 
@@ -29,6 +30,11 @@ func TestETagSupport(t *testing.T) {
 			if r.Method == http.MethodPut {
 				receivedETag = r.Header.Get("If-Match")
 				ifMatchHeaderReceived = receivedETag != ""
+
+				// Save the first ETag for verification in the retry test
+				if firstPUTRequest {
+					firstReceivedETag = receivedETag
+				}
 
 				// In retry test (DetectsConcurrentModification):
 				// - First PUT with wrong ETag fails with 412
@@ -92,8 +98,6 @@ func TestETagSupport(t *testing.T) {
 		Host:  server.URL,
 		Token: "test-token",
 	})
-
-	// Test 1: GET captures ETag
 	t.Run("GetCaptures_ETag", func(t *testing.T) {
 		result, err := c.GetServiceAccount("ps-test123", "asa-test123")
 		assert.NoError(t, err)
@@ -102,8 +106,6 @@ func TestETagSupport(t *testing.T) {
 		assert.Equal(t, "asa-test123", result.ServiceAccount.ID)
 		assert.Equal(t, "Test Service Account", result.ServiceAccount.Name)
 	})
-
-	// Test 2: Update sends ETag in If-Match header
 	t.Run("UpdateSends_IfMatch", func(t *testing.T) {
 		// Reset tracking variables
 		ifMatchHeaderReceived = false
@@ -124,18 +126,12 @@ func TestETagSupport(t *testing.T) {
 		assert.Equal(t, testETag, receivedETag, "ETag should be sent correctly")
 		assert.Equal(t, updatedETag, result.ETag, "New ETag should be returned")
 	})
-
-	// Test 3: Concurrent modification detection and auto-retry
 	t.Run("DetectsConcurrentModification", func(t *testing.T) {
 		// Reset tracking variables
 		ifMatchHeaderReceived = false
 		receivedETag = ""
-		firstPUTRequest = true // Reset for this test run
-
-		// Modify mock server to handle the auto-retry flow:
-		// 1. First PUT with wrong ETag returns 412
-		// 2. GET to fetch latest ETag returns the current ETag
-		// 3. Second PUT with correct ETag succeeds
+		firstReceivedETag = ""
+		firstPUTRequest = true
 
 		// Perform update with wrong ETag
 		sa := &models.ServiceAccount{
@@ -150,7 +146,7 @@ func TestETagSupport(t *testing.T) {
 		assert.NoError(t, err, "Update with wrong ETag should retry and succeed")
 		assert.NotNil(t, result, "Result should not be nil after successful retry")
 		assert.True(t, ifMatchHeaderReceived, "If-Match header should be sent")
-		assert.Equal(t, "W/\"wrong-etag\"", receivedETag, "Wrong ETag should be sent initially")
+		assert.Equal(t, "W/\"wrong-etag\"", firstReceivedETag, "Wrong ETag should be sent initially")
 
 		// After retry, the result should have the updated ETag
 		assert.Equal(t, updatedETag, result.ETag, "Result should have updated ETag after retry")
