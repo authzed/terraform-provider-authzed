@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"terraform-provider-authzed/internal/client"
 	"terraform-provider-authzed/internal/models"
@@ -126,6 +127,13 @@ func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequ
 
 	serviceAccountWithETag, err := r.client.GetServiceAccount(data.PermissionsSystemID.ValueString(), data.ID.ValueString())
 	if err != nil {
+		// Check if the resource was not found (404 error)
+		if strings.Contains(err.Error(), "status 404") || strings.Contains(err.Error(), "not found") {
+			// Resource no longer exists, remove it from state
+			resp.State.RemoveResource(ctx)
+			return
+		}
+
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read service account, got error: %s", err))
 		return
 	}
@@ -169,7 +177,17 @@ func (r *serviceAccountResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	// Update resource data with the response
+	// Update resource data with the response - ensure all fields are set
+	data.ID = types.StringValue(updatedServiceAccountWithETag.ServiceAccount.ID)
+
+	// If the ID is empty (which might happen due to API behavior), preserve the original ID
+	if data.ID.ValueString() == "" {
+		data.ID = state.ID
+	}
+
+	data.Name = types.StringValue(updatedServiceAccountWithETag.ServiceAccount.Name)
+	data.Description = types.StringValue(updatedServiceAccountWithETag.ServiceAccount.Description)
+	data.PermissionsSystemID = types.StringValue(updatedServiceAccountWithETag.ServiceAccount.PermissionsSystemID)
 	data.CreatedAt = types.StringValue(updatedServiceAccountWithETag.ServiceAccount.CreatedAt)
 	data.Creator = types.StringValue(updatedServiceAccountWithETag.ServiceAccount.Creator)
 	data.ETag = types.StringValue(updatedServiceAccountWithETag.ETag)
