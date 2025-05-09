@@ -32,6 +32,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          # For PRs, check out the head of the PR
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || '' }}
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -53,7 +56,7 @@ jobs:
             echo "changes=false" >> $GITHUB_OUTPUT
           fi
 
-      # Only create PR when not in a PR context
+      # When not in a PR, create a new PR with changes
       - name: Create Pull Request
         if: steps.update-spec.outputs.changes == 'true' && github.event_name != 'pull_request'
         uses: peter-evans/create-pull-request@v5
@@ -68,7 +71,17 @@ jobs:
           base: main
           labels: dependencies,automated
       
-      # For PR events, comment on the PR if the spec is out of date
+      # When in a PR context, update the PR with the latest spec
+      - name: Commit changes to PR
+        if: steps.update-spec.outputs.changes == 'true' && github.event_name == 'pull_request'
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add openapi-spec.yaml
+          git commit -m "chore: update OpenAPI spec to latest version"
+          git push
+          
+      # Also add a comment to the PR about the update
       - name: Comment on PR
         if: steps.update-spec.outputs.changes == 'true' && github.event_name == 'pull_request'
         uses: actions/github-script@v6
@@ -78,5 +91,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '⚠️ The OpenAPI spec in this PR is out of date with the latest API spec. Consider updating it before merging.'
+              body: '✅ The OpenAPI spec in this PR has been automatically updated to the latest version.'
             }) 
