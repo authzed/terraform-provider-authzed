@@ -5,10 +5,12 @@ info:
   description: Cloud API for AuthZed Dedicated
   termsOfService: https://authzed.com/terms-conditions
   title: AuthZed Cloud API
-  version: 25r1
+  version: ""
 externalDocs:
   description: Find out more at the official Authzed Docs site
   url: https://authzed.com/docs
+servers:
+- url: https://api.admin.stage.aws.authzed.net
 tags:
 - description: A permissions system defines a managed SpiceDB instance
   externalDocs:
