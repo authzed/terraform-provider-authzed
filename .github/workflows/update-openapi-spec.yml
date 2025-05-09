@@ -1,0 +1,82 @@
+name: Update OpenAPI Spec
+
+on:
+  # Run once daily at 00:00 UTC
+  schedule:
+    - cron: '0 0 * * *'
+  
+  # Run when PRs are opened or synchronized
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - 'openapi-spec.yaml'
+      - '.github/workflows/update-openapi-spec.yml'
+  
+  # Allow manual triggering
+  workflow_dispatch:
+  
+  # Add a repository_dispatch event for external triggers if needed
+  repository_dispatch:
+    types: [openapi_spec_updated]
+
+jobs:
+  update-openapi-spec:
+    name: Update OpenAPI Spec
+    # Don't run this job on PR events if the PR is from the update-openapi-spec branch (to avoid loops)
+    if: github.event_name != 'pull_request' || github.head_ref != 'update-openapi-spec'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24.3'
+          check-latest: true
+
+      - name: Install mage
+        run: go install github.com/magefile/mage@latest
+
+      - name: Update OpenAPI spec
+        id: update-spec
+        run: |
+          mage openapi:update
+          # Check if there are changes
+          if [[ -n "$(git status --porcelain openapi-spec.yaml)" ]]; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      # Only create PR when not in a PR context
+      - name: Create Pull Request
+        if: steps.update-spec.outputs.changes == 'true' && github.event_name != 'pull_request'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          commit-message: 'chore: update OpenAPI spec'
+          title: 'chore: update OpenAPI spec'
+          body: |
+            This PR updates the OpenAPI spec to the latest version.
+            
+            This is an automated PR created by the GitHub Actions workflow.
+          branch: update-openapi-spec
+          base: main
+          labels: dependencies,automated
+      
+      # For PR events, comment on the PR if the spec is out of date
+      - name: Comment on PR
+        if: steps.update-spec.outputs.changes == 'true' && github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '⚠️ The OpenAPI spec in this PR is out of date with the latest API spec. Consider updating it before merging.'
+            }) 
