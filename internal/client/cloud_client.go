@@ -102,7 +102,8 @@ func (c *CloudClient) Do(req *http.Request) (*ResponseWithETag, error) {
 func (c *CloudClient) UpdateResource(resource Resource, endpoint string, body any) (Resource, error) {
 	// Check if the ETag is empty
 	if resource.GetETag() == "" {
-		// Get the current resource to obtain an ETag
+		// We only update the ETag, not the local attributes, since this is purely for optconcurrency control.
+		// If the remote resource differs from local state, the update will fail with 412 and retry with latest version.
 		req, err := c.NewRequest(http.MethodGet, endpoint, nil)
 		if err != nil {
 			return nil, err
