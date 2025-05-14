@@ -9,7 +9,7 @@ type ServiceAccount struct {
 	Tokens              []Token `json:"token,omitempty"`
 	CreatedAt           string  `json:"createdAt,omitempty"`
 	Creator             string  `json:"creator,omitempty"`
-	ConfigETag          string  `json:"ConfigETag,omitempty"`
+	ConfigETag          string  `json:"configETag,omitempty"`
 }
 
 // Token represents a token associated with a service account
