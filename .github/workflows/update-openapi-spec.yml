@@ -59,7 +59,7 @@ jobs:
       # When not in a PR, create a new PR with changes
       - name: Create Pull Request
         if: steps.update-spec.outputs.changes == 'true' && github.event_name != 'pull_request'
-        uses: peter-evans/create-pull-request@v5
+        uses: peter-evans/create-pull-request@v7
         with:
           commit-message: 'chore: update OpenAPI spec'
           title: 'chore: update OpenAPI spec'
