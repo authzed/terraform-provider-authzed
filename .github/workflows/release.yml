@@ -1,3 +1,4 @@
+---
 # Terraform Provider release workflow.
 name: Release
 
@@ -39,3 +40,42 @@ jobs:
           # GitHub sets the GITHUB_TOKEN secret automatically.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
+      - name: Notify Slack of release (success)
+        if: ${{ success() }}
+        uses: slackapi/slack-github-action@v2.0.0
+        with:
+          webhook: "${{ secrets.SLACK_WEBHOOK_URL }}"
+          webhook-type: "incoming-webhook"
+          payload: |
+            text: ":white_check_mark: *Terraform Provider Release Succeeded!*"
+            blocks:
+              - type: "section"
+                text:
+                  type: "mrkdwn"
+                  text: |
+                    :white_check_mark: *Terraform Provider Release* succeeded!
+                    *Tag pushed:* `${{ github.ref_name }}`
+                    *Repository:* <https://github.com/${{ github.repository }}|${{ github.repository }}>
+                    *Commit:* <https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>
+                    *Actor:* `${{ github.actor }}`
+                    *Workflow:* `${{ github.workflow }}`
+
+      - name: Notify Slack of release (failure)
+        if: ${{ failure() }}
+        uses: slackapi/slack-github-action@v2.0.0
+        with:
+          webhook: "${{ secrets.SLACK_WEBHOOK_URL }}"
+          webhook-type: "incoming-webhook"
+          payload: |
+            text: ":x: *Terraform Provider Release Failed!*"
+            blocks:
+              - type: "section"
+                text:
+                  type: "mrkdwn"
+                  text: |
+                    :x: *Terraform Provider Release* failed.
+                    *Tag pushed:* `${{ github.ref_name }}`
+                    *Repository:* <https://github.com/${{ github.repository }}|${{ github.repository }}>
+                    *Commit:* <https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>
+                    *Actor:* `${{ github.actor }}`
+                    *Workflow:* `${{ github.workflow }}`
