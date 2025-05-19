@@ -27,9 +27,21 @@ output "system_count" {
 The following attributes are exported:
 
 * `permission_systems` - A list of all permission systems. Each permission system contains:
-  * `id` - The unique identifier of the permission system.
-  * `name` - The name of the permission system.
+  * `id` - The unique identifier of the permission system. Will start with `ps-` followed by alphanumeric characters or hyphens.
+  * `name` - The name of the permission system. Will be between 1 and 50 characters.
+  * `description` - The description of the permission system. Maximum length is 200 characters.
   * `system_type` - The type of the permission system (e.g., "dedicated", "developer").
-  * `created_at` - The timestamp when the permission system was created.
-  * `updated_at` - The timestamp when the permission system was last updated.
+  * `created_at` - The timestamp when the permission system was created (RFC 3339 format).
+  * `creator` - The name of the user that created this permission system.
+  * `updated_at` - The timestamp when the permission system was last updated (RFC 3339 format).
+  * `updater` - The name of the user that last updated this permission system.
+  * `version` - A complex object containing version information with the following attributes:
+    * `current_version` - An object containing:
+      * `display_name` - The display name of the current version.
+      * `supported_feature_names` - List of supported feature names.
+      * `version` - The version string.
+    * `has_update_available` - Whether an update is available.
+    * `is_locked_to_version` - Whether the version is locked.
+    * `override_image` - The image to use for the SpiceDB instance.
+    * `selected_channel` - The selected channel for updates.
 * `permission_systems_count` - The total number of permission systems found. 

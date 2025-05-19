@@ -12,8 +12,8 @@ This data source retrieves information about a specific policy in an AuthZed per
 
 ```terraform
 data "cloudapi_policy" "example" {
-  permission_system_id = "sys_123456789"
-  policy_id            = "pol_abcdef123456"
+  permission_system_id = "ps-123456789"
+  policy_id            = "apc-abcdef123456"
 }
 
 output "policy_roles" {
@@ -25,17 +25,19 @@ output "policy_roles" {
 
 The following arguments are supported:
 
-* `permission_system_id` - (Required) The ID of the permission system containing the policy.
-* `policy_id` - (Required) The ID of the policy to look up.
+* `permission_system_id` - (Required) The ID of the permission system containing the policy. Must start with `ps-` followed by alphanumeric characters or hyphens.
+* `policy_id` - (Required) The ID of the policy to look up. Must start with `apc-` followed by alphanumeric characters or hyphens.
 
 ## Attribute Reference
 
 In addition to all arguments above, the following attributes are exported:
 
 * `id` - A composite ID uniquely identifying this policy.
-* `name` - The name of the policy.
-* `description` - The description of the policy.
+* `name` - The name of the policy. Will be between 1 and 50 characters.
+* `description` - The description of the policy. Maximum length is 200 characters.
 * `principal_id` - The ID of the service account this policy applies to.
-* `role_ids` - A list of role IDs assigned by this policy.
-* `created_at` - The timestamp when the policy was created.
-* `updated_at` - The timestamp when the policy was last updated. 
+* `role_ids` - A list of role IDs assigned by this policy. Currently limited to exactly one role ID.
+* `created_at` - The timestamp when the policy was created (RFC 3339 format).
+* `creator` - The name of the user that created this policy.
+* `updated_at` - The timestamp when the policy was last updated (RFC 3339 format).
+* `updater` - The name of the user that last updated this policy. 
