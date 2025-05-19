@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"terraform-provider-authzed/internal/client"
 	"terraform-provider-authzed/internal/models"
@@ -138,6 +139,13 @@ func (r *roleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	roleWithETag, err := r.client.GetRole(data.PermissionsSystemID.ValueString(), data.ID.ValueString())
 	if err != nil {
+		// Check if the resource was not found (404 error)
+		if strings.Contains(err.Error(), "status 404") || strings.Contains(err.Error(), "not found") {
+			// Resource no longer exists, remove it from state
+			resp.State.RemoveResource(ctx)
+			return
+		}
+
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read role, got error: %s", err))
 		return
 	}
@@ -199,6 +207,13 @@ func (r *roleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	}
 
 	// Update resource data with the response
+	data.ID = types.StringValue(updatedRoleWithETag.Role.ID)
+
+	// If the ID is empty, preserve the original ID
+	if data.ID.ValueString() == "" {
+		data.ID = state.ID
+	}
+
 	data.CreatedAt = types.StringValue(updatedRoleWithETag.Role.CreatedAt)
 	data.Creator = types.StringValue(updatedRoleWithETag.Role.Creator)
 	data.ETag = types.StringValue(updatedRoleWithETag.ETag)

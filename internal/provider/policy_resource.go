@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"terraform-provider-authzed/internal/client"
 	"terraform-provider-authzed/internal/models"
@@ -155,6 +156,13 @@ func (r *policyResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 	policyWithETag, err := r.client.GetPolicy(data.PermissionsSystemID.ValueString(), data.ID.ValueString())
 	if err != nil {
+		// Check if the resource was not found (404 error)
+		if strings.Contains(err.Error(), "status 404") || strings.Contains(err.Error(), "not found") {
+			// Resource no longer exists, remove it from state
+			resp.State.RemoveResource(ctx)
+			return
+		}
+
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read policy, got error: %s", err))
 		return
 	}
@@ -219,6 +227,13 @@ func (r *policyResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	// Update resource data with the response
+	data.ID = types.StringValue(updatedPolicyWithETag.Policy.ID)
+
+	// If the ID is empty, preserve the original ID
+	if data.ID.ValueString() == "" {
+		data.ID = state.ID
+	}
+
 	data.CreatedAt = types.StringValue(updatedPolicyWithETag.Policy.CreatedAt)
 	data.Creator = types.StringValue(updatedPolicyWithETag.Policy.Creator)
 	data.ETag = types.StringValue(updatedPolicyWithETag.ETag)

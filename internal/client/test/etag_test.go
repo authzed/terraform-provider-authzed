@@ -15,26 +15,40 @@ func TestETagSupport(t *testing.T) {
 	const testETag = "W/\"etag-service-account\""
 	const updatedETag = "W/\"etag-updated\""
 	var receivedETag string
+	var firstReceivedETag string // Track the first ETag received for verification
 	var ifMatchHeaderReceived bool
+	var firstPUTRequest = true // Track first PUT request for retry test
 
 	// Create test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Set content type for all responses
 		w.Header().Set("Content-Type", "application/json")
 
-		// Check for If-Match header in PUT requests
-		if r.Method == http.MethodPut {
-			receivedETag = r.Header.Get("If-Match")
-			ifMatchHeaderReceived = receivedETag != ""
+		// For the retry test, track sequence of requests
+		if r.URL.Path == "/ps/ps-test123/access/service-accounts/asa-test123" {
+			// Check for If-Match header in PUT requests
+			if r.Method == http.MethodPut {
+				receivedETag = r.Header.Get("If-Match")
+				ifMatchHeaderReceived = receivedETag != ""
 
-			// Simulate concurrency detection
-			if receivedETag != testETag && receivedETag != "" {
-				w.WriteHeader(http.StatusPreconditionFailed)
-				_, err := w.Write([]byte(`{"error":"Precondition failed: resource has been modified"}`))
-				if err != nil {
-					t.Errorf("Failed to write response: %v", err)
+				// Save the first ETag for verification in the retry test
+				if firstPUTRequest {
+					firstReceivedETag = receivedETag
 				}
-				return
+
+				// In retry test (DetectsConcurrentModification):
+				// - First PUT with wrong ETag fails with 412
+				// - Second PUT (after GET) with correct ETag succeeds
+				if receivedETag == "W/\"wrong-etag\"" && firstPUTRequest {
+					// Fail first PUT with wrong ETag
+					firstPUTRequest = false
+					w.WriteHeader(http.StatusPreconditionFailed)
+					_, err := w.Write([]byte(`{"error":"Precondition failed: resource has been modified"}`))
+					if err != nil {
+						t.Errorf("Failed to write response: %v", err)
+					}
+					return
+				}
 			}
 		}
 
@@ -84,8 +98,6 @@ func TestETagSupport(t *testing.T) {
 		Host:  server.URL,
 		Token: "test-token",
 	})
-
-	// Test 1: GET captures ETag
 	t.Run("GetCaptures_ETag", func(t *testing.T) {
 		result, err := c.GetServiceAccount("ps-test123", "asa-test123")
 		assert.NoError(t, err)
@@ -94,8 +106,6 @@ func TestETagSupport(t *testing.T) {
 		assert.Equal(t, "asa-test123", result.ServiceAccount.ID)
 		assert.Equal(t, "Test Service Account", result.ServiceAccount.Name)
 	})
-
-	// Test 2: Update sends ETag in If-Match header
 	t.Run("UpdateSends_IfMatch", func(t *testing.T) {
 		// Reset tracking variables
 		ifMatchHeaderReceived = false
@@ -116,12 +126,12 @@ func TestETagSupport(t *testing.T) {
 		assert.Equal(t, testETag, receivedETag, "ETag should be sent correctly")
 		assert.Equal(t, updatedETag, result.ETag, "New ETag should be returned")
 	})
-
-	// Test 3: Concurrent modification detection
 	t.Run("DetectsConcurrentModification", func(t *testing.T) {
 		// Reset tracking variables
 		ifMatchHeaderReceived = false
 		receivedETag = ""
+		firstReceivedETag = ""
+		firstPUTRequest = true
 
 		// Perform update with wrong ETag
 		sa := &models.ServiceAccount{
@@ -132,14 +142,13 @@ func TestETagSupport(t *testing.T) {
 		}
 
 		result, err := c.UpdateServiceAccount(sa, "W/\"wrong-etag\"")
-		assert.Error(t, err, "Update with wrong ETag should fail")
-		assert.Nil(t, result)
+		// With auto-retry, this should succeed
+		assert.NoError(t, err, "Update with wrong ETag should retry and succeed")
+		assert.NotNil(t, result, "Result should not be nil after successful retry")
 		assert.True(t, ifMatchHeaderReceived, "If-Match header should be sent")
-		assert.Equal(t, "W/\"wrong-etag\"", receivedETag, "Wrong ETag should be sent")
+		assert.Equal(t, "W/\"wrong-etag\"", firstReceivedETag, "Wrong ETag should be sent initially")
 
-		// Check error type
-		apiErr, ok := err.(*client.APIError)
-		assert.True(t, ok, "Error should be an APIError")
-		assert.Equal(t, http.StatusPreconditionFailed, apiErr.StatusCode, "Should receive 412 Precondition Failed")
+		// After retry, the result should have the updated ETag
+		assert.Equal(t, updatedETag, result.ETag, "Result should have updated ETag after retry")
 	})
 }

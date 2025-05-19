@@ -9,7 +9,6 @@ import (
 	"time"
 )
 
-// CloudClient is the HTTP client for the AuthZed Cloud API
 type CloudClient struct {
 	Host       string
 	Token      string
@@ -17,7 +16,6 @@ type CloudClient struct {
 	HTTPClient *http.Client
 }
 
-// CloudClientConfig represents the config for the Cloud API client
 type CloudClientConfig struct {
 	Host       string
 	Token      string
@@ -91,7 +89,7 @@ func (c *CloudClient) Do(req *http.Request) (*ResponseWithETag, error) {
 		return nil, err
 	}
 
-	// Extract the ETag if it exists
+	// Extract the ETag from standard header
 	etag := resp.Header.Get("ETag")
 
 	return &ResponseWithETag{
@@ -102,6 +100,36 @@ func (c *CloudClient) Do(req *http.Request) (*ResponseWithETag, error) {
 
 // UpdateResource updates any resource that implements the Resource interface
 func (c *CloudClient) UpdateResource(resource Resource, endpoint string, body any) (Resource, error) {
+	// Check if the ETag is empty
+	if resource.GetETag() == "" {
+		// We only update the ETag without updating local attributes. ETags represent specific
+		// versions of resources (like a hash) and this is purely for optimistic concurrency control.
+		// If the remote resource differs from local state, the update will fail with 412 and retry with latest version.
+		req, err := c.NewRequest(http.MethodGet, endpoint, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		respWithETag, err := c.Do(req)
+		if err != nil {
+			return nil, err
+		}
+
+		if respWithETag.Response.StatusCode != http.StatusOK {
+			_ = respWithETag.Response.Body.Close()
+			return nil, fmt.Errorf("failed to fetch current resource for ETag: %s", NewAPIError(respWithETag))
+		}
+
+		// Extract the ETag from the GET response
+		etag := respWithETag.ETag
+
+		// Set the ETag on the resource
+		resource.SetETag(etag)
+
+		_ = respWithETag.Response.Body.Close()
+	}
+
+	// Proceed with the update using the ETag (original or newly fetched)
 	req, err := c.NewRequest(http.MethodPut, endpoint, body, WithETag(resource.GetETag()))
 	if err != nil {
 		return nil, err
@@ -262,5 +290,6 @@ func (c *CloudClient) CreateResourceWithFactory(endpoint string, body any, dest 
 	}
 
 	// Use the factory to create a Resource from the decoded object
+	// The factory will handle extracting ConfigETag from the response body if needed
 	return factory(dest, respWithETag.ETag), nil
 }
