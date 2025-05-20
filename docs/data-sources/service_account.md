@@ -14,7 +14,7 @@ This data source retrieves information about a specific service account in an Au
 ```terraform
 data "cloudapi_service_account" "example" {
   permission_system_id = "ps-123456789"
-  service_account_id   = "sva-abcdef123456"
+  service_account_id   = "asa-abcdef123456"
 }
 
 output "service_account_name" {
@@ -27,7 +27,7 @@ output "service_account_name" {
 The following arguments are supported:
 
 * `permission_system_id` - (Required) The ID of the permission system containing the service account. Must start with `ps-` followed by alphanumeric characters or hyphens.
-* `service_account_id` - (Required) The ID of the service account to look up. Must start with `sva-` followed by alphanumeric characters or hyphens.
+* `service_account_id` - (Required) The ID of the service account to look up. Must start with `asa-` followed by alphanumeric characters or hyphens.
 
 ## Attributes Reference
 
