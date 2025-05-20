@@ -6,16 +6,15 @@ description: |-
 
 # Getting Started with AuthZed Cloud API Provider
 
-This guide will walk you through the process of setting up and using the AuthZed Cloud API provider with Terraform. You'll learn how to authenticate with [AuthZed Cloud API](https://www.postman.com/authzed/spicedb/collection/5fm402n/authzed-cloud-api), manage resources, and implement common access control patterns.
+This guide will help you get started with the AuthZed provider. You'll learn how to configure the provider and manage basic resources.
 
-## What this API Does
+## Prerequisites
 
-The AuthZed Cloud API allows you to manage access to the AuthZed platform itself, not the permission relationships within your systems. Using this provider, you can:
+- [Terraform](https://www.terraform.io/downloads.html) 0.13.x or later
+- An AuthZed Dedicated account
+- An AuthZed API token
 
-* Control who can access your AuthZed environment
-* Create and manage service accounts that can access your permission systems
-* Generate and manage API tokens for secure programmatic access
-* View and monitor your hosted permission systems
+## Provider Configuration
 
 > **Important:** This API manages platform-level access. For defining permission relationships within your systems (e.g., defining who can view what document), you would use the AuthZed permissions API directly.
 
@@ -23,13 +22,9 @@ The AuthZed Cloud API allows you to manage access to the AuthZed platform itself
 
 The AuthZed API has certain limitations you should be aware of when working with Terraform:
 
-1. **No Support for Updates**: The API does not support direct updates to resources. When you change attributes of a resource in your Terraform configuration, Terraform will need to delete the existing resource and create a new one with the updated attributes.
+1. **Token Regeneration**: When a token resource is recreated, a new secret is generated. Applications using the previous token will need to be updated with the new secret.
 
-2. **Token Regeneration**: When a token resource is recreated, a new secret is generated. Applications using the previous token will need to be updated with the new secret.
-
-3. **Resource Dependencies**: When a resource like a service account is recreated, it will receive a new ID. Any resources that depend on this ID (like tokens or policies) will also need to be recreated.
-
-4. **Access Continuity**: Plan your changes carefully to avoid disrupting access for production systems. Consider using separate resources for critical vs. non-critical access.
+2. **Access Continuity**: Plan your changes carefully to avoid disrupting access for production systems. Consider using separate resources for critical vs. non-critical access.
 
 ## Before You Begin
 
@@ -239,24 +234,11 @@ Apply these changes:
 terraform apply
 ```
 
-## Understanding Resource Limitations
-
-When working with this provider, be aware of these limitations:
-
-1. **No Support for Updates**: The AuthZed API doesn't support direct updates. Changing any resource attributes will cause Terraform to delete and recreate the resource.
-
-2. **State Management**: When a token is recreated, a new secret is generated and the old token becomes invalid. Applications using the previous token will need to be updated with the new secret.
-
-3. **Resource Dependencies**: When a service account is recreated, it receives a new ID, which means any tokens or policies attached to it will also need to be recreated.
-
 ## Best Practices
 
 1. **Minimize Changes**: Group related resources together and try to avoid frequent changes to resources with dependencies.
-
 2. **Secret Rotation**: If you need to rotate secrets, plan for a transition period where both old and new tokens might be valid.
-
 3. **Separate Environments**: Use different Terraform workspaces or states for development and production environments.
-
 4. **Use Variables**: Keep tokens and IDs in variables to make your configurations more flexible.
 
 ## Additional Resources 

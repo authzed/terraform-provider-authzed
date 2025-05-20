@@ -47,13 +47,10 @@ To obtain a token, contact your AuthZed account team. They will provide you with
 * `token` - (Required) The bearer token for authentication with AuthZed.
 * `api_version` - (Optional) The version of the API to use. Default is "25r1".
 
-## Tech Preview Limitations
+## Important Notes
 
-The AuthZed API has the following limitations that affect Terraform operations:
-
-* **No Resource Updates**: The API does not support updating resources directly. Any change to a resource's attributes will require the resource to be deleted and recreated.
 * **Token Recreation**: When a token resource is recreated, a new secret is generated, and the old token becomes invalid.
-* **Resource Dependencies**: Changes to resources like service accounts will generate new IDs, requiring dependent resources to also be recreated.
+* **Resource Dependencies**: Consider the impact on dependent resources when making changes.
 
 Plan your changes carefully to avoid disrupting access for production systems.
 
