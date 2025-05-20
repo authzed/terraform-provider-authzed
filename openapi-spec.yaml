@@ -1956,6 +1956,7 @@ components:
         apiKey:
           description: The Datadog API key. Will not be returned after writing.
           type: string
+          writeOnly: true
         site:
           description: The Datadog Site associated with your API key.
           type: string
