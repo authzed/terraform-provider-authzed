@@ -12,7 +12,7 @@ This guide will walk you through the process of setting up and using the AuthZed
 
 - [Terraform](https://www.terraform.io/downloads.html) 0.13.x or later
 - An AuthZed Dedicated account
-- An AuthZed API token
+- An AuthZed Cloud API token
 
 ## Provider Configuration
 
