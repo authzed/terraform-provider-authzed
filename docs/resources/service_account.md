@@ -28,7 +28,7 @@ resource "cloudapi_service_account" "api_service" {
 
 In addition to the arguments listed above, the following attributes are exported:
 
-* `id` - The unique identifier for the service account. Will start with `sva-` followed by alphanumeric characters or hyphens.
+* `id` - The unique identifier for the service account. Will start with `asa-` followed by alphanumeric characters or hyphens.
 * `created_at` - The timestamp when the service account was created (RFC 3339 format).
 * `creator` - The name of the user that created this service account.
 * `updated_at` - The timestamp when the service account was last updated (RFC 3339 format).
@@ -39,5 +39,5 @@ In addition to the arguments listed above, the following attributes are exported
 Service accounts can be imported using a composite ID with the format `permission_system_id:service_account_id`, for example:
 
 ```bash
-terraform import cloudapi_service_account.api_service ps-123456789:sva-abcdef123456
+terraform import cloudapi_service_account.api_service ps-123456789:asa-abcdef123456
 ``` 

@@ -8,6 +8,15 @@ description: |-
 
 This guide will walk you through the process of setting up and using the AuthZed Cloud API provider with Terraform. You'll learn how to authenticate with [AuthZed Cloud API](https://www.postman.com/authzed/spicedb/collection/5fm402n/authzed-cloud-api), manage resources, and implement common access control patterns.
 
+## What this API Does
+
+The AuthZed Cloud API allows you to manage access to the AuthZed platform itself, not the permission relationships within your systems. Using this provider, you can:
+
+* Control who can access your AuthZed environment
+* Create and manage service accounts that can access your permission systems
+* Generate and manage API tokens for secure programmatic access
+* View and monitor your hosted permission systems
+
 ## Prerequisites
 
 - [Terraform](https://www.terraform.io/downloads.html) 0.13.x or later
