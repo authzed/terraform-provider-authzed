@@ -6,7 +6,7 @@ description: |-
 
 # Getting Started with AuthZed Cloud API Provider
 
-This guide will help you get started with the AuthZed provider. You'll learn how to configure the provider and manage basic resources.
+This guide will walk you through the process of setting up and using the AuthZed Cloud API provider with Terraform. You'll learn how to authenticate with [AuthZed Cloud API](https://www.postman.com/authzed/spicedb/collection/5fm402n/authzed-cloud-api), manage resources, and implement common access control patterns.
 
 ## Prerequisites
 
