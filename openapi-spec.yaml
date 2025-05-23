@@ -23,6 +23,11 @@ tags:
     description: Find out more at the official Authzed Docs site
     url: https://authzed.com/docs/authzed/concepts/restricted-api-access
   name: access management
+- description: Performance insights for a permissions system
+  externalDocs:
+    description: Find out more at the official Authzed Docs site
+    url: https://authzed.com/docs/authzed/concepts/perf-insights
+  name: performance insights
 paths:
   /ps:
     get:
@@ -115,7 +120,6 @@ paths:
         schema:
           description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
           type: string
       - description: The version of the API to use. Must be specified.
         in: header
@@ -313,7 +317,6 @@ paths:
         schema:
           description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
           type: string
       - description: The version of the API to use. Must be specified.
         in: header
@@ -511,7 +514,6 @@ paths:
         schema:
           description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
           type: string
       - description: The version of the API to use. Must be specified.
         in: header
@@ -627,7 +629,6 @@ paths:
         required: true
         schema:
           description: The globally unique ID for this Service Account
-          readOnly: true
           type: string
       - description: The globally unique ID for the Permissions System
         in: path
@@ -636,7 +637,6 @@ paths:
         schema:
           description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
           type: string
       - description: The ETag of the Service Account to update. If this does not match
           the current ETag, the update will be rejected.
@@ -724,7 +724,6 @@ paths:
         schema:
           description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
           type: string
       - description: The globally unique ID for the containing Service Account
         in: path
@@ -732,7 +731,6 @@ paths:
         required: true
         schema:
           description: The globally unique ID for the containing Service Account
-          readOnly: true
           type: string
       - description: The version of the API to use. Must be specified.
         in: header
@@ -973,28 +971,92 @@ paths:
       - auth: []
       tags:
       - permissions system
+  /ps/{permissionsSystemID}/perf-insights/topk:
+    get:
+      description: get the top K most expensive permissions API calls
+      operationId: PerformanceInsightsTopK
+      parameters:
+      - description: The time period to analyze. The default is the last hour.
+        in: query
+        name: period
+        schema:
+          $ref: '#/components/schemas/Period'
+      - description: The number of top K items to return. The maximum value is 50.
+        in: query
+        name: count
+        schema:
+          default: 10
+          description: The number of top K items to return. The maximum value is 50.
+          type: integer
+      - description: The field to sort the results by. The default is total impact,
+          which is defined as P50 latency * count over the period.
+        in: query
+        name: sortBy
+        schema:
+          $ref: '#/components/schemas/SortBy'
+      - description: The globally unique ID for the Permissions System
+        in: path
+        name: permissionsSystemID
+        required: true
+        schema:
+          description: The globally unique ID for the Permissions System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerfInsightsTopKResponse'
+          description: OK
+      security:
+      - auth: []
+      tags:
+      - permissions system
+      - performance insights
 components:
   schemas:
+    APIShapeMetrics:
+      properties:
+        count:
+          description: The number of times this API shape was called
+          nullable: true
+          type: integer
+        p50LatencySeconds:
+          description: The 50th percentile latency of this API shape over the period
+          nullable: true
+          type: number
+        p95LatencySeconds:
+          description: The 95th percentile latency of this API shape over the period
+          nullable: true
+          type: number
+        p99LatencySeconds:
+          description: The 99th percentile latency of this API shape over the period
+          nullable: true
+          type: number
+        shapeFields:
+          additionalProperties:
+            type: string
+          description: The fields of the API shape
+          nullable: true
+          type: object
+        shapeID:
+          description: The ID of the API shape
+          type: string
+      type: object
     CreatePolicyRequest:
       properties:
-        createdAt:
-          description: The timestamp when the Policy was created (RFC 3339). May not
-            be specified.
-          format: date-time
-          nullable: true
-          readOnly: true
-          type: string
-        creator:
-          description: The name of the user that created this Policy. May be empty.
-          readOnly: true
-          type: string
         description:
           description: The human-supplied description of the Policy. May be empty.
           maxLength: 200
-          type: string
-        id:
-          description: The globally unique ID for this Policy
-          readOnly: true
           type: string
         name:
           description: The name of the Policy
@@ -1004,7 +1066,6 @@ components:
         permissionsSystemID:
           description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
           type: string
         principalID:
           description: The ID of the Principal that this Policy is associated with
@@ -1017,18 +1078,6 @@ components:
           maxLength: 1
           minLength: 1
           type: array
-        updatedAt:
-          description: The timestamp when the Policy was last updated (RFC 3339).
-            May not be specified.
-          format: date-time
-          nullable: true
-          readOnly: true
-          type: string
-        updater:
-          description: The name of the user that last updated this Policy. May be
-            empty.
-          readOnly: true
-          type: string
       required:
       - name
       - principalID
@@ -1041,11 +1090,9 @@ components:
             be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         creator:
           description: The name of the user that created this Policy. May be empty.
-          readOnly: true
           type: string
         description:
           description: The human-supplied description of the Policy. May be empty.
@@ -1053,7 +1100,6 @@ components:
           type: string
         id:
           description: The globally unique ID for this Policy
-          readOnly: true
           type: string
         name:
           description: The name of the Policy
@@ -1063,7 +1109,6 @@ components:
         permissionsSystemID:
           description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
           type: string
         principalID:
           description: The ID of the Principal that this Policy is associated with
@@ -1081,12 +1126,10 @@ components:
             May not be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         updater:
           description: The name of the user that last updated this Policy. May be
             empty.
-          readOnly: true
           type: string
       required:
       - name
@@ -1095,24 +1138,9 @@ components:
       type: object
     CreateRoleRequest:
       properties:
-        createdAt:
-          description: The timestamp when the Role was created (RFC 3339). May not
-            be specified.
-          format: date-time
-          nullable: true
-          readOnly: true
-          type: string
-        creator:
-          description: The name of the user that created this Role. May be empty.
-          readOnly: true
-          type: string
         description:
           description: The human-supplied description of the Role. May be empty.
           maxLength: 200
-          type: string
-        id:
-          description: The globally unique ID for this Role
-          readOnly: true
           type: string
         name:
           description: The name of the Role
@@ -1124,18 +1152,6 @@ components:
         permissionsSystemID:
           description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
-          type: string
-        updatedAt:
-          description: The timestamp when the Role was last updated (RFC 3339). May
-            not be specified.
-          format: date-time
-          nullable: true
-          readOnly: true
-          type: string
-        updater:
-          description: The name of the user that last updated this Role. May be empty.
-          readOnly: true
           type: string
       required:
       - name
@@ -1148,11 +1164,9 @@ components:
             be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         creator:
           description: The name of the user that created this Role. May be empty.
-          readOnly: true
           type: string
         description:
           description: The human-supplied description of the Role. May be empty.
@@ -1160,7 +1174,6 @@ components:
           type: string
         id:
           description: The globally unique ID for this Role
-          readOnly: true
           type: string
         name:
           description: The name of the Role
@@ -1172,18 +1185,15 @@ components:
         permissionsSystemID:
           description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
           type: string
         updatedAt:
           description: The timestamp when the Role was last updated (RFC 3339). May
             not be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         updater:
           description: The name of the user that last updated this Role. May be empty.
-          readOnly: true
           type: string
       required:
       - name
@@ -1191,26 +1201,10 @@ components:
       type: object
     CreateServiceAccountRequest:
       properties:
-        createdAt:
-          description: The timestamp when the Service Account was created (RFC 3339).
-            May not be specified.
-          format: date-time
-          nullable: true
-          readOnly: true
-          type: string
-        creator:
-          description: The name of the user that created this Service Account. May
-            be empty.
-          readOnly: true
-          type: string
         description:
           description: The human-supplied description of the Service Account. May
             be empty.
           maxLength: 200
-          type: string
-        id:
-          description: The globally unique ID for this Service Account
-          readOnly: true
           type: string
         name:
           description: The name of the Service Account
@@ -1220,25 +1214,6 @@ components:
         permissionsSystemID:
           description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
-          type: string
-        token:
-          description: The Tokens associated with this Service Account
-          items:
-            $ref: '#/components/schemas/Token'
-          readOnly: true
-          type: array
-        updatedAt:
-          description: The timestamp when the Service Account was last updated (RFC
-            3339). May not be specified.
-          format: date-time
-          nullable: true
-          readOnly: true
-          type: string
-        updater:
-          description: The name of the user that last updated this Service Account.
-            May be empty.
-          readOnly: true
           type: string
       required:
       - name
@@ -1250,12 +1225,10 @@ components:
             May not be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         creator:
           description: The name of the user that created this Service Account. May
             be empty.
-          readOnly: true
           type: string
         description:
           description: The human-supplied description of the Service Account. May
@@ -1264,7 +1237,6 @@ components:
           type: string
         id:
           description: The globally unique ID for this Service Account
-          readOnly: true
           type: string
         name:
           description: The name of the Service Account
@@ -1274,54 +1246,30 @@ components:
         permissionsSystemID:
           description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
           type: string
         token:
           description: The Tokens associated with this Service Account
           items:
             $ref: '#/components/schemas/Token'
-          readOnly: true
           type: array
         updatedAt:
           description: The timestamp when the Service Account was last updated (RFC
             3339). May not be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         updater:
           description: The name of the user that last updated this Service Account.
             May be empty.
-          readOnly: true
           type: string
       required:
       - name
       type: object
     CreateTokenRequest:
       properties:
-        createdAt:
-          description: The timestamp when the Token was created (RFC 3339). May not
-            be specified.
-          format: date-time
-          nullable: true
-          readOnly: true
-          type: string
-        creator:
-          description: The name of the user that created this Token. May be empty.
-          readOnly: true
-          type: string
         description:
           description: The human-supplied description of the Token. May be empty.
           maxLength: 200
-          type: string
-        hash:
-          description: The SHA256 hash of the secret part of the token, without the
-            prefix
-          readOnly: true
-          type: string
-        id:
-          description: The globally unique ID for this Token
-          readOnly: true
           type: string
         name:
           description: The name of the Token
@@ -1331,22 +1279,9 @@ components:
         permissionsSystemID:
           description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
           type: string
         serviceAccountID:
           description: The globally unique ID for the containing Service Account
-          readOnly: true
-          type: string
-        updatedAt:
-          description: The timestamp when the Token was last updated (RFC 3339). May
-            not be specified.
-          format: date-time
-          nullable: true
-          readOnly: true
-          type: string
-        updater:
-          description: The name of the user that last updated this Token. May be empty.
-          readOnly: true
           type: string
       required:
       - name
@@ -1358,11 +1293,9 @@ components:
             be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         creator:
           description: The name of the user that created this Token. May be empty.
-          readOnly: true
           type: string
         description:
           description: The human-supplied description of the Token. May be empty.
@@ -1371,11 +1304,9 @@ components:
         hash:
           description: The SHA256 hash of the secret part of the token, without the
             prefix
-          readOnly: true
           type: string
         id:
           description: The globally unique ID for this Token
-          readOnly: true
           type: string
         name:
           description: The name of the Token
@@ -1385,26 +1316,21 @@ components:
         permissionsSystemID:
           description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
           type: string
         secret:
           description: The secret for the token. Will not be returned again.
-          readOnly: true
           type: string
         serviceAccountID:
           description: The globally unique ID for the containing Service Account
-          readOnly: true
           type: string
         updatedAt:
           description: The timestamp when the Token was last updated (RFC 3339). May
             not be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         updater:
           description: The name of the user that last updated this Token. May be empty.
-          readOnly: true
           type: string
       required:
       - name
@@ -1460,11 +1386,9 @@ components:
             be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         creator:
           description: The name of the user that created this Policy. May be empty.
-          readOnly: true
           type: string
         description:
           description: The human-supplied description of the Policy. May be empty.
@@ -1472,7 +1396,6 @@ components:
           type: string
         id:
           description: The globally unique ID for this Policy
-          readOnly: true
           type: string
         name:
           description: The name of the Policy
@@ -1482,7 +1405,6 @@ components:
         permissionsSystemID:
           description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
           type: string
         principalID:
           description: The ID of the Principal that this Policy is associated with
@@ -1500,12 +1422,10 @@ components:
             May not be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         updater:
           description: The name of the user that last updated this Policy. May be
             empty.
-          readOnly: true
           type: string
       required:
       - name
@@ -1519,11 +1439,9 @@ components:
             be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         creator:
           description: The name of the user that created this Role. May be empty.
-          readOnly: true
           type: string
         description:
           description: The human-supplied description of the Role. May be empty.
@@ -1531,7 +1449,6 @@ components:
           type: string
         id:
           description: The globally unique ID for this Role
-          readOnly: true
           type: string
         name:
           description: The name of the Role
@@ -1543,18 +1460,15 @@ components:
         permissionsSystemID:
           description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
           type: string
         updatedAt:
           description: The timestamp when the Role was last updated (RFC 3339). May
             not be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         updater:
           description: The name of the user that last updated this Role. May be empty.
-          readOnly: true
           type: string
       required:
       - name
@@ -1567,12 +1481,10 @@ components:
             May not be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         creator:
           description: The name of the user that created this Service Account. May
             be empty.
-          readOnly: true
           type: string
         description:
           description: The human-supplied description of the Service Account. May
@@ -1581,7 +1493,6 @@ components:
           type: string
         id:
           description: The globally unique ID for this Service Account
-          readOnly: true
           type: string
         name:
           description: The name of the Service Account
@@ -1591,25 +1502,21 @@ components:
         permissionsSystemID:
           description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
           type: string
         token:
           description: The Tokens associated with this Service Account
           items:
             $ref: '#/components/schemas/Token'
-          readOnly: true
           type: array
         updatedAt:
           description: The timestamp when the Service Account was last updated (RFC
             3339). May not be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         updater:
           description: The name of the user that last updated this Service Account.
             May be empty.
-          readOnly: true
           type: string
       required:
       - name
@@ -1621,11 +1528,9 @@ components:
             be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         creator:
           description: The name of the user that created this Token. May be empty.
-          readOnly: true
           type: string
         description:
           description: The human-supplied description of the Token. May be empty.
@@ -1634,11 +1539,9 @@ components:
         hash:
           description: The SHA256 hash of the secret part of the token, without the
             prefix
-          readOnly: true
           type: string
         id:
           description: The globally unique ID for this Token
-          readOnly: true
           type: string
         name:
           description: The name of the Token
@@ -1648,22 +1551,18 @@ components:
         permissionsSystemID:
           description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
           type: string
         serviceAccountID:
           description: The globally unique ID for the containing Service Account
-          readOnly: true
           type: string
         updatedAt:
           description: The timestamp when the Token was last updated (RFC 3339). May
             not be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         updater:
           description: The name of the user that last updated this Token. May be empty.
-          readOnly: true
           type: string
       required:
       - name
@@ -1693,6 +1592,26 @@ components:
         $ref: '#/components/schemas/Token'
       nullable: true
       type: array
+    PerfInsightsTopKResponse:
+      properties:
+        shapes:
+          description: The top K most expensive API calls
+          items:
+            $ref: '#/components/schemas/APIShapeMetrics'
+          nullable: true
+          type: array
+      type: object
+    Period:
+      enum:
+      - 1m
+      - 5m
+      - 10m
+      - 30m
+      - 1h
+      - 6h
+      - 12h
+      - 24h
+      type: string
     PermissionExprMap:
       properties:
         authzed.v1/BulkCheckPermission:
@@ -1797,11 +1716,9 @@ components:
             be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         creator:
           description: The name of the user that created this Policy. May be empty.
-          readOnly: true
           type: string
         description:
           description: The human-supplied description of the Policy. May be empty.
@@ -1809,7 +1726,6 @@ components:
           type: string
         id:
           description: The globally unique ID for this Policy
-          readOnly: true
           type: string
         name:
           description: The name of the Policy
@@ -1819,7 +1735,6 @@ components:
         permissionsSystemID:
           description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
           type: string
         principalID:
           description: The ID of the Principal that this Policy is associated with
@@ -1837,12 +1752,10 @@ components:
             May not be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         updater:
           description: The name of the user that last updated this Policy. May be
             empty.
-          readOnly: true
           type: string
       required:
       - name
@@ -1856,11 +1769,9 @@ components:
             be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         creator:
           description: The name of the user that created this Role. May be empty.
-          readOnly: true
           type: string
         description:
           description: The human-supplied description of the Role. May be empty.
@@ -1868,7 +1779,6 @@ components:
           type: string
         id:
           description: The globally unique ID for this Role
-          readOnly: true
           type: string
         name:
           description: The name of the Role
@@ -1880,18 +1790,15 @@ components:
         permissionsSystemID:
           description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
           type: string
         updatedAt:
           description: The timestamp when the Role was last updated (RFC 3339). May
             not be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         updater:
           description: The name of the user that last updated this Role. May be empty.
-          readOnly: true
           type: string
       required:
       - name
@@ -1904,12 +1811,10 @@ components:
             May not be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         creator:
           description: The name of the user that created this Service Account. May
             be empty.
-          readOnly: true
           type: string
         description:
           description: The human-supplied description of the Service Account. May
@@ -1918,7 +1823,6 @@ components:
           type: string
         id:
           description: The globally unique ID for this Service Account
-          readOnly: true
           type: string
         name:
           description: The name of the Service Account
@@ -1928,25 +1832,21 @@ components:
         permissionsSystemID:
           description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
           type: string
         token:
           description: The Tokens associated with this Service Account
           items:
             $ref: '#/components/schemas/Token'
-          readOnly: true
           type: array
         updatedAt:
           description: The timestamp when the Service Account was last updated (RFC
             3339). May not be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         updater:
           description: The name of the user that last updated this Service Account.
             May be empty.
-          readOnly: true
           type: string
       required:
       - name
@@ -1956,13 +1856,12 @@ components:
         apiKey:
           description: The Datadog API key. Will not be returned after writing.
           type: string
-          writeOnly: true
         site:
           description: The Datadog Site associated with your API key.
           type: string
       required:
-      - apiKey
       - site
+      - apiKey
       type: object
     SetFeatureDatadogExportResponse:
       properties:
@@ -1976,6 +1875,14 @@ components:
           description: The feature identifier
           type: string
       type: object
+    SortBy:
+      enum:
+      - impact
+      - count
+      - p50
+      - p95
+      - p99
+      type: string
     SpiceDBVersion:
       properties:
         displayName:
@@ -2023,11 +1930,9 @@ components:
             be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         creator:
           description: The name of the user that created this Token. May be empty.
-          readOnly: true
           type: string
         description:
           description: The human-supplied description of the Token. May be empty.
@@ -2036,11 +1941,9 @@ components:
         hash:
           description: The SHA256 hash of the secret part of the token, without the
             prefix
-          readOnly: true
           type: string
         id:
           description: The globally unique ID for this Token
-          readOnly: true
           type: string
         name:
           description: The name of the Token
@@ -2050,22 +1953,18 @@ components:
         permissionsSystemID:
           description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
           type: string
         serviceAccountID:
           description: The globally unique ID for the containing Service Account
-          readOnly: true
           type: string
         updatedAt:
           description: The timestamp when the Token was last updated (RFC 3339). May
             not be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         updater:
           description: The name of the user that last updated this Token. May be empty.
-          readOnly: true
           type: string
       required:
       - name
@@ -2103,11 +2002,9 @@ components:
             be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         creator:
           description: The name of the user that created this Policy. May be empty.
-          readOnly: true
           type: string
         description:
           description: The human-supplied description of the Policy. May be empty.
@@ -2115,7 +2012,6 @@ components:
           type: string
         id:
           description: The globally unique ID for this Policy
-          readOnly: true
           type: string
         name:
           description: The name of the Policy
@@ -2125,7 +2021,6 @@ components:
         permissionsSystemID:
           description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
           type: string
         principalID:
           description: The ID of the Principal that this Policy is associated with
@@ -2143,12 +2038,10 @@ components:
             May not be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         updater:
           description: The name of the user that last updated this Policy. May be
             empty.
-          readOnly: true
           type: string
       required:
       - name
@@ -2178,11 +2071,9 @@ components:
             be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         creator:
           description: The name of the user that created this Role. May be empty.
-          readOnly: true
           type: string
         description:
           description: The human-supplied description of the Role. May be empty.
@@ -2190,7 +2081,6 @@ components:
           type: string
         id:
           description: The globally unique ID for this Role
-          readOnly: true
           type: string
         name:
           description: The name of the Role
@@ -2202,18 +2092,15 @@ components:
         permissionsSystemID:
           description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
           type: string
         updatedAt:
           description: The timestamp when the Role was last updated (RFC 3339). May
             not be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         updater:
           description: The name of the user that last updated this Role. May be empty.
-          readOnly: true
           type: string
       required:
       - name
@@ -2228,7 +2115,6 @@ components:
           type: string
         id:
           description: The globally unique ID for this Service Account
-          readOnly: true
           type: string
         name:
           description: The name of the Service Account
@@ -2238,7 +2124,6 @@ components:
         permissionsSystemID:
           description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
           type: string
       required:
       - name
@@ -2250,12 +2135,10 @@ components:
             May not be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         creator:
           description: The name of the user that created this Service Account. May
             be empty.
-          readOnly: true
           type: string
         description:
           description: The human-supplied description of the Service Account. May
@@ -2264,7 +2147,6 @@ components:
           type: string
         id:
           description: The globally unique ID for this Service Account
-          readOnly: true
           type: string
         name:
           description: The name of the Service Account
@@ -2274,25 +2156,21 @@ components:
         permissionsSystemID:
           description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
           type: string
         token:
           description: The Tokens associated with this Service Account
           items:
             $ref: '#/components/schemas/Token'
-          readOnly: true
           type: array
         updatedAt:
           description: The timestamp when the Service Account was last updated (RFC
             3339). May not be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         updater:
           description: The name of the user that last updated this Service Account.
             May be empty.
-          readOnly: true
           type: string
       required:
       - name
@@ -2318,11 +2196,9 @@ components:
             be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         creator:
           description: The name of the user that created this Token. May be empty.
-          readOnly: true
           type: string
         description:
           description: The human-supplied description of the Token. May be empty.
@@ -2331,11 +2207,9 @@ components:
         hash:
           description: The SHA256 hash of the secret part of the token, without the
             prefix
-          readOnly: true
           type: string
         id:
           description: The globally unique ID for this Token
-          readOnly: true
           type: string
         name:
           description: The name of the Token
@@ -2345,22 +2219,18 @@ components:
         permissionsSystemID:
           description: The globally unique ID for the Permissions System
           pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
           type: string
         serviceAccountID:
           description: The globally unique ID for the containing Service Account
-          readOnly: true
           type: string
         updatedAt:
           description: The timestamp when the Token was last updated (RFC 3339). May
             not be specified.
           format: date-time
           nullable: true
-          readOnly: true
           type: string
         updater:
           description: The name of the user that last updated this Token. May be empty.
-          readOnly: true
           type: string
       required:
       - name
