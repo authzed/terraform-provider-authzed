@@ -908,6 +908,34 @@ paths:
       - auth: []
       tags:
       - access management
+  /ps/{permissionsSystemID}/deployments:
+    get:
+      description: list all deployments for a permissions system
+      operationId: ListDeployments
+      parameters:
+      - in: path
+        name: permissionsSystemID
+        required: true
+        schema:
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListDeploymentsResponse'
+          description: OK
+      security:
+      - auth: []
+      tags:
+      - permissions system
   /ps/{permissionsSystemID}/features/datadog-export:
     get:
       description: get the current configuration of the datadog export feature
@@ -1335,6 +1363,23 @@ components:
       required:
       - name
       type: object
+    Deployment:
+      properties:
+        id:
+          description: The globally unique ID for this Deployment
+          type: string
+        metaName:
+          deprecated: true
+          description: The internal name of the Permissions System. Prefer ID or the
+            normal name.
+          type: string
+        name:
+          description: The name of the Deployment
+          type: string
+        replicas:
+          description: The number of replicas on this Deployment
+          type: integer
+      type: object
     Feature:
       properties:
         displayName:
@@ -1567,6 +1612,11 @@ components:
       required:
       - name
       type: object
+    ListDeploymentsResponse:
+      items:
+        $ref: '#/components/schemas/Deployment'
+      nullable: true
+      type: array
     ListPermissionsSystemsResponse:
       items:
         $ref: '#/components/schemas/PermissionsSystem'
