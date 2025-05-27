@@ -1,16 +1,20 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 
 	"terraform-provider-authzed/internal/models"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // TokenWithETag represents a token resource with its ETag
 type TokenWithETag struct {
-	Token *models.Token
+	Token *models.TokenRequest
 	ETag  string
 }
 
@@ -34,31 +38,125 @@ func (t *TokenWithETag) GetResource() interface{} {
 	return t.Token
 }
 
-func (c *CloudClient) CreateToken(token *models.Token) (*TokenWithETag, error) {
+func (c *CloudClient) CreateToken(token *models.TokenRequest) (*TokenWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s/tokens", token.PermissionsSystemID, token.ServiceAccountID)
 
-	var createdToken models.Token
-	resource, err := c.CreateResourceWithFactory(path, token, &createdToken, NewTokenResource)
+	// Create the request body
+	reqBody := struct {
+		Name        string `json:"name"`
+		Description string `json:"description,omitempty"`
+	}{
+		Name:        token.Name,
+		Description: token.Description,
+	}
+
+	req, err := c.NewRequest(http.MethodPost, path, reqBody)
 	if err != nil {
 		return nil, err
 	}
 
-	return resource.(*TokenWithETag), nil
+	respWithETag, err := c.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		// ignore the error
+		_ = respWithETag.Response.Body.Close()
+	}()
+
+	if respWithETag.Response.StatusCode != http.StatusCreated {
+		return nil, NewAPIError(respWithETag)
+	}
+
+	// Read the response body once
+	body, err := io.ReadAll(respWithETag.Response.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	// The API response has a different structure during creation
+	var createResp struct {
+		ID                  string `json:"id"`
+		Name                string `json:"name"`
+		Description         string `json:"description"`
+		PermissionsSystemID string `json:"permissionsSystemID"`
+		ServiceAccountID    string `json:"serviceAccountID"`
+		CreatedAt           string `json:"createdAt"`
+		Creator             string `json:"creator"`
+		UpdatedAt           string `json:"updatedAt"`
+		Updater             string `json:"updater"`
+		Hash                string `json:"hash"`
+		Secret              string `json:"secret"`
+		ConfigETag          string `json:"ConfigETag"`
+	}
+	if err := json.Unmarshal(body, &createResp); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	// Create a new Token with all fields
+	createdToken := &models.TokenRequest{
+		ID:                  createResp.ID,
+		Name:                createResp.Name,
+		Description:         createResp.Description,
+		PermissionsSystemID: createResp.PermissionsSystemID,
+		ServiceAccountID:    createResp.ServiceAccountID,
+		CreatedAt:           createResp.CreatedAt,
+		Creator:             createResp.Creator,
+		UpdatedAt:           createResp.UpdatedAt,
+		Updater:             createResp.Updater,
+		Hash:                createResp.Hash,
+		Secret:              createResp.Secret,
+		ReturnPlainText:     token.ReturnPlainText,
+	}
+
+	return &TokenWithETag{
+		Token: createdToken,
+		ETag:  respWithETag.ETag,
+	}, nil
 }
 
 func (c *CloudClient) GetToken(permissionsSystemID, serviceAccountID, tokenID string) (*TokenWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s/tokens/%s", permissionsSystemID, serviceAccountID, tokenID)
 
-	var token models.Token
-	resource, err := c.GetResourceWithFactory(path, &token, NewTokenResource)
+	req, err := c.NewRequest(http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	return resource.(*TokenWithETag), nil
+	respWithETag, err := c.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		// ignore the error
+		_ = respWithETag.Response.Body.Close()
+	}()
+
+	if respWithETag.Response.StatusCode != http.StatusOK {
+		return nil, NewAPIError(respWithETag)
+	}
+
+	// Read the response body once
+	body, err := io.ReadAll(respWithETag.Response.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	// Log the raw response for debugging
+	tflog.Debug(context.Background(), fmt.Sprintf("Raw API response: %s", string(body)))
+
+	var token models.TokenRequest
+	if err := json.Unmarshal(body, &token); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &TokenWithETag{
+		Token: &token,
+		ETag:  respWithETag.ETag,
+	}, nil
 }
 
-func (c *CloudClient) ListTokens(permissionsSystemID, serviceAccountID string) ([]models.Token, error) {
+func (c *CloudClient) ListTokens(permissionsSystemID, serviceAccountID string) ([]models.TokenRequest, error) {
 	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s/tokens", permissionsSystemID, serviceAccountID)
 	req, err := c.NewRequest(http.MethodGet, path, nil)
 	if err != nil {
@@ -79,7 +177,7 @@ func (c *CloudClient) ListTokens(permissionsSystemID, serviceAccountID string) (
 	}
 
 	var listResp struct {
-		Items []models.Token `json:"items"`
+		Items []models.TokenRequest `json:"items"`
 	}
 	if err := json.NewDecoder(respWithETag.Response.Body).Decode(&listResp); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
@@ -89,7 +187,7 @@ func (c *CloudClient) ListTokens(permissionsSystemID, serviceAccountID string) (
 }
 
 // UpdateToken updates an existing token using PUT
-func (c *CloudClient) UpdateToken(token *models.Token, etag string) (*TokenWithETag, error) {
+func (c *CloudClient) UpdateToken(token *models.TokenRequest, etag string) (*TokenWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s/tokens/%s", token.PermissionsSystemID, token.ServiceAccountID, token.ID)
 
 	resourceWrapper := &TokenWithETag{
