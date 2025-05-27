@@ -46,7 +46,7 @@ func TestResourceInterface(t *testing.T) {
 	// Test TokenWithETag
 	tokenID := "atk-901jkl234mno"
 	tokenETag := "W/\"etag-token\""
-	token := &models.Token{ID: tokenID}
+	token := &models.TokenRequest{ID: tokenID}
 	tokenResource := &client.TokenWithETag{
 		Token: token,
 		ETag:  tokenETag,

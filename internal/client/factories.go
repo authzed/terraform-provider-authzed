@@ -60,7 +60,7 @@ func NewPolicyResource(decoded any, etag string) Resource {
 
 // NewTokenResource creates a TokenWithETag Resource
 func NewTokenResource(decoded any, etag string) Resource {
-	token, ok := decoded.(*models.Token)
+	token, ok := decoded.(*models.TokenRequest)
 	if !ok {
 		panic("Invalid type for Token")
 	}

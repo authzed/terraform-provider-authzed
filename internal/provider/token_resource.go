@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -34,8 +33,9 @@ type TokenResourceModel struct {
 	ServiceAccountID    types.String `tfsdk:"service_account_id"`
 	CreatedAt           types.String `tfsdk:"created_at"`
 	Creator             types.String `tfsdk:"creator"`
-	Secret              types.String `tfsdk:"secret"`
-	ETag                types.String `tfsdk:"etag"` // Added for ETag support
+	Hash                types.String `tfsdk:"hash"`
+	PlainText           types.String `tfsdk:"plain_text"`
+	ETag                types.String `tfsdk:"etag"`
 }
 
 func (r *TokenResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -77,14 +77,24 @@ func (r *TokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Description: "The name of the user that created this token",
 				Computed:    true,
 			},
-			"secret": schema.StringAttribute{
-				Description: "The secret value of the token. Only available after creation.",
+			"hash": schema.StringAttribute{
+				Description: "The SHA256 hash of the token",
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"plain_text": schema.StringAttribute{
+				Description: "One-time token value (returned only at creation).",
 				Computed:    true,
 				Sensitive:   true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"etag": schema.StringAttribute{
 				Computed:    true,
-				Description: "Version identifier used to prevent conflicts from concurrent updates, ensuring safe resource modifications",
+				Description: "Version identifier used to prevent conflicts from concurrent updates",
 			},
 		},
 	}
@@ -117,18 +127,13 @@ func (r *TokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// Create new token
-	token := &models.Token{
+	token := &models.TokenRequest{
 		Name:                plan.Name.ValueString(),
 		Description:         plan.Description.ValueString(),
 		PermissionsSystemID: plan.PermissionsSystemID.ValueString(),
 		ServiceAccountID:    plan.ServiceAccountID.ValueString(),
+		ReturnPlainText:     true, // Always request plain text during creation
 	}
-
-	tflog.Info(ctx, "Creating token", map[string]any{
-		"name":                 token.Name,
-		"permission_system_id": token.PermissionsSystemID,
-		"service_account_id":   token.ServiceAccountID,
-	})
 
 	createdTokenWithETag, err := r.client.CreateToken(token)
 	if err != nil {
@@ -139,6 +144,7 @@ func (r *TokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
+	// Set all fields in the plan
 	plan.ID = types.StringValue(createdTokenWithETag.Token.ID)
 	plan.Name = types.StringValue(createdTokenWithETag.Token.Name)
 	plan.Description = types.StringValue(createdTokenWithETag.Token.Description)
@@ -148,9 +154,12 @@ func (r *TokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	plan.Creator = types.StringValue(createdTokenWithETag.Token.Creator)
 	plan.ETag = types.StringValue(createdTokenWithETag.ETag)
 
-	// Set the secret (only available during creation)
+	// Set the one-time plain text value and hash during creation
+	if createdTokenWithETag.Token.Secret != "" {
+		plan.PlainText = types.StringValue(createdTokenWithETag.Token.Secret)
+	}
 	if createdTokenWithETag.Token.Hash != "" {
-		plan.Secret = types.StringValue(createdTokenWithETag.Token.Hash)
+		plan.Hash = types.StringValue(createdTokenWithETag.Token.Hash)
 	}
 
 	// Save data into Terraform state
@@ -191,7 +200,7 @@ func (r *TokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
-	// Update state
+	// Update state with metadata only
 	state.ID = types.StringValue(tokenWithETag.Token.ID)
 	state.Name = types.StringValue(tokenWithETag.Token.Name)
 	state.Description = types.StringValue(tokenWithETag.Token.Description)
@@ -201,7 +210,10 @@ func (r *TokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	state.Creator = types.StringValue(tokenWithETag.Token.Creator)
 	state.ETag = types.StringValue(tokenWithETag.ETag)
 
-	// The secret isn't returned during Read operations, but we want to keep it
+	// Only set the hash, never reset plain_text
+	if tokenWithETag.Token.Hash != "" {
+		state.Hash = types.StringValue(tokenWithETag.Token.Hash)
+	}
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -229,7 +241,7 @@ func (r *TokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 
 	// Create token with updated data
-	token := &models.Token{
+	token := &models.TokenRequest{
 		ID:                  plan.ID.ValueString(),
 		Name:                plan.Name.ValueString(),
 		Description:         plan.Description.ValueString(),
@@ -252,8 +264,9 @@ func (r *TokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	plan.Creator = types.StringValue(updatedTokenWithETag.Token.Creator)
 	plan.ETag = types.StringValue(updatedTokenWithETag.ETag)
 
-	// Preserve the secret value from state since it won't be returned in updates
-	plan.Secret = state.Secret
+	// Preserve the token value and hash from state since they won't be returned in updates
+	plan.PlainText = state.PlainText
+	plan.Hash = state.Hash
 
 	// Save updated data into Terraform state
 	diags = resp.State.Set(ctx, plan)
