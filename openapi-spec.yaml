@@ -1363,15 +1363,23 @@ components:
       required:
       - name
       type: object
+    DatadogExportFeatureConfig:
+      properties:
+        site:
+          description: The Datadog Site associated with your API key.
+          type: string
+      required:
+      - site
+      type: object
     Deployment:
       properties:
         id:
           description: The globally unique ID for this Deployment
           type: string
-        metaName:
+        internalReference:
           deprecated: true
-          description: The internal name of the Permissions System. Prefer ID or the
-            normal name.
+          description: The internal reference of the Permissions System. DO NOT USE.
+            Prefer ID or the normal name.
           type: string
         name:
           description: The name of the Deployment
@@ -1379,6 +1387,8 @@ components:
         replicas:
           description: The number of replicas on this Deployment
           type: integer
+      required:
+      - id
       type: object
     Feature:
       properties:
@@ -1394,6 +1404,8 @@ components:
       type: object
     GetFeatureDatadogExportResponse:
       properties:
+        config:
+          $ref: '#/components/schemas/DatadogExportFeatureConfig'
         displayName:
           description: The display name for the Feature
           type: string
@@ -1403,6 +1415,8 @@ components:
         id:
           description: The feature identifier
           type: string
+      required:
+      - config
       type: object
     GetPermissionsSystemResponse:
       properties:
@@ -1414,6 +1428,11 @@ components:
         id:
           description: The globally unique ID for this Permissions System
           type: string
+        internalReference:
+          deprecated: true
+          description: The internal reference of the Permissions System. DO NOT USE.
+            Prefer ID or the normal name.
+          type: string
         name:
           description: The name of the Permissions System
           type: string
@@ -1423,6 +1442,8 @@ components:
           $ref: '#/components/schemas/SystemType'
         version:
           $ref: '#/components/schemas/SystemVersion'
+      required:
+      - id
       type: object
     GetPolicyResponse:
       properties:
@@ -1728,6 +1749,11 @@ components:
         id:
           description: The globally unique ID for this Permissions System
           type: string
+        internalReference:
+          deprecated: true
+          description: The internal reference of the Permissions System. DO NOT USE.
+            Prefer ID or the normal name.
+          type: string
         name:
           description: The name of the Permissions System
           type: string
@@ -1737,6 +1763,8 @@ components:
           $ref: '#/components/schemas/SystemType'
         version:
           $ref: '#/components/schemas/SystemVersion'
+      required:
+      - id
       type: object
     PermissionsSystemState:
       properties:
@@ -1915,6 +1943,8 @@ components:
       type: object
     SetFeatureDatadogExportResponse:
       properties:
+        config:
+          $ref: '#/components/schemas/DatadogExportFeatureConfig'
         displayName:
           description: The display name for the Feature
           type: string
@@ -1924,6 +1954,8 @@ components:
         id:
           description: The feature identifier
           type: string
+      required:
+      - config
       type: object
     SortBy:
       enum:
