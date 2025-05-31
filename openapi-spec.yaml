@@ -1163,6 +1163,7 @@ components:
       - name
       - principalID
       - roleIDs
+      - id
       type: object
     CreateRoleRequest:
       properties:
@@ -1226,6 +1227,7 @@ components:
       required:
       - name
       - permissions
+      - id
       type: object
     CreateServiceAccountRequest:
       properties:
@@ -1292,6 +1294,7 @@ components:
           type: string
       required:
       - name
+      - id
       type: object
     CreateTokenRequest:
       properties:
@@ -1362,11 +1365,14 @@ components:
           type: string
       required:
       - name
+      - id
       type: object
     DatadogExportFeatureConfig:
       properties:
         site:
           description: The Datadog Site associated with your API key.
+          maxLength: 64
+          minLength: 1
           type: string
       required:
       - site
@@ -1497,6 +1503,7 @@ components:
       - name
       - principalID
       - roleIDs
+      - id
       type: object
     GetRoleResponse:
       properties:
@@ -1539,6 +1546,7 @@ components:
       required:
       - name
       - permissions
+      - id
       type: object
     GetServiceAccountResponse:
       properties:
@@ -1586,6 +1594,7 @@ components:
           type: string
       required:
       - name
+      - id
       type: object
     GetTokenResponse:
       properties:
@@ -1632,6 +1641,7 @@ components:
           type: string
       required:
       - name
+      - id
       type: object
     ListDeploymentsResponse:
       items:
@@ -1839,6 +1849,7 @@ components:
       - name
       - principalID
       - roleIDs
+      - id
       type: object
     Role:
       properties:
@@ -1881,6 +1892,7 @@ components:
       required:
       - name
       - permissions
+      - id
       type: object
     ServiceAccount:
       properties:
@@ -1928,14 +1940,19 @@ components:
           type: string
       required:
       - name
+      - id
       type: object
     SetFeatureDatadogExportRequest:
       properties:
         apiKey:
           description: The Datadog API key. Will not be returned after writing.
+          maxLength: 64
+          minLength: 1
           type: string
         site:
           description: The Datadog Site associated with your API key.
+          maxLength: 64
+          minLength: 1
           type: string
       required:
       - site
@@ -2050,6 +2067,7 @@ components:
           type: string
       required:
       - name
+      - id
       type: object
     UpdatePolicyRequest:
       properties:
@@ -2129,6 +2147,7 @@ components:
       - name
       - principalID
       - roleIDs
+      - id
       type: object
     UpdateRoleRequest:
       properties:
@@ -2187,6 +2206,7 @@ components:
       required:
       - name
       - permissions
+      - id
       type: object
     UpdateServiceAccountRequest:
       properties:
@@ -2256,6 +2276,7 @@ components:
           type: string
       required:
       - name
+      - id
       type: object
     UpdateTokenRequest:
       properties:
@@ -2316,6 +2337,7 @@ components:
           type: string
       required:
       - name
+      - id
       type: object
   securitySchemes:
     auth:
