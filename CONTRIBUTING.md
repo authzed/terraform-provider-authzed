@@ -75,9 +75,10 @@ Closes #42
 ### Pull Requests
 
 1. Update the README.md with details of changes if appropriate
-2. Update the CHANGELOG.md with details of changes
-3. The PR should work against the main branch
-4. Include appropriate tests
+2. The PR should work against the main branch
+3. Include appropriate tests
+
+Note: While the changelog is automatically generated from commit messages, it may be curated for clarity during the release process.
 
 ## Documentation
 
@@ -89,9 +90,10 @@ Closes #42
 
 (For maintainers only)
 
-1. Update CHANGELOG.md
-2. Create a new GitHub release with a semantic version tag
-3. The release will automatically be published to the Terraform Registry
+1. Let GoReleaser generate the initial changelog from commits
+2. Review and curate the changelog for clarity if needed
+3. Create a new GitHub release with a semantic version tag
+4. The release will automatically be published to the Terraform Registry
 
 ## License
 
