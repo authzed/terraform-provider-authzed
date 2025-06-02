@@ -58,6 +58,19 @@ Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
 - Use the imperative mood ("Move cursor to..." not "Moves cursor to...")
 - Limit the first line to 72 characters or less
 - Reference issues and pull requests liberally after the first line
+- Prefix your commit messages with one of the following to help with changelog generation:
+  - `feat:` for new features (e.g., "feat: add support for relationship tuples")
+  - `fix:` for bug fixes (e.g., "fix: correct validation in schema resource")
+  - `docs:` for documentation changes (e.g., "docs: clarify resource import process")
+  - `add:` for other additions (e.g., "add: new validation function")
+
+For example:
+```
+fix: correct typo in error message
+
+Changed "permision" to "permission" in validation error.
+Closes #42
+```
 
 ### Pull Requests
 
