@@ -936,6 +936,69 @@ paths:
       - auth: []
       tags:
       - permissions system
+  /ps/{permissionsSystemID}/features/audit-log:
+    get:
+      description: get the current configuration of the audit log feature
+      operationId: GetFeatureAuditLog
+      parameters:
+      - in: path
+        name: permissionsSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetFeatureAuditLogResponse'
+          description: OK
+      security:
+      - auth: []
+      tags:
+      - permissions system
+    put:
+      description: set the configuration for the audit log feature and enable the
+        feature
+      operationId: SetFeatureAuditLog
+      parameters:
+      - in: path
+        name: permissionsSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: 25r1
+          description: The version of the API to use. Must be specified.
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetFeatureAuditLogRequest'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetFeatureAuditLogResponse'
+          description: OK
+      security:
+      - auth: []
+      tags:
+      - permissions system
   /ps/{permissionsSystemID}/features/datadog-export:
     get:
       description: get the current configuration of the datadog export feature
@@ -1080,6 +1143,30 @@ components:
           description: The ID of the API shape
           type: string
       type: object
+    AuditLogFeatureConfig:
+      properties:
+        streamName:
+          description: The name of the destination sink.
+          type: string
+        targetConfiguration:
+          additionalProperties:
+            type: string
+          description: Any target-specific fields for the destination sink.
+          type: object
+        targetEndpointUrl:
+          description: The endpoint URL for the destination sink.
+          type: string
+        targetType:
+          $ref: '#/components/schemas/AuditLogTargetType'
+      required:
+      - targetType
+      - streamName
+      type: object
+    AuditLogTargetType:
+      enum:
+      - aws-kinesis
+      - aws-firehose
+      type: string
     CreatePolicyRequest:
       properties:
         description:
@@ -1408,6 +1495,20 @@ components:
           description: The feature identifier
           type: string
       type: object
+    GetFeatureAuditLogResponse:
+      properties:
+        config:
+          $ref: '#/components/schemas/AuditLogFeatureConfig'
+        displayName:
+          description: The display name for the Feature
+          type: string
+        enabled:
+          description: Whether a specific feature is enabled or disabled
+          type: boolean
+        id:
+          description: The feature identifier
+          type: string
+      type: object
     GetFeatureDatadogExportResponse:
       properties:
         config:
@@ -1421,8 +1522,6 @@ components:
         id:
           description: The feature identifier
           type: string
-      required:
-      - config
       type: object
     GetPermissionsSystemResponse:
       properties:
@@ -1942,6 +2041,29 @@ components:
       - name
       - id
       type: object
+    SetFeatureAuditLogRequest:
+      properties:
+        config:
+          $ref: '#/components/schemas/AuditLogFeatureConfig'
+        enabled:
+          type: boolean
+      required:
+      - enabled
+      type: object
+    SetFeatureAuditLogResponse:
+      properties:
+        config:
+          $ref: '#/components/schemas/AuditLogFeatureConfig'
+        displayName:
+          description: The display name for the Feature
+          type: string
+        enabled:
+          description: Whether a specific feature is enabled or disabled
+          type: boolean
+        id:
+          description: The feature identifier
+          type: string
+      type: object
     SetFeatureDatadogExportRequest:
       properties:
         apiKey:
@@ -1971,8 +2093,6 @@ components:
         id:
           description: The feature identifier
           type: string
-      required:
-      - config
       type: object
     SortBy:
       enum:
