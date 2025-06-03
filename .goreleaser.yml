@@ -57,5 +57,23 @@ release:
       name_template: '{{ .ProjectName }}_{{ .Version }}_manifest.json'
   # If you want to manually examine the release before its live, uncomment this line:
   # draft: true
+
 changelog:
-  disable: true
+  sort: asc
+  filters:
+    exclude:
+      - '^Merge pull request'
+      - '^Merge branch'
+      - '^Merge remote-tracking'
+  groups:
+    - title: Features
+      regexp: "^.*feat[(\\w)]*:+.*$|^.*add[(\\w)]*:+.*$"
+      order: 0
+    - title: Bug Fixes
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 1
+    - title: Documentation
+      regexp: "^.*docs[(\\w)]*:+.*$"
+      order: 2
+    - title: Other Changes
+      order: 999
