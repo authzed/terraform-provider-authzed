@@ -1145,6 +1145,12 @@ components:
       type: object
     AuditLogFeatureConfig:
       properties:
+        disabledOnMethods:
+          description: A list of methods that will not be logged. If empty, all methods
+            will be logged.
+          items:
+            type: string
+          type: array
         streamName:
           description: The name of the destination sink.
           type: string
@@ -1167,6 +1173,17 @@ components:
       - aws-kinesis
       - aws-firehose
       type: string
+    CloudProviderDetails:
+      properties:
+        awsAccountID:
+          description: The AWS account ID associated with this Deployment. Will be
+            empty if not applicable.
+          type: string
+        gcpServiceAccount:
+          description: The GCP service account associated with this Deployment. Will
+            be empty if not applicable.
+          type: string
+      type: object
     CreatePolicyRequest:
       properties:
         description:
@@ -1466,6 +1483,8 @@ components:
       type: object
     Deployment:
       properties:
+        cloudProviderDetails:
+          $ref: '#/components/schemas/CloudProviderDetails'
         id:
           description: The globally unique ID for this Deployment
           type: string
