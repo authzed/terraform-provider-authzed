@@ -1,23 +1,23 @@
 ---
-page_title: "Policies Data Source - cloudapi"
+page_title: "Data Source: authzed_policies"
 subcategory: ""
 description: |-
   Lists all policies in a permission system.
 ---
 
-# cloudapi_policies (Data Source)
+# authzed_policies (Data Source)
 
 This data source retrieves a list of all policies defined in an AuthZed Cloud permission system.
 
 ## Example Usage
 
 ```terraform
-data "cloudapi_policies" "all" {
+data "authzed_policies" "all" {
   permission_system_id = "sys_123456789"
 }
 
 output "policy_names" {
-  value = [for policy in data.cloudapi_policies.all.policies : policy.name]
+  value = [for policy in data.authzed_policies.all.policies : policy.name]
 }
 ```
 

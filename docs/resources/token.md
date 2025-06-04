@@ -1,10 +1,10 @@
 ---
-page_title: "Resource: cloudapi_token"
+page_title: "Resource: authzed_token"
 description: |-
   Manages permission system access-management tokens for service accounts.
 ---
 
-# cloudapi_token
+# authzed_token
 
 This resource allows you to create and manage permission system access-management tokens under service accounts. These tokens are used for access management of a permissions system.
 
@@ -16,29 +16,29 @@ This resource allows you to create and manage permission system access-managemen
 
 ```hcl
 # Create a service account
-resource "cloudapi_service_account" "example" {
+resource "authzed_service_account" "example" {
   permission_system_id = "ps-example"
   name                = "example-sa"
   description         = "Example service account"
 }
 
 # Create a token for the service account
-resource "cloudapi_token" "example" {
-  permission_system_id = cloudapi_service_account.example.permission_system_id
-  service_account_id   = cloudapi_service_account.example.id
+resource "authzed_token" "example" {
+  permission_system_id = authzed_service_account.example.permission_system_id
+  service_account_id   = authzed_service_account.example.id
   name                = "example-token"
   description         = "Example token"
 }
 
 # Output the token value (only available during creation)
 output "token_plain_text" {
-  value     = cloudapi_token.example.plain_text
+  value     = authzed_token.example.plain_text
   sensitive = true    # Keeps the token hidden by default
 }
 
 # Output the token hash for verification
 output "token_hash" {
-  value = cloudapi_token.example.hash
+  value = authzed_token.example.hash
 }
 ```
 
@@ -67,10 +67,10 @@ Here's a recommended pattern for handling service account tokens:
    Allow Terraform to preserve the token (marked sensitive) in its state file—and optionally as an `output`—so other resources or modules can reference it without re-creating the token.
 
 4. **Rotate when needed**  
-   When it's time to rotate, create a new `cloudapi_token` resource, update your consumers to use the new token, then destroy the old token:
+   When it's time to rotate, create a new `authzed_token` resource, update your consumers to use the new token, then destroy the old token:
 
    ```hcl
-   resource "cloudapi_token" "ci_v2" { ... }
+   resource "authzed_token" "ci_v2" { ... }
    # then remove or destroy the old one
    ```
 
@@ -113,7 +113,7 @@ The token value is stored in the state file as a sensitive value. To protect sen
 Tokens can be imported using a composite ID with the format `permission_system_id:service_account_id:token_id`, for example:
 
 ```bash
-terraform import cloudapi_token.example "ps-example:asa-example:atk-example"
+terraform import authzed_token.example "ps-example:asa-example:atk-example"
 ```
 
 ~> **Note:** When importing a token, the `plain_text` value is **not available**—only the hash can be imported. This is because tokens are only returned in plaintext during their initial creation.

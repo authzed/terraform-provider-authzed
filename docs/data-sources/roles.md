@@ -1,22 +1,22 @@
 ---
-page_title: "Data Source: cloudapi_roles"
+page_title: "Data Source: authzed_roles"
 description: |-
   Lists all roles in a permission system.
 ---
 
-# cloudapi_roles
+# authzed_roles (Data Source)
 
 This data source retrieves a list of all roles defined in an AuthZed permission system.
 
 ## Example Usage
 
 ```terraform
-data "cloudapi_roles" "all" {
+data "authzed_roles" "all" {
   permission_system_id = "sys_123456789"
 }
 
 output "role_names" {
-  value = [for role in data.cloudapi_roles.all.roles : role.name]
+  value = [for role in data.authzed_roles.all.roles : role.name]
 }
 ```
 

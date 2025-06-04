@@ -1,26 +1,26 @@
 ---
-page_title: "Data Source: cloudapi_permission_system"
+page_title: "Data Source: authzed_permission_system"
 description: |-
   Retrieves information about a specific permission system in AuthZed.
 ---
 
-# cloudapi_permission_system
+# authzed_permission_system
 
 This data source retrieves information about a specific permission system in your AuthZed account. Permission systems are where you define and store your permission relationships.
 
 ## Example Usage
 
 ```terraform
-data "cloudapi_permission_system" "development" {
+data "authzed_permission_system" "development" {
   id = "ps-123456789"
 }
 
 output "system_name" {
-  value = data.cloudapi_permission_system.development.name
+  value = data.authzed_permission_system.development.name
 }
 
 output "system_type" {
-  value = data.cloudapi_permission_system.development.system_type
+  value = data.authzed_permission_system.development.system_type
 }
 ```
 

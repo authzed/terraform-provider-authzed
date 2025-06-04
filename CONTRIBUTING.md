@@ -1,6 +1,6 @@
-# Contributing to the AuthZed Cloud API Terraform Provider
+# Contributing to the AuthZed Terraform Provider
 
-Thank you for considering contributing to the AuthZed Cloud API Terraform Provider! This document provides guidelines and instructions for contributing.
+Thank you for considering contributing to the AuthZed Terraform Provider! This document provides guidelines and instructions for contributing.
 
 ## Code of Conduct
 
@@ -11,7 +11,7 @@ Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
 1. **Fork the repository** on GitHub.
 2. **Clone your fork** locally:
    ```
-   git clone https://github.com/YOUR-USERNAME/terraform-provider-cloudapi.git
+   git clone https://github.com/YOUR-USERNAME/terraform-provider-authzed.git
    ```
 3. **Create a branch** for your work:
    ```
@@ -23,7 +23,7 @@ Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
 ### Requirements
 
 - Go 1.23 or higher
-- Terraform 1.0 or higher
+- Terraform 1.12 or higher
 - Access to an AuthZed Cloud account for testing
 
 ### Building and Testing
@@ -40,8 +40,8 @@ Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 3. **Install locally for testing**:
    ```
-   mkdir -p ~/.terraform.d/plugins/registry.terraform.io/authzed/cloudapi/0.1.0/$(go env GOOS)_$(go env GOARCH)
-   cp terraform-provider-cloudapi ~/.terraform.d/plugins/registry.terraform.io/authzed/cloudapi/0.1.0/$(go env GOOS)_$(go env GOARCH)/
+   mkdir -p ~/.terraform.d/plugins/registry.terraform.io/authzed/authzed/0.1.0/$(go env GOOS)_$(go env GOARCH)
+   cp terraform-provider-authzed ~/.terraform.d/plugins/registry.terraform.io/authzed/authzed/0.1.0/$(go env GOOS)_$(go env GOARCH)/
    ```
 
 ## Making Changes

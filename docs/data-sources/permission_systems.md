@@ -1,24 +1,24 @@
 ---
-page_title: "Data Source: cloudapi_permission_systems"
+page_title: "Data Source: authzed_permission_systems"
 description: |-
   Lists all permission systems available in your AuthZed account.
 ---
 
-# cloudapi_permission_systems
+# authzed_permission_systems
 
 This data source retrieves information about all permission systems in your AuthZed account. Use this to discover your permission systems and their properties.
 
 ## Example Usage
 
 ```terraform
-data "cloudapi_permission_systems" "all" {}
+data "authzed_permission_systems" "all" {}
 
 output "all_system_names" {
-  value = [for ps in data.cloudapi_permission_systems.all.permission_systems : ps.name]
+  value = [for ps in data.authzed_permission_systems.all.permission_systems : ps.name]
 }
 
 output "system_count" {
-  value = data.cloudapi_permission_systems.all.permission_systems_count
+  value = data.authzed_permission_systems.all.permission_systems_count
 }
 ```
 

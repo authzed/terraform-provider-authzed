@@ -1,5 +1,6 @@
 # Build artifacts
 dist/
+terraform-provider-authzed
 # IDE files
 .idea/
 .vscode/

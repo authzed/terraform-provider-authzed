@@ -1,24 +1,24 @@
 ---
-page_title: "Tokens Data Source - cloudapi"
+page_title: "Data Source: authzed_tokens"
 subcategory: ""
 description: |-
   Lists all tokens for a service account in a permission system.
 ---
 
-# cloudapi_tokens (Data Source)
+# authzed_tokens (Data Source)
 
 This data source retrieves a list of all tokens belonging to a service account in an AuthZed Cloud permission system.
 
 ## Example Usage
 
 ```terraform
-data "cloudapi_tokens" "all" {
+data "authzed_tokens" "all" {
   permission_system_id = "ps-123456789"
   service_account_id   = "asa-abcdef123456"
 }
 
 output "token_names" {
-  value = [for token in data.cloudapi_tokens.all.tokens : token.name]
+  value = [for token in data.authzed_tokens.all.tokens : token.name]
 }
 ```
 

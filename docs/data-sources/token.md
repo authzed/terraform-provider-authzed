@@ -1,24 +1,24 @@
 ---
-page_title: "Data Source: cloudapi_token"
+page_title: "Data Source: authzed_token"
 description: |-
   Gets information about a specific token belonging to a service account.
 ---
 
-# cloudapi_token
+# authzed_token (Data Source)
 
 This data source retrieves information about a specific token belonging to a service account in an AuthZed permission system.
 
 ## Example Usage
 
 ```terraform
-data "cloudapi_token" "example" {
+data "authzed_token" "example" {
   permission_system_id = "ps-123456789"
   service_account_id   = "asa-abcdef123456"
   token_id            = "atk-987654321"
 }
 
 output "token_name" {
-  value = data.cloudapi_token.example.name
+  value = data.authzed_token.example.name
 }
 ```
 

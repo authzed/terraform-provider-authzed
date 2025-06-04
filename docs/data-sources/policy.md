@@ -1,23 +1,23 @@
 ---
-page_title: "Data Source: cloudapi_policy"
+page_title: "Data Source: authzed_policy"
 description: |-
   Gets information about a specific policy in a permission system.
 ---
 
-# cloudapi_policy
+# authzed_policy (Data Source)
 
 This data source retrieves information about a specific policy in an AuthZed permission system.
 
 ## Example Usage
 
 ```terraform
-data "cloudapi_policy" "example" {
+data "authzed_policy" "example" {
   permission_system_id = "ps-123456789"
   policy_id            = "apc-abcdef123456"
 }
 
 output "policy_roles" {
-  value = data.cloudapi_policy.example.role_ids
+  value = data.authzed_policy.example.role_ids
 }
 ```
 

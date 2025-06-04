@@ -1,17 +1,17 @@
 ---
-page_title: "Resource: cloudapi_service_account"
+page_title: "Resource: authzed_service_account"
 description: |-
   Manages service accounts for secure access to AuthZed permission systems.
 ---
 
-# cloudapi_service_account
+# authzed_service_account
 
 This resource allows you to create, update, and delete service accounts for your AuthZed permission systems. Service accounts provide a secure way for applications and services to authenticate with and access your permission systems.
 
 ## Example Usage
 
 ```terraform
-resource "cloudapi_service_account" "api_service" {
+resource "authzed_service_account" "api_service" {
   name                 = "api-service"
   description          = "Service account for our API backend"
   permission_system_id = "ps-123456789"
@@ -39,5 +39,5 @@ In addition to the arguments listed above, the following attributes are exported
 Service accounts can be imported using a composite ID with the format `permission_system_id:service_account_id`, for example:
 
 ```bash
-terraform import cloudapi_service_account.api_service ps-123456789:asa-abcdef123456
+terraform import authzed_service_account.api_service ps-123456789:asa-abcdef123456
 ``` 

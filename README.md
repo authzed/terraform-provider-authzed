@@ -1,13 +1,13 @@
-# Terraform Provider for AuthZed Cloud API
+# Terraform Provider for AuthZed
 
-A Terraform provider for managing administrative access to [AuthZed](https://authzed.com/) through its Cloud API.
+A Terraform provider for managing [AuthZed](https://authzed.com/) resources through its Cloud API.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Terraform Registry](https://img.shields.io/badge/Terraform%20Registry-AuthZed-blue.svg)](https://registry.terraform.io/providers/authzed/authzed/latest/docs)
 
 ## Overview
 
-This provider automates the management of platform access in AuthZed Dedicated environments:
+This provider automates the management of resources in AuthZed Dedicated environments:
 
 - **Service accounts** for programmatic access to permission systems
 - **API tokens** for secure authentication
