@@ -1,22 +1,22 @@
 ---
-page_title: "Resource: cloudapi_policy"
+page_title: "Resource: authzed_policy"
 description: |-
   Manages access control policies in an AuthZed permission system.
 ---
 
-# cloudapi_policy
+# authzed_policy
 
 This resource allows you to create and manage access control policies that connect service accounts with roles. Policies are the mechanism for controlling what actions service accounts can perform on your AuthZed permission systems.
 
 ## Example Usage
 
 ```terraform
-resource "cloudapi_policy" "reader_policy" {
+resource "authzed_policy" "reader_policy" {
   name                 = "reader-policy"
   description          = "Grant read-only access"
   permission_system_id = "ps-123456789"
-  principal_id         = cloudapi_service_account.api_service.id
-  role_ids             = [cloudapi_role.reader.id]
+  principal_id         = authzed_service_account.api_service.id
+  role_ids             = [authzed_role.reader.id]
 }
 ```
 
@@ -40,8 +40,13 @@ In addition to the arguments listed above, the following attributes are exported
 
 ## Import
 
-Policies can be imported using a composite ID with the format `permission_system_id:policy_id`, for example:
+Policies can be imported using a composite ID with the format `permission_system_id:policy_id`. The permission system ID must start with `ps-` and the policy ID must start with `apc-`. For example:
 
 ```bash
-terraform import cloudapi_policy.reader_policy ps-123456789:apc-abcdef123456
-``` 
+# Import a policy with:
+# - Permission System ID: ps-example123
+# - Policy ID: apc-mypolicy
+terraform import authzed_policy.example "ps-example123:apc-mypolicy"
+```
+
+After import, you can manage the policy using Terraform. The imported policy will include all computed attributes like `created_at`, `creator`, etc. and the associated role IDs. 
