@@ -36,8 +36,13 @@ In addition to the arguments listed above, the following attributes are exported
 
 ## Import
 
-Service accounts can be imported using a composite ID with the format `permission_system_id:service_account_id`, for example:
+Service accounts can be imported using a composite ID with the format `permission_system_id:service_account_id`. The permission system ID must start with `ps-` and the service account ID must start with `asa-`. For example:
 
 ```bash
-terraform import authzed_service_account.api_service ps-123456789:asa-abcdef123456
-``` 
+# Import a service account with:
+# - Permission System ID: ps-example123
+# - Service Account ID: asa-myserviceaccount
+terraform import authzed_service_account.example "ps-example123:asa-myserviceaccount"
+```
+
+After import, you can manage the service account using Terraform. The imported service account will include all computed attributes like `created_at`, `creator`, etc. 

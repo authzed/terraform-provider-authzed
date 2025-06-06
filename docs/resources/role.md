@@ -57,8 +57,13 @@ In addition to the arguments listed above, the following attributes are exported
 
 ## Import
 
-Roles can be imported using a composite ID with the format `permission_system_id:role_id`, for example:
+Roles can be imported using a composite ID with the format `permission_system_id:role_id`. The permission system ID must start with `ps-` and the role ID must start with `arl-`. For example:
 
 ```bash
-terraform import authzed_role.example ps-123456789:arl-987654321
-``` 
+# Import a role with:
+# - Permission System ID: ps-example123
+# - Role ID: arl-myrole
+terraform import authzed_role.example "ps-example123:arl-myrole"
+```
+
+After import, you can manage the role using Terraform. The imported role will include all computed attributes like `created_at`, `creator`, etc. and the full permissions map. 

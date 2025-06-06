@@ -8,12 +8,16 @@ import (
 	"terraform-provider-authzed/internal/client"
 	"terraform-provider-authzed/internal/models"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-var _ resource.Resource = &policyResource{}
+var (
+	_ resource.Resource                = &policyResource{}
+	_ resource.ResourceWithImportState = &policyResource{}
+)
 
 func NewPolicyResource() resource.Resource {
 	return &policyResource{}
@@ -261,4 +265,25 @@ func (r *policyResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete policy, got error: %s", err))
 		return
 	}
+}
+
+// ImportState handles importing an existing policy into Terraform state
+func (r *policyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	idParts := strings.Split(req.ID, ":")
+	if len(idParts) != 2 {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID",
+			fmt.Sprintf("Expected import id in format 'permission_system_id:policy_id', got: %s", req.ID),
+		)
+		return
+	}
+
+	permissionSystemID := idParts[0]
+	policyID := idParts[1]
+
+	// Set the main identifiers
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("permission_system_id"), permissionSystemID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), policyID)...)
+
+	// Terraform automatically calls Read to fetch the rest of the attributes
 }

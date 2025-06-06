@@ -3,10 +3,12 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"terraform-provider-authzed/internal/client"
 	"terraform-provider-authzed/internal/models"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -15,7 +17,10 @@ import (
 )
 
 // Ensure the implementation satisfies the expected interfaces.
-var _ resource.Resource = &TokenResource{}
+var (
+	_ resource.Resource                = &TokenResource{}
+	_ resource.ResourceWithImportState = &TokenResource{}
+)
 
 func NewTokenResource() resource.Resource {
 	return &TokenResource{}
@@ -300,4 +305,27 @@ func (r *TokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 		)
 		return
 	}
+}
+
+// ImportState handles importing an existing token into Terraform state
+func (r *TokenResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	idParts := strings.Split(req.ID, ":")
+	if len(idParts) != 3 {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID",
+			fmt.Sprintf("Expected import id in format 'permission_system_id:service_account_id:token_id', got: %s", req.ID),
+		)
+		return
+	}
+
+	permissionSystemID := idParts[0]
+	serviceAccountID := idParts[1]
+	tokenID := idParts[2]
+
+	// Set the main identifiers
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("permission_system_id"), permissionSystemID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("service_account_id"), serviceAccountID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), tokenID)...)
+
+	// Terraform automatically calls Read to fetch the rest of the attributes
 }

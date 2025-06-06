@@ -8,12 +8,16 @@ import (
 	"terraform-provider-authzed/internal/client"
 	"terraform-provider-authzed/internal/models"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-var _ resource.Resource = &serviceAccountResource{}
+var (
+	_ resource.Resource                = &serviceAccountResource{}
+	_ resource.ResourceWithImportState = &serviceAccountResource{}
+)
 
 func NewServiceAccountResource() resource.Resource {
 	return &serviceAccountResource{}
@@ -207,4 +211,26 @@ func (r *serviceAccountResource) Delete(ctx context.Context, req resource.Delete
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete service account, got error: %s", err))
 		return
 	}
+}
+
+// ImportState handles importing an existing service account into Terraform state
+func (r *serviceAccountResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	// Import ID format: permission_system_id:service_account_id
+	idParts := strings.Split(req.ID, ":")
+	if len(idParts) != 2 {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID",
+			fmt.Sprintf("Expected import id in format 'permission_system_id:service_account_id', got: %s", req.ID),
+		)
+		return
+	}
+
+	permissionSystemID := idParts[0]
+	serviceAccountID := idParts[1]
+
+	// Set the main identifiers
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("permission_system_id"), permissionSystemID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), serviceAccountID)...)
+
+	// Terraform automatically calls Read to fetch the rest of the attributes
 }

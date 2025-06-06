@@ -110,10 +110,16 @@ The token value is stored in the state file as a sensitive value. To protect sen
 
 ## Import
 
-Tokens can be imported using a composite ID with the format `permission_system_id:service_account_id:token_id`, for example:
+Tokens can be imported using a composite ID with the format `permission_system_id:service_account_id:token_id`. The permission system ID must start with `ps-`, the service account ID must start with `asa-`, and the token ID must start with `atk-`. For example:
 
 ```bash
-terraform import authzed_token.example "ps-example:asa-example:atk-example"
+# Import a token with:
+# - Permission System ID: ps-example123
+# - Service Account ID: asa-myserviceaccount
+# - Token ID: atk-mytoken
+terraform import authzed_token.example "ps-example123:asa-myserviceaccount:atk-mytoken"
 ```
+
+After import, you can manage the token using Terraform. The imported token will include all computed attributes like `created_at`, `creator`, etc. and the token hash.
 
 ~> **Note:** When importing a token, the `plain_text` value is **not available**—only the hash can be imported. This is because tokens are only returned in plaintext during their initial creation.
