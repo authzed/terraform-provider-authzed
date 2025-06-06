@@ -1,12 +1,12 @@
 ---
-page_title: "Provider: AuthZed Cloud API"
+page_title: "Provider: AuthZed"
 description: |-
-  The AuthZed Cloud API provider allows Terraform to manage access to your AuthZed environment.
+  The AuthZed provider allows Terraform to manage resources in your AuthZed environment.
 ---
 
-# AuthZed Cloud API Provider
+# AuthZed Provider
 
-The AuthZed Cloud API provider allows you to manage access to [AuthZed Cloud API](https://www.postman.com/authzed/spicedb/collection/5fm402n/authzed-cloud-api) through Terraform. This provider is used to interact with the resources supported by AuthZed Cloud API.
+The AuthZed provider allows you to manage resources via the [AuthZed Cloud API](https://www.postman.com/authzed/spicedb/collection/5fm402n/authzed-cloud-api) through Terraform. This provider is used to interact with the resources supported by AuthZed Cloud API.
 
 Use the navigation to the left to read about the available resources and data sources.
 
@@ -15,14 +15,14 @@ Use the navigation to the left to read about the available resources and data so
 ```terraform
 terraform {
   required_providers {
-    cloudapi = {
-      source  = "authzed/cloudapi"
+    authzed = {
+      source  = "authzed/authzed"
       version = "~> 0.1.0"
     }
   }
 }
 
-provider "cloudapi" {
+provider "authzed" {
   endpoint    = "https://api.admin.stage.aws.authzed.net"
   token       = var.authzed_api_token
   # Uncomment to specify a different API version
@@ -43,7 +43,7 @@ To obtain a token, contact your AuthZed account team. They will provide you with
 
 ## Provider Arguments
 
-* `endpoint` - (Optional) The host address of the AuthZed Cloud API. Default is `https://api.admin.stage.aws.authzed.net`.
+* `endpoint` - (Required) The host address of the AuthZed Cloud API. Default is `https://api.admin.stage.aws.authzed.net`.
 * `token` - (Required) The bearer token for authentication with AuthZed.
 * `api_version` - (Optional) The version of the API to use. Default is "25r1".
 
@@ -58,20 +58,20 @@ Plan your changes carefully to avoid disrupting access for production systems.
 
 ### Resources
 
-* [`cloudapi_role`](resources/role.md) - Manage roles and permissions
-* [`cloudapi_policy`](resources/policy.md) - Manage policies for assigning roles
-* [`cloudapi_service_account`](resources/service_account.md) - Manage service accounts
-* [`cloudapi_token`](resources/token.md) - Manage API tokens
+* [`authzed_role`](resources/role.md) - Manage roles and permissions
+* [`authzed_policy`](resources/policy.md) - Manage policies for assigning roles
+* [`authzed_service_account`](resources/service_account.md) - Manage service accounts
+* [`authzed_token`](resources/token.md) - Manage tokens for service accounts
 
 ### Data Sources
 
-* [`cloudapi_permission_system`](data-sources/permission_system.md) - Get a specific permission system
-* [`cloudapi_permission_systems`](data-sources/permission_systems.md) - List all permission systems
-* [`cloudapi_role`](data-sources/role.md) - Get a specific role
-* [`cloudapi_roles`](data-sources/roles.md) - List all roles in a permission system
-* [`cloudapi_policy`](data-sources/policy.md) - Get a specific policy
-* [`cloudapi_policies`](data-sources/policies.md) - List all policies in a permission system
-* [`cloudapi_service_account`](data-sources/service_account.md) - Get a specific service account
-* [`cloudapi_service_accounts`](data-sources/service_accounts.md) - List all service accounts in a permission system
-* [`cloudapi_token`](data-sources/token.md) - Get a specific token
-* [`cloudapi_tokens`](data-sources/tokens.md) - List all tokens for a service account 
+* [`authzed_permission_system`](data-sources/permission_system.md) - Get a specific permission system
+* [`authzed_permission_systems`](data-sources/permission_systems.md) - List all permission systems
+* [`authzed_role`](data-sources/role.md) - Get a specific role
+* [`authzed_roles`](data-sources/roles.md) - List all roles in a permission system
+* [`authzed_policy`](data-sources/policy.md) - Get a specific policy
+* [`authzed_policies`](data-sources/policies.md) - List all policies in a permission system
+* [`authzed_service_account`](data-sources/service_account.md) - Get a specific service account
+* [`authzed_service_accounts`](data-sources/service_accounts.md) - List all service accounts in a permission system
+* [`authzed_token`](data-sources/token.md) - Get a specific token
+* [`authzed_tokens`](data-sources/tokens.md) - List all tokens for a service account 

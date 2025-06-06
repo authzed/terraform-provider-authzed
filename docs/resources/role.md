@@ -16,9 +16,9 @@ resource "authzed_role" "reader" {
   description          = "Role for read-only operations"
   permission_system_id = "ps-123456789"
   permissions = {
-    "authzed.v1/ReadSchema"        = "true"
-    "authzed.v1/ReadRelationships" = "true"
-    "authzed.v1/CheckPermission"   = "true"
+    "authzed.v1/ReadSchema"        = ""
+    "authzed.v1/ReadRelationships" = ""
+    "authzed.v1/CheckPermission"   = "CheckPermissionRequest.permission == \"admin\""
   }
 }
 ```
@@ -28,7 +28,7 @@ resource "authzed_role" "reader" {
 * `name` - (Required) The name of the role. Must be between 1 and 50 characters.
 * `description` - (Optional) A description of the role's purpose. Maximum length is 200 characters.
 * `permission_system_id` - (Required) The ID of the permission system this role belongs to. Must start with `ps-` followed by alphanumeric characters or hyphens.
-* `permissions` - (Required) A map of permission names to their values. Most permissions are boolean and use "true" as the value. These control what actions can be performed on the permission system.
+* `permissions` - (Required) A map of permission names to CEL filter expressions for more fine grained control access to API methods. Examples can be found [here](https://authzed.com/docs/authzed/concepts/restricted-api-access#example-rule-expressions).  If no filter is required, provide an empty string.
 
 ## Permission Reference
 

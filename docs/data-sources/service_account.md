@@ -1,24 +1,24 @@
 ---
-page_title: "Service Account Data Source - cloudapi"
+page_title: "Data Source: authzed_service_account"
 subcategory: ""
 description: |-
   Gets information about a specific service account in a permission system.
 ---
 
-# cloudapi_service_account (Data Source)
+# authzed_service_account (Data Source)
 
 This data source retrieves information about a specific service account in an AuthZed Cloud permission system.
 
 ## Example Usage
 
 ```terraform
-data "cloudapi_service_account" "example" {
+data "authzed_service_account" "example" {
   permission_system_id = "ps-123456789"
   service_account_id   = "asa-abcdef123456"
 }
 
 output "service_account_name" {
-  value = data.cloudapi_service_account.example.name
+  value = data.authzed_service_account.example.name
 }
 ```
 

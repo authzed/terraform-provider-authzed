@@ -1,5 +1,6 @@
 ---
 page_title: "Resource: authzed_policy"
+page_title: "Resource: authzed_policy"
 description: |-
   Manages access control policies in an AuthZed permission system.
 ---
