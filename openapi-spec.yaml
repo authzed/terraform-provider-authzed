@@ -61,6 +61,7 @@ paths:
         name: permissionsSystemID
         required: true
         schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
           type: string
       - description: The version of the API to use. Must be specified.
         in: header
@@ -629,6 +630,7 @@ paths:
         required: true
         schema:
           description: The globally unique ID for this Service Account
+          pattern: ^asa-[a-zA-Z0-9-]+$
           type: string
       - description: The globally unique ID for the Permissions System
         in: path
@@ -731,6 +733,7 @@ paths:
         required: true
         schema:
           description: The globally unique ID for the containing Service Account
+          pattern: ^asa-[a-zA-Z0-9-]+$
           type: string
       - description: The version of the API to use. Must be specified.
         in: header
@@ -917,6 +920,7 @@ paths:
         name: permissionsSystemID
         required: true
         schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
           type: string
       - description: The version of the API to use. Must be specified.
         in: header
@@ -1072,12 +1076,14 @@ paths:
         name: period
         schema:
           $ref: '#/components/schemas/Period'
-      - description: The number of top K items to return. The maximum value is 50.
+      - description: The number of top K items to return.
         in: query
         name: count
         schema:
           default: 10
-          description: The number of top K items to return. The maximum value is 50.
+          description: The number of top K items to return.
+          maximum: 50
+          minimum: 1
           type: integer
       - description: The field to sort the results by. The default is total impact,
           which is defined as P50 latency * count over the period.
@@ -1172,6 +1178,8 @@ components:
       enum:
       - aws-kinesis
       - aws-firehose
+      - aws-s3
+      - gcp-cloud-storage
       type: string
     CloudProviderDetails:
       properties:
@@ -1207,8 +1215,8 @@ components:
             only allowed to be a single ID
           items:
             type: string
-          maxLength: 1
-          minLength: 1
+          maxItems: 1
+          minItems: 1
           type: array
       required:
       - name
@@ -1225,6 +1233,7 @@ components:
           type: string
         creator:
           description: The name of the user that created this Policy. May be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Policy. May be empty.
@@ -1232,6 +1241,7 @@ components:
           type: string
         id:
           description: The globally unique ID for this Policy
+          pattern: ^apc-[a-zA-Z0-9-]+$
           type: string
         name:
           description: The name of the Policy
@@ -1250,8 +1260,8 @@ components:
             only allowed to be a single ID
           items:
             type: string
-          maxLength: 1
-          minLength: 1
+          maxItems: 1
+          minItems: 1
           type: array
         updatedAt:
           description: The timestamp when the Policy was last updated (RFC 3339).
@@ -1262,6 +1272,7 @@ components:
         updater:
           description: The name of the user that last updated this Policy. May be
             empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
       required:
       - name
@@ -1300,6 +1311,7 @@ components:
           type: string
         creator:
           description: The name of the user that created this Role. May be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Role. May be empty.
@@ -1307,6 +1319,7 @@ components:
           type: string
         id:
           description: The globally unique ID for this Role
+          pattern: ^arl-[a-zA-Z0-9-]+$
           type: string
         name:
           description: The name of the Role
@@ -1327,6 +1340,7 @@ components:
           type: string
         updater:
           description: The name of the user that last updated this Role. May be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
       required:
       - name
@@ -1363,6 +1377,7 @@ components:
         creator:
           description: The name of the user that created this Service Account. May
             be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Service Account. May
@@ -1371,6 +1386,7 @@ components:
           type: string
         id:
           description: The globally unique ID for this Service Account
+          pattern: ^asa-[a-zA-Z0-9-]+$
           type: string
         name:
           description: The name of the Service Account
@@ -1395,6 +1411,7 @@ components:
         updater:
           description: The name of the user that last updated this Service Account.
             May be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
       required:
       - name
@@ -1417,6 +1434,7 @@ components:
           type: string
         serviceAccountID:
           description: The globally unique ID for the containing Service Account
+          pattern: ^asa-[a-zA-Z0-9-]+$
           type: string
       required:
       - name
@@ -1431,6 +1449,7 @@ components:
           type: string
         creator:
           description: The name of the user that created this Token. May be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Token. May be empty.
@@ -1439,9 +1458,11 @@ components:
         hash:
           description: The SHA256 hash of the secret part of the token, without the
             prefix
+          pattern: ^[a-zA-Z0-9]{64}$
           type: string
         id:
           description: The globally unique ID for this Token
+          pattern: ^atk-[a-zA-Z0-9-_]+$
           type: string
         name:
           description: The name of the Token
@@ -1457,6 +1478,7 @@ components:
           type: string
         serviceAccountID:
           description: The globally unique ID for the containing Service Account
+          pattern: ^asa-[a-zA-Z0-9-]+$
           type: string
         updatedAt:
           description: The timestamp when the Token was last updated (RFC 3339). May
@@ -1466,6 +1488,7 @@ components:
           type: string
         updater:
           description: The name of the user that last updated this Token. May be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
       required:
       - name
@@ -1579,6 +1602,7 @@ components:
           type: string
         creator:
           description: The name of the user that created this Policy. May be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Policy. May be empty.
@@ -1586,6 +1610,7 @@ components:
           type: string
         id:
           description: The globally unique ID for this Policy
+          pattern: ^apc-[a-zA-Z0-9-]+$
           type: string
         name:
           description: The name of the Policy
@@ -1604,8 +1629,8 @@ components:
             only allowed to be a single ID
           items:
             type: string
-          maxLength: 1
-          minLength: 1
+          maxItems: 1
+          minItems: 1
           type: array
         updatedAt:
           description: The timestamp when the Policy was last updated (RFC 3339).
@@ -1616,6 +1641,7 @@ components:
         updater:
           description: The name of the user that last updated this Policy. May be
             empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
       required:
       - name
@@ -1633,6 +1659,7 @@ components:
           type: string
         creator:
           description: The name of the user that created this Role. May be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Role. May be empty.
@@ -1640,6 +1667,7 @@ components:
           type: string
         id:
           description: The globally unique ID for this Role
+          pattern: ^arl-[a-zA-Z0-9-]+$
           type: string
         name:
           description: The name of the Role
@@ -1660,6 +1688,7 @@ components:
           type: string
         updater:
           description: The name of the user that last updated this Role. May be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
       required:
       - name
@@ -1677,6 +1706,7 @@ components:
         creator:
           description: The name of the user that created this Service Account. May
             be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Service Account. May
@@ -1685,6 +1715,7 @@ components:
           type: string
         id:
           description: The globally unique ID for this Service Account
+          pattern: ^asa-[a-zA-Z0-9-]+$
           type: string
         name:
           description: The name of the Service Account
@@ -1709,6 +1740,7 @@ components:
         updater:
           description: The name of the user that last updated this Service Account.
             May be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
       required:
       - name
@@ -1724,6 +1756,7 @@ components:
           type: string
         creator:
           description: The name of the user that created this Token. May be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Token. May be empty.
@@ -1732,9 +1765,11 @@ components:
         hash:
           description: The SHA256 hash of the secret part of the token, without the
             prefix
+          pattern: ^[a-zA-Z0-9]{64}$
           type: string
         id:
           description: The globally unique ID for this Token
+          pattern: ^atk-[a-zA-Z0-9-_]+$
           type: string
         name:
           description: The name of the Token
@@ -1747,6 +1782,7 @@ components:
           type: string
         serviceAccountID:
           description: The globally unique ID for the containing Service Account
+          pattern: ^asa-[a-zA-Z0-9-]+$
           type: string
         updatedAt:
           description: The timestamp when the Token was last updated (RFC 3339). May
@@ -1756,6 +1792,7 @@ components:
           type: string
         updater:
           description: The name of the user that last updated this Token. May be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
       required:
       - name
@@ -1925,6 +1962,7 @@ components:
           type: string
         creator:
           description: The name of the user that created this Policy. May be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Policy. May be empty.
@@ -1932,6 +1970,7 @@ components:
           type: string
         id:
           description: The globally unique ID for this Policy
+          pattern: ^apc-[a-zA-Z0-9-]+$
           type: string
         name:
           description: The name of the Policy
@@ -1950,8 +1989,8 @@ components:
             only allowed to be a single ID
           items:
             type: string
-          maxLength: 1
-          minLength: 1
+          maxItems: 1
+          minItems: 1
           type: array
         updatedAt:
           description: The timestamp when the Policy was last updated (RFC 3339).
@@ -1962,6 +2001,7 @@ components:
         updater:
           description: The name of the user that last updated this Policy. May be
             empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
       required:
       - name
@@ -1979,6 +2019,7 @@ components:
           type: string
         creator:
           description: The name of the user that created this Role. May be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Role. May be empty.
@@ -1986,6 +2027,7 @@ components:
           type: string
         id:
           description: The globally unique ID for this Role
+          pattern: ^arl-[a-zA-Z0-9-]+$
           type: string
         name:
           description: The name of the Role
@@ -2006,6 +2048,7 @@ components:
           type: string
         updater:
           description: The name of the user that last updated this Role. May be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
       required:
       - name
@@ -2023,6 +2066,7 @@ components:
         creator:
           description: The name of the user that created this Service Account. May
             be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Service Account. May
@@ -2031,6 +2075,7 @@ components:
           type: string
         id:
           description: The globally unique ID for this Service Account
+          pattern: ^asa-[a-zA-Z0-9-]+$
           type: string
         name:
           description: The name of the Service Account
@@ -2055,6 +2100,7 @@ components:
         updater:
           description: The name of the user that last updated this Service Account.
             May be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
       required:
       - name
@@ -2087,8 +2133,7 @@ components:
       properties:
         apiKey:
           description: The Datadog API key. Will not be returned after writing.
-          maxLength: 64
-          minLength: 1
+          pattern: ^\S{32}$
           type: string
         site:
           description: The Datadog Site associated with your API key.
@@ -2171,6 +2216,7 @@ components:
           type: string
         creator:
           description: The name of the user that created this Token. May be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Token. May be empty.
@@ -2179,9 +2225,11 @@ components:
         hash:
           description: The SHA256 hash of the secret part of the token, without the
             prefix
+          pattern: ^[a-zA-Z0-9]{64}$
           type: string
         id:
           description: The globally unique ID for this Token
+          pattern: ^atk-[a-zA-Z0-9-_]+$
           type: string
         name:
           description: The name of the Token
@@ -2194,6 +2242,7 @@ components:
           type: string
         serviceAccountID:
           description: The globally unique ID for the containing Service Account
+          pattern: ^asa-[a-zA-Z0-9-]+$
           type: string
         updatedAt:
           description: The timestamp when the Token was last updated (RFC 3339). May
@@ -2203,6 +2252,7 @@ components:
           type: string
         updater:
           description: The name of the user that last updated this Token. May be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
       required:
       - name
@@ -2228,8 +2278,8 @@ components:
             only allowed to be a single ID
           items:
             type: string
-          maxLength: 1
-          minLength: 1
+          maxItems: 1
+          minItems: 1
           type: array
       required:
       - name
@@ -2244,6 +2294,7 @@ components:
           type: string
         creator:
           description: The name of the user that created this Policy. May be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Policy. May be empty.
@@ -2251,6 +2302,7 @@ components:
           type: string
         id:
           description: The globally unique ID for this Policy
+          pattern: ^apc-[a-zA-Z0-9-]+$
           type: string
         name:
           description: The name of the Policy
@@ -2269,8 +2321,8 @@ components:
             only allowed to be a single ID
           items:
             type: string
-          maxLength: 1
-          minLength: 1
+          maxItems: 1
+          minItems: 1
           type: array
         updatedAt:
           description: The timestamp when the Policy was last updated (RFC 3339).
@@ -2281,6 +2333,7 @@ components:
         updater:
           description: The name of the user that last updated this Policy. May be
             empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
       required:
       - name
@@ -2314,6 +2367,7 @@ components:
           type: string
         creator:
           description: The name of the user that created this Role. May be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Role. May be empty.
@@ -2321,6 +2375,7 @@ components:
           type: string
         id:
           description: The globally unique ID for this Role
+          pattern: ^arl-[a-zA-Z0-9-]+$
           type: string
         name:
           description: The name of the Role
@@ -2341,6 +2396,7 @@ components:
           type: string
         updater:
           description: The name of the user that last updated this Role. May be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
       required:
       - name
@@ -2356,6 +2412,7 @@ components:
           type: string
         id:
           description: The globally unique ID for this Service Account
+          pattern: ^asa-[a-zA-Z0-9-]+$
           type: string
         name:
           description: The name of the Service Account
@@ -2380,6 +2437,7 @@ components:
         creator:
           description: The name of the user that created this Service Account. May
             be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Service Account. May
@@ -2388,6 +2446,7 @@ components:
           type: string
         id:
           description: The globally unique ID for this Service Account
+          pattern: ^asa-[a-zA-Z0-9-]+$
           type: string
         name:
           description: The name of the Service Account
@@ -2412,6 +2471,7 @@ components:
         updater:
           description: The name of the user that last updated this Service Account.
             May be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
       required:
       - name
@@ -2441,6 +2501,7 @@ components:
           type: string
         creator:
           description: The name of the user that created this Token. May be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Token. May be empty.
@@ -2449,9 +2510,11 @@ components:
         hash:
           description: The SHA256 hash of the secret part of the token, without the
             prefix
+          pattern: ^[a-zA-Z0-9]{64}$
           type: string
         id:
           description: The globally unique ID for this Token
+          pattern: ^atk-[a-zA-Z0-9-_]+$
           type: string
         name:
           description: The name of the Token
@@ -2464,6 +2527,7 @@ components:
           type: string
         serviceAccountID:
           description: The globally unique ID for the containing Service Account
+          pattern: ^asa-[a-zA-Z0-9-]+$
           type: string
         updatedAt:
           description: The timestamp when the Token was last updated (RFC 3339). May
@@ -2473,6 +2537,7 @@ components:
           type: string
         updater:
           description: The name of the user that last updated this Token. May be empty.
+          pattern: ^[a-zA-Z0-9-_]{2,50}$
           type: string
       required:
       - name
