@@ -1200,7 +1200,7 @@ components:
           type: string
         name:
           description: The name of the Policy
-          maxLength: 50
+          maxLength: 100
           minLength: 1
           type: string
         permissionsSystemID:
@@ -1245,7 +1245,7 @@ components:
           type: string
         name:
           description: The name of the Policy
-          maxLength: 50
+          maxLength: 100
           minLength: 1
           type: string
         permissionsSystemID:
@@ -1288,7 +1288,7 @@ components:
           type: string
         name:
           description: The name of the Role
-          maxLength: 50
+          maxLength: 100
           minLength: 1
           type: string
         permissions:
@@ -1323,7 +1323,7 @@ components:
           type: string
         name:
           description: The name of the Role
-          maxLength: 50
+          maxLength: 100
           minLength: 1
           type: string
         permissions:
@@ -1356,7 +1356,7 @@ components:
           type: string
         name:
           description: The name of the Service Account
-          maxLength: 50
+          maxLength: 100
           minLength: 1
           type: string
         permissionsSystemID:
@@ -1390,7 +1390,7 @@ components:
           type: string
         name:
           description: The name of the Service Account
-          maxLength: 50
+          maxLength: 100
           minLength: 1
           type: string
         permissionsSystemID:
@@ -1425,7 +1425,7 @@ components:
           type: string
         name:
           description: The name of the Token
-          maxLength: 50
+          maxLength: 100
           minLength: 1
           type: string
         permissionsSystemID:
@@ -1466,7 +1466,7 @@ components:
           type: string
         name:
           description: The name of the Token
-          maxLength: 50
+          maxLength: 100
           minLength: 1
           type: string
         permissionsSystemID:
@@ -1614,7 +1614,7 @@ components:
           type: string
         name:
           description: The name of the Policy
-          maxLength: 50
+          maxLength: 100
           minLength: 1
           type: string
         permissionsSystemID:
@@ -1671,7 +1671,7 @@ components:
           type: string
         name:
           description: The name of the Role
-          maxLength: 50
+          maxLength: 100
           minLength: 1
           type: string
         permissions:
@@ -1719,7 +1719,7 @@ components:
           type: string
         name:
           description: The name of the Service Account
-          maxLength: 50
+          maxLength: 100
           minLength: 1
           type: string
         permissionsSystemID:
@@ -1773,7 +1773,7 @@ components:
           type: string
         name:
           description: The name of the Token
-          maxLength: 50
+          maxLength: 100
           minLength: 1
           type: string
         permissionsSystemID:
@@ -1974,7 +1974,7 @@ components:
           type: string
         name:
           description: The name of the Policy
-          maxLength: 50
+          maxLength: 100
           minLength: 1
           type: string
         permissionsSystemID:
@@ -2031,7 +2031,7 @@ components:
           type: string
         name:
           description: The name of the Role
-          maxLength: 50
+          maxLength: 100
           minLength: 1
           type: string
         permissions:
@@ -2079,7 +2079,7 @@ components:
           type: string
         name:
           description: The name of the Service Account
-          maxLength: 50
+          maxLength: 100
           minLength: 1
           type: string
         permissionsSystemID:
@@ -2233,7 +2233,7 @@ components:
           type: string
         name:
           description: The name of the Token
-          maxLength: 50
+          maxLength: 100
           minLength: 1
           type: string
         permissionsSystemID:
@@ -2267,7 +2267,7 @@ components:
           type: string
         name:
           description: The name of the Policy
-          maxLength: 50
+          maxLength: 100
           minLength: 1
           type: string
         principalID:
@@ -2306,7 +2306,7 @@ components:
           type: string
         name:
           description: The name of the Policy
-          maxLength: 50
+          maxLength: 100
           minLength: 1
           type: string
         permissionsSystemID:
@@ -2349,7 +2349,7 @@ components:
           type: string
         name:
           description: The name of the Role
-          maxLength: 50
+          maxLength: 100
           minLength: 1
           type: string
         permissions:
@@ -2379,7 +2379,7 @@ components:
           type: string
         name:
           description: The name of the Role
-          maxLength: 50
+          maxLength: 100
           minLength: 1
           type: string
         permissions:
@@ -2416,7 +2416,7 @@ components:
           type: string
         name:
           description: The name of the Service Account
-          maxLength: 50
+          maxLength: 100
           minLength: 1
           type: string
         permissionsSystemID:
@@ -2450,7 +2450,7 @@ components:
           type: string
         name:
           description: The name of the Service Account
-          maxLength: 50
+          maxLength: 100
           minLength: 1
           type: string
         permissionsSystemID:
@@ -2485,7 +2485,7 @@ components:
           type: string
         name:
           description: The name of the Token
-          maxLength: 50
+          maxLength: 100
           minLength: 1
           type: string
       required:
@@ -2518,7 +2518,7 @@ components:
           type: string
         name:
           description: The name of the Token
-          maxLength: 50
+          maxLength: 100
           minLength: 1
           type: string
         permissionsSystemID:
