@@ -38,7 +38,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -67,7 +67,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -96,7 +96,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -126,7 +126,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       requestBody:
@@ -173,7 +173,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -203,7 +203,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -252,7 +252,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       requestBody:
@@ -293,7 +293,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -323,7 +323,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       requestBody:
@@ -370,7 +370,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -400,7 +400,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -449,7 +449,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       requestBody:
@@ -490,7 +490,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -520,7 +520,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       requestBody:
@@ -568,7 +568,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -599,7 +599,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -652,7 +652,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       requestBody:
@@ -700,7 +700,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -739,7 +739,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       requestBody:
@@ -793,7 +793,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -830,7 +830,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -885,7 +885,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       requestBody:
@@ -926,7 +926,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -955,7 +955,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -984,7 +984,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       requestBody:
@@ -1018,7 +1018,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -1047,7 +1047,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       requestBody:
@@ -1104,7 +1104,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: 25r1
+          default: internal
           description: The version of the API to use. Must be specified.
           type: string
       responses:
