@@ -53,6 +53,31 @@ paths:
       tags:
       - permissions system
   /ps/{permissionsSystemID}:
+    delete:
+      description: delete a permissions system by its ID. All associated resources
+        will be deleted.
+      operationId: DeletePermissionsSystem
+      parameters:
+      - in: path
+        name: permissionsSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - auth: []
+      tags:
+      - permissions system
     get:
       description: get a permissions system by its ID
       operationId: GetPermissionsSystem
@@ -940,6 +965,106 @@ paths:
       - auth: []
       tags:
       - permissions system
+  /ps/{permissionsSystemID}/externalmetrics/tokens:
+    get:
+      description: get a token used to export metrics to Prometheus
+      operationId: ListExternalMetricsToken
+      parameters:
+      - description: The globally unique ID for the Permissions System
+        in: path
+        name: permissionsSystemID
+        required: true
+        schema:
+          description: The globally unique ID for the Permissions System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListExternalMetricsTokenResponse'
+          description: OK
+      security:
+      - auth: []
+      tags:
+      - permissions system
+    post:
+      description: create a token that can be used to export metrics to Prometheus
+      operationId: CreateExternalMetricsToken
+      parameters:
+      - description: The globally unique ID for the Permissions System
+        in: path
+        name: permissionsSystemID
+        required: true
+        schema:
+          description: The globally unique ID for the Permissions System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateExternalMetricsTokenResponse'
+          description: Created
+      security:
+      - auth: []
+      tags:
+      - permissions system
+  /ps/{permissionsSystemID}/externalmetrics/tokens/{id}:
+    put:
+      description: rotate a token used to export metrics to Prometheus
+      operationId: RotateExternalMetricsToken
+      parameters:
+      - description: The globally unique ID for the Permissions System
+        in: path
+        name: permissionsSystemID
+        required: true
+        schema:
+          description: The globally unique ID for the Permissions System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - description: The globally unique ID for this token
+        in: path
+        name: id
+        required: true
+        schema:
+          description: The globally unique ID for this token
+          pattern: ^em-[a-zA-Z0-9-_]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RotateExternalMetricsTokenResponse'
+          description: OK
+      security:
+      - auth: []
+      tags:
+      - permissions system
   /ps/{permissionsSystemID}/features/audit-log:
     get:
       description: get the current configuration of the audit log feature
@@ -1191,6 +1316,23 @@ components:
           description: The GCP service account associated with this Deployment. Will
             be empty if not applicable.
           type: string
+      type: object
+    CreateExternalMetricsTokenResponse:
+      properties:
+        id:
+          description: The globally unique ID for this token
+          pattern: ^em-[a-zA-Z0-9-_]+$
+          type: string
+        permissionsSystemID:
+          description: The globally unique ID for the Permissions System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+        secret:
+          description: The secret for the token. Will not be returned again.
+          type: string
+      required:
+      - id
+      - secret
       type: object
     CreatePolicyRequest:
       properties:
@@ -1803,6 +1945,32 @@ components:
         $ref: '#/components/schemas/Deployment'
       nullable: true
       type: array
+    ListExternalMetricsTokenResponse:
+      properties:
+        tokens:
+          description: The list of tokens for the Permissions System. If no tokens
+            exist, this will be empty.
+          items:
+            $ref: '#/components/schemas/ListExternalMetricsTokenResponseElement'
+          type: array
+      required:
+      - tokens
+      type: object
+    ListExternalMetricsTokenResponseElement:
+      properties:
+        hash:
+          description: If the token exists, the SHA256 hash of the secret part of
+            the token, without the prefix
+          pattern: ^[a-zA-Z0-9]{64}$
+          type: string
+        id:
+          description: The globally unique ID for this token
+          pattern: ^em-[a-zA-Z0-9-_]+$
+          type: string
+      required:
+      - id
+      - hash
+      type: object
     ListPermissionsSystemsResponse:
       items:
         $ref: '#/components/schemas/PermissionsSystem'
@@ -2054,6 +2222,14 @@ components:
       - name
       - permissions
       - id
+      type: object
+    RotateExternalMetricsTokenResponse:
+      properties:
+        secret:
+          description: The secret for the token. Will not be returned again.
+          type: string
+      required:
+      - secret
       type: object
     ServiceAccount:
       properties:
