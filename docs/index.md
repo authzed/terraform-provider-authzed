@@ -17,7 +17,7 @@ terraform {
   required_providers {
     authzed = {
       source  = "authzed/authzed"
-      version = "~> 0.1.0"
+      version = "~> 0.1"
     }
   }
 }
@@ -53,6 +53,11 @@ To obtain a token, contact your AuthZed account team. They will provide you with
 * **Resource Dependencies**: Consider the impact on dependent resources when making changes.
 
 Plan your changes carefully to avoid disrupting access for production systems.
+
+## Guides
+
+* [`Getting Started`](guides/getting-started.md) - Get started with the AuthZed provider
+* [`Troubleshooting`](guides/troubleshooting.md) - Common issues and solutions
 
 ## Resources and Data Sources
 
