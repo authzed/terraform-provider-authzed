@@ -65,3 +65,16 @@ Contributions are welcome! Please see the [contribution guidelines](CONTRIBUTING
 ## License
 
 [Apache 2.0 License](LICENSE)
+
+## Troubleshooting
+
+If you encounter issues with provider installation such as "Failed to query available provider packages" or "no available releases match", this is often caused by locally cached provider files. 
+
+**Quick fix:**
+```bash
+# Remove cached files and reinitialize
+rm -rf ~/.terraform.d/plugins/*/authzed
+terraform init
+```
+
+For more detailed troubleshooting information, see our [Troubleshooting Guide](https://registry.terraform.io/providers/authzed/authzed/latest/docs/guides/troubleshooting).
