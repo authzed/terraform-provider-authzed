@@ -72,8 +72,8 @@ paths:
           description: The version of the API to use. Must be specified.
           type: string
       responses:
-        "204":
-          description: No Content
+        "202":
+          description: Accepted
       security:
       - auth: []
       tags:
@@ -202,8 +202,8 @@ paths:
           description: The version of the API to use. Must be specified.
           type: string
       responses:
-        "204":
-          description: No Content
+        "202":
+          description: Accepted
       security:
       - auth: []
       tags:
@@ -399,8 +399,8 @@ paths:
           description: The version of the API to use. Must be specified.
           type: string
       responses:
-        "204":
-          description: No Content
+        "202":
+          description: Accepted
       security:
       - auth: []
       tags:
@@ -597,8 +597,8 @@ paths:
           description: The version of the API to use. Must be specified.
           type: string
       responses:
-        "204":
-          description: No Content
+        "202":
+          description: Accepted
       security:
       - auth: []
       tags:
@@ -822,8 +822,8 @@ paths:
           description: The version of the API to use. Must be specified.
           type: string
       responses:
-        "204":
-          description: No Content
+        "202":
+          description: Accepted
       security:
       - auth: []
       tags:
