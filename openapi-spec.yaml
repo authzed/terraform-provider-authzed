@@ -106,6 +106,39 @@ paths:
       - auth: []
       tags:
       - permissions system
+    put:
+      description: update a permissions system
+      operationId: UpdatePermissionsSystem
+      parameters:
+      - in: path
+        name: permissionsSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePermissionsSystemRequest'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdatePermissionsSystemResponse'
+          description: OK
+      security:
+      - auth: []
+      tags:
+      - permissions system
   /ps/{permissionsSystemID}/access/policies:
     get:
       description: list all permission system access-management polices
@@ -2432,6 +2465,49 @@ components:
           type: string
       required:
       - name
+      - id
+      type: object
+    UpdatePermissionsSystemRequest:
+      properties:
+        channel:
+          description: The channel selected for the SpiceDB version. May be empty.
+          type: string
+        name:
+          description: The name of the Permissions System
+          type: string
+        selectedVersion:
+          description: The specific version to pin to. If not specified, the system
+            will use automatic updates.
+          nullable: true
+          type: string
+        systemType:
+          $ref: '#/components/schemas/SystemType'
+      type: object
+    UpdatePermissionsSystemResponse:
+      properties:
+        features:
+          description: The features enabled in this Permissions System
+          items:
+            $ref: '#/components/schemas/Feature'
+          type: array
+        id:
+          description: The globally unique ID for this Permissions System
+          type: string
+        internalReference:
+          deprecated: true
+          description: The internal reference of the Permissions System. DO NOT USE.
+            Prefer ID or the normal name.
+          type: string
+        name:
+          description: The name of the Permissions System
+          type: string
+        systemState:
+          $ref: '#/components/schemas/PermissionsSystemState'
+        systemType:
+          $ref: '#/components/schemas/SystemType'
+        version:
+          $ref: '#/components/schemas/SystemVersion'
+      required:
       - id
       type: object
     UpdatePolicyRequest:
