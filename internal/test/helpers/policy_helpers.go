@@ -125,11 +125,11 @@ func ValidatePolicyDestroyed(permissionSystemID, policyID string) error {
 	testClient := CreateTestClient()
 	_, err := testClient.GetPolicy(permissionSystemID, policyID)
 	if err == nil {
-		return fmt.Errorf("Policy still exists: %s", policyID)
+		return fmt.Errorf("policy still exists: %s", policyID)
 	}
 
 	if !IsNotFoundError(err) {
-		return fmt.Errorf("Unexpected error checking policy destruction: %v", err)
+		return fmt.Errorf("unexpected error checking policy destruction: %v", err)
 	}
 
 	return nil

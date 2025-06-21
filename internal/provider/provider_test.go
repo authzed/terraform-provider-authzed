@@ -27,23 +27,9 @@ func testAccPreCheck(t *testing.T) {
 	}
 }
 
-// testAccProvider returns a configured provider for testing
-func testAccProvider() *CloudProvider {
-	return New("test")().(*CloudProvider)
-}
-
 // testAccProviderConfig returns a basic provider configuration for testing
 func testAccProviderConfig() string {
 	return helpers.BuildProviderConfig()
-}
-
-// Defaults to "25r1" if API version is not set
-func getAPIVersion() string {
-	return helpers.GetTestAPIVersion()
-}
-
-func generateTestID(prefix string) string {
-	return helpers.GenerateTestID(prefix)
 }
 
 // TestProvider verifies that the provider can be instantiated

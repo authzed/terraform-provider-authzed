@@ -14,15 +14,15 @@ func TestBuildProviderConfig(t *testing.T) {
 
 	// Clean up after test
 	defer func() {
-		os.Setenv("AUTHZED_HOST", originalHost)
-		os.Setenv("AUTHZED_TOKEN", originalToken)
-		os.Setenv("AUTHZED_API_VERSION", originalAPIVersion)
+		_ = os.Setenv("AUTHZED_HOST", originalHost)
+		_ = os.Setenv("AUTHZED_TOKEN", originalToken)
+		_ = os.Setenv("AUTHZED_API_VERSION", originalAPIVersion)
 	}()
 
 	// Set test values
-	os.Setenv("AUTHZED_HOST", "test-host")
-	os.Setenv("AUTHZED_TOKEN", "test-token")
-	os.Setenv("AUTHZED_API_VERSION", "test-version")
+	_ = os.Setenv("AUTHZED_HOST", "test-host")
+	_ = os.Setenv("AUTHZED_TOKEN", "test-token")
+	_ = os.Setenv("AUTHZED_API_VERSION", "test-version")
 
 	config := BuildProviderConfig()
 
@@ -63,15 +63,15 @@ func TestBuildPolicyConfig(t *testing.T) {
 
 	// Clean up after test
 	defer func() {
-		os.Setenv("AUTHZED_HOST", originalHost)
-		os.Setenv("AUTHZED_TOKEN", originalToken)
-		os.Setenv("AUTHZED_PS_ID", originalPSID)
+		_ = os.Setenv("AUTHZED_HOST", originalHost)
+		_ = os.Setenv("AUTHZED_TOKEN", originalToken)
+		_ = os.Setenv("AUTHZED_PS_ID", originalPSID)
 	}()
 
 	// Set test values
-	os.Setenv("AUTHZED_HOST", "test-host")
-	os.Setenv("AUTHZED_TOKEN", "test-token")
-	os.Setenv("AUTHZED_PS_ID", "test-ps-id")
+	_ = os.Setenv("AUTHZED_HOST", "test-host")
+	_ = os.Setenv("AUTHZED_TOKEN", "test-token")
+	_ = os.Setenv("AUTHZED_PS_ID", "test-ps-id")
 
 	config := BuildPolicyConfig("test-policy")
 
@@ -94,15 +94,15 @@ func TestBuildRoleConfig(t *testing.T) {
 
 	// Clean up after test
 	defer func() {
-		os.Setenv("AUTHZED_HOST", originalHost)
-		os.Setenv("AUTHZED_TOKEN", originalToken)
-		os.Setenv("AUTHZED_PS_ID", originalPSID)
+		_ = os.Setenv("AUTHZED_HOST", originalHost)
+		_ = os.Setenv("AUTHZED_TOKEN", originalToken)
+		_ = os.Setenv("AUTHZED_PS_ID", originalPSID)
 	}()
 
 	// Set test values
-	os.Setenv("AUTHZED_HOST", "test-host")
-	os.Setenv("AUTHZED_TOKEN", "test-token")
-	os.Setenv("AUTHZED_PS_ID", "test-ps-id")
+	_ = os.Setenv("AUTHZED_HOST", "test-host")
+	_ = os.Setenv("AUTHZED_TOKEN", "test-token")
+	_ = os.Setenv("AUTHZED_PS_ID", "test-ps-id")
 
 	config := BuildRoleConfig("test-role")
 
@@ -125,15 +125,15 @@ func TestBuildDataSourceConfig(t *testing.T) {
 
 	// Clean up after test
 	defer func() {
-		os.Setenv("AUTHZED_HOST", originalHost)
-		os.Setenv("AUTHZED_TOKEN", originalToken)
-		os.Setenv("AUTHZED_PS_ID", originalPSID)
+		_ = os.Setenv("AUTHZED_HOST", originalHost)
+		_ = os.Setenv("AUTHZED_TOKEN", originalToken)
+		_ = os.Setenv("AUTHZED_PS_ID", originalPSID)
 	}()
 
 	// Set test values
-	os.Setenv("AUTHZED_HOST", "test-host")
-	os.Setenv("AUTHZED_TOKEN", "test-token")
-	os.Setenv("AUTHZED_PS_ID", "test-ps-id")
+	_ = os.Setenv("AUTHZED_HOST", "test-host")
+	_ = os.Setenv("AUTHZED_TOKEN", "test-token")
+	_ = os.Setenv("AUTHZED_PS_ID", "test-ps-id")
 
 	// Test permission_system data source
 	config := BuildDataSourceConfig("permission_system", "test-name")
