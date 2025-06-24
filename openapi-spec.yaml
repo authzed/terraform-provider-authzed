@@ -28,7 +28,44 @@ tags:
     description: Find out more at the official Authzed Docs site
     url: https://authzed.com/docs/authzed/concepts/perf-insights
   name: performance insights
+- description: System-level configuration and information
+  externalDocs:
+    description: Find out more at the official Authzed Docs site
+    url: https://authzed.com/docs
+  name: system
 paths:
+  /channels:
+    get:
+      description: lists the available channels and versions that can be applied to
+        a permissions system
+      operationId: ListChannelsAndVersions
+      parameters:
+      - description: The kind of datastore for which to list channels and versions
+          (e.g., cockroachdb, postgres, spanner)
+        in: query
+        name: dataStoreKind
+        schema:
+          description: The kind of datastore for which to list channels and versions
+            (e.g., cockroachdb, postgres, spanner)
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListChannelsAndVersionsResponse'
+          description: OK
+      security:
+      - auth: []
+      tags:
+      - system
   /ps:
     get:
       description: list all permissions systems
@@ -1973,6 +2010,17 @@ components:
       - name
       - id
       type: object
+    ListChannelsAndVersionsResponse:
+      properties:
+        channels:
+          description: Available channels for SpiceDB versions
+          items:
+            $ref: '#/components/schemas/SpiceDBChannel'
+          nullable: true
+          type: array
+      required:
+      - channels
+      type: object
     ListDeploymentsResponse:
       items:
         $ref: '#/components/schemas/Deployment'
@@ -2375,10 +2423,38 @@ components:
       - p95
       - p99
       type: string
+    SpiceDBChannel:
+      properties:
+        description:
+          description: The description of the channel
+          maxLength: 200
+          type: string
+        displayName:
+          description: The display name of the channel
+          maxLength: 100
+          minLength: 1
+          type: string
+        name:
+          description: The unique name of the channel, e.g. 'stable', 'beta', or 'alpha'
+          maxLength: 100
+          minLength: 1
+          type: string
+        versions:
+          description: The versions available in this channel, sorted from newest
+            to oldest
+          items:
+            $ref: '#/components/schemas/SpiceDBVersion'
+          type: array
+      required:
+      - name
+      - displayName
+      type: object
     SpiceDBVersion:
       properties:
         displayName:
           description: The display name of the version
+          maxLength: 100
+          minLength: 1
           type: string
         supportedFeatureNames:
           description: The features supported by the version
@@ -2387,7 +2463,12 @@ components:
           type: array
         version:
           description: The version of SpiceDB
+          maxLength: 100
+          minLength: 1
           type: string
+      required:
+      - displayName
+      - version
       type: object
     SystemType:
       enum:
