@@ -33,10 +33,17 @@ Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
    go build
    ```
 
-2. **Run tests**:
+2. **Run unit tests**:
    ```
-   go test ./...
+   go test -v ./internal/test/helpers ./internal/provider -run '^Test[^A]'
    ```
+   
+   **Run acceptance tests** (requires AuthZed Cloud access and `TF_ACC=1`):
+   ```
+   TF_ACC=1 go test -v ./internal/provider -run TestAcc
+   ```
+   
+   Note: Acceptance tests interact with real AuthZed Cloud resources and may incur costs. 
 
 3. **Install locally for testing**:
    ```
@@ -76,7 +83,16 @@ Closes #42
 
 1. Update the README.md with details of changes if appropriate
 2. The PR should work against the main branch
-3. Include appropriate tests
+3. Include appropriate tests:
+   - Unit tests for all new functionality
+   - Acceptance tests for new resources and data sources
+   - Ensure all existing tests continue to pass
+4. Set up the required environment variables for acceptance testing:
+   - `AUTHZED_HOST` - AuthZed API endpoint
+   - `AUTHZED_TOKEN` - AuthZed API token
+   - `AUTHZED_PS_ID` - Permission system ID for testing
+
+For detailed testing information, see the [Acceptance Tests Guide](acceptance-tests.md).
 
 Note: While the changelog is automatically generated from commit messages, it may be curated for clarity during the release process.
 
