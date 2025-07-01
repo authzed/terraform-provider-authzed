@@ -58,6 +58,10 @@ provider_installation {
 }
 ```
 
+## Maintenance
+
+This provider is actively maintained by AuthZed, however, many issues are tracked outside of GitHub on internal AuthZed systems. For urgent issues please file a GH Issue or contact your account team.
+
 ## Contributing
 
 Contributions are welcome! Please see the [contribution guidelines](CONTRIBUTING.md) for more information.
