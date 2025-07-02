@@ -17,6 +17,12 @@ tags:
     description: Find out more at the official Authzed Docs site
     url: https://authzed.com/docs
   name: permissions system
+- description: Datastore APIs for managing the underlying data storage of a Permissions
+    System
+  externalDocs:
+    description: Find out more at the official Authzed Docs site
+    url: https://authzed.com/docs/spicedb/concepts/datastores
+  name: datastore
 - description: Set of APIs to for the fine-grained access management of a Permissions
     System
   externalDocs:
@@ -84,6 +90,36 @@ paths:
       - auth: []
       tags:
       - system
+  /datastores:
+    get:
+      description: list all datastore instances
+      operationId: ListDatastores
+      parameters:
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListDatastoresResponse'
+          description: OK
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - system
+      - datastore
   /ps:
     get:
       description: list all permissions systems
@@ -2224,6 +2260,31 @@ components:
       required:
       - site
       type: object
+    Datastore:
+      properties:
+        id:
+          description: The ID for this Datastore instance.
+          pattern: ^dbi-[a-zA-Z0-9-]+$
+          type: string
+        internalReference:
+          deprecated: true
+          description: The internal reference of the Datastore. DO NOT USE. Prefer
+            ID or the normal name.
+          type: string
+        name:
+          description: The name of the Datastore instance.
+          maxLength: 50
+          minLength: 1
+          type: string
+        type:
+          description: The type of Datastore.
+          type: string
+      required:
+      - id
+      - internalReference
+      - name
+      - type
+      type: object
     Deployment:
       properties:
         cloudProviderDetails:
@@ -2537,6 +2598,11 @@ components:
       required:
       - channels
       type: object
+    ListDatastoresResponse:
+      items:
+        $ref: '#/components/schemas/Datastore'
+      nullable: true
+      type: array
     ListDeploymentsResponse:
       items:
         $ref: '#/components/schemas/Deployment'
