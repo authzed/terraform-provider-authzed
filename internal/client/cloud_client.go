@@ -9,18 +9,22 @@ import (
 	"time"
 )
 
+// CloudClient is the HTTP client for the AuthZed Cloud API
 type CloudClient struct {
-	Host       string
-	Token      string
-	APIVersion string
-	HTTPClient *http.Client
+	Host          string
+	Token         string
+	APIVersion    string
+	HTTPClient    *http.Client
+	DeleteTimeout time.Duration
 }
 
+// CloudClientConfig represents the config for the Cloud API client
 type CloudClientConfig struct {
-	Host       string
-	Token      string
-	APIVersion string
-	Timeout    time.Duration
+	Host          string
+	Token         string
+	APIVersion    string
+	Timeout       time.Duration
+	DeleteTimeout time.Duration
 }
 
 // NewCloudClient creates a new Cloud API client
@@ -28,6 +32,11 @@ func NewCloudClient(cfg *CloudClientConfig) *CloudClient {
 	timeout := cfg.Timeout
 	if timeout == 0 {
 		timeout = DefaultTimeout
+	}
+
+	deleteTimeout := cfg.DeleteTimeout
+	if deleteTimeout == 0 {
+		deleteTimeout = DefaultDeleteTimeout
 	}
 
 	apiVersion := cfg.APIVersion
@@ -42,6 +51,7 @@ func NewCloudClient(cfg *CloudClientConfig) *CloudClient {
 		HTTPClient: &http.Client{
 			Timeout: timeout,
 		},
+		DeleteTimeout: deleteTimeout,
 	}
 }
 
@@ -89,7 +99,7 @@ func (c *CloudClient) Do(req *http.Request) (*ResponseWithETag, error) {
 		return nil, err
 	}
 
-	// Extract the ETag from standard header
+	// Extract the ETag if it exists
 	etag := resp.Header.Get("ETag")
 
 	return &ResponseWithETag{
@@ -100,36 +110,6 @@ func (c *CloudClient) Do(req *http.Request) (*ResponseWithETag, error) {
 
 // UpdateResource updates any resource that implements the Resource interface
 func (c *CloudClient) UpdateResource(resource Resource, endpoint string, body any) (Resource, error) {
-	// Check if the ETag is empty
-	if resource.GetETag() == "" {
-		// We only update the ETag without updating local attributes. ETags represent specific
-		// versions of resources (like a hash) and this is purely for optimistic concurrency control.
-		// If the remote resource differs from local state, the update will fail with 412 and retry with latest version.
-		req, err := c.NewRequest(http.MethodGet, endpoint, nil)
-		if err != nil {
-			return nil, err
-		}
-
-		respWithETag, err := c.Do(req)
-		if err != nil {
-			return nil, err
-		}
-
-		if respWithETag.Response.StatusCode != http.StatusOK {
-			_ = respWithETag.Response.Body.Close()
-			return nil, fmt.Errorf("failed to fetch current resource for ETag: %s", NewAPIError(respWithETag))
-		}
-
-		// Extract the ETag from the GET response
-		etag := respWithETag.ETag
-
-		// Set the ETag on the resource
-		resource.SetETag(etag)
-
-		_ = respWithETag.Response.Body.Close()
-	}
-
-	// Proceed with the update using the ETag (original or newly fetched)
 	req, err := c.NewRequest(http.MethodPut, endpoint, body, WithETag(resource.GetETag()))
 	if err != nil {
 		return nil, err
@@ -227,11 +207,59 @@ func (c *CloudClient) DeleteResource(endpoint string) error {
 		_ = respWithETag.Response.Body.Close()
 	}()
 
-	if respWithETag.Response.StatusCode != http.StatusNoContent {
-		return NewAPIError(respWithETag)
+	// Handle synchronous delete (204 No Content)
+	if respWithETag.Response.StatusCode == http.StatusNoContent {
+		return nil
 	}
 
-	return nil
+	// Handle asynchronous delete (202 Accepted)
+	if respWithETag.Response.StatusCode == http.StatusAccepted {
+		return c.waitForDeletion(endpoint)
+	}
+
+	// All other status codes are errors
+	return NewAPIError(respWithETag)
+}
+
+// waitForDeletion polls the resource endpoint until it returns 404 (deleted)
+func (c *CloudClient) waitForDeletion(endpoint string) error {
+	timeout := time.After(c.DeleteTimeout)
+	ticker := time.NewTicker(DefaultDeletePollInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-timeout:
+			return fmt.Errorf("timeout waiting for resource deletion at %s (waited %v)", endpoint, c.DeleteTimeout)
+		case <-ticker.C:
+			// Check if resource still exists
+			req, err := c.NewRequest(http.MethodGet, endpoint, nil)
+			if err != nil {
+				return fmt.Errorf("failed to create request while polling for deletion: %w", err)
+			}
+
+			respWithETag, err := c.Do(req)
+			if err != nil {
+				return fmt.Errorf("failed to poll for deletion: %w", err)
+			}
+
+			// Close response body immediately
+			_ = respWithETag.Response.Body.Close()
+
+			// 404 means resource is deleted - success!
+			if respWithETag.Response.StatusCode == http.StatusNotFound {
+				return nil
+			}
+
+			// 200 means resource still exists - continue polling
+			if respWithETag.Response.StatusCode == http.StatusOK {
+				continue
+			}
+
+			// Any other status code is unexpected
+			return fmt.Errorf("unexpected status code %d while polling for deletion", respWithETag.Response.StatusCode)
+		}
+	}
 }
 
 // ResourceFactory is a function that creates a Resource from the decoded response
@@ -290,6 +318,5 @@ func (c *CloudClient) CreateResourceWithFactory(endpoint string, body any, dest 
 	}
 
 	// Use the factory to create a Resource from the decoded object
-	// The factory will handle extracting ConfigETag from the response body if needed
 	return factory(dest, respWithETag.ETag), nil
 }
