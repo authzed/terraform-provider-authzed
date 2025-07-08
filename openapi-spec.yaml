@@ -29,6 +29,12 @@ tags:
     description: Find out more at the official Authzed Docs site
     url: https://authzed.com/docs/authzed/concepts/restricted-api-access
   name: access management
+- description: Set of APIs to for handling deployments. A permissions system is compromised
+    of one or more deployments in the same and/or different regions
+  externalDocs:
+    description: Find out more at the official Authzed Docs site
+    url: https://authzed.com/docs
+  name: deployment
 - description: Performance insights for a permissions system
   externalDocs:
     description: Find out more at the official Authzed Docs site
@@ -51,6 +57,11 @@ tags:
     description: Find out more at the official Authzed Docs site
     url: https://authzed.com/docs/authzed/concepts/authzed-materialize
   name: materialize
+- description: Organization management APIs
+  externalDocs:
+    description: Find out more at the official Authzed Docs site
+    url: https://authzed.com/docs
+  name: organization
 paths:
   /channels:
     get:
@@ -120,6 +131,141 @@ paths:
       tags:
       - system
       - datastore
+  /deployment-templates:
+    get:
+      description: list all deployment templates available to an organization
+      operationId: ListDeploymentTemplates
+      parameters:
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListDeploymentTemplatesResponse'
+          description: OK
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - deployment
+  /deployment-templates/{deploymentTemplateID}:
+    get:
+      description: list all deployments templates available to an organization
+      operationId: GetDeploymentTemplate
+      parameters:
+      - description: The ID of the Deployment Template
+        in: path
+        name: deploymentTemplateID
+        required: true
+        schema:
+          description: The ID of the Deployment Template
+          example: dt-YUCnUAA7QFAyalREJboOH
+          pattern: ^dt-[a-zA-Z0-9-]+$
+          readOnly: true
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetDeploymentTemplateResponse'
+          description: OK
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - deployment
+  /organizations:
+    get:
+      description: list all organizations
+      operationId: ListOrganizations
+      parameters:
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListOrganizationsResponse'
+          description: OK
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - organization
+  /organizations/{organizationID}:
+    get:
+      description: lookup an organization by its ID
+      operationId: LookupOrganization
+      parameters:
+      - description: The ID of the Organization
+        in: path
+        name: organizationID
+        required: true
+        schema:
+          description: The ID of the Organization
+          example: org-example
+          pattern: ^org-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+          description: OK
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - organization
   /ps:
     get:
       description: list all permissions systems
@@ -1841,12 +1987,34 @@ paths:
       - permissions system
 components:
   schemas:
+    APICategory:
+      enum:
+      - check
+      - lookup
+      - write
+      type: string
     APIShapeMetrics:
       properties:
+        apiCategory:
+          $ref: '#/components/schemas/APICategory'
+        apiIndex:
+          description: The index of the API call type; used for categorization and
+            sorting
+          type: integer
+        apiName:
+          description: The name of API call (e.g., ReadRelationships, CheckPermission,
+            etc.)
+          type: string
         count:
           description: The number of times this API shape was called
           nullable: true
           type: integer
+        orderedShapeFields:
+          description: The fields of the API shape in the order they should be displayed
+          items:
+            $ref: '#/components/schemas/ShapeField'
+          nullable: true
+          type: array
         p50LatencySeconds:
           description: The 50th percentile latency of this API shape over the period
           nullable: true
@@ -1931,6 +2099,14 @@ components:
             be empty if not applicable.
           type: string
       type: object
+    CockroachDBOverlapStrategy:
+      enum:
+      - request
+      - prefix
+      - static
+      - insecure
+      - unknown
+      type: string
     CreateExternalMetricsTokenResponse:
       properties:
         id:
@@ -2306,6 +2482,146 @@ components:
       required:
       - id
       type: object
+    DeploymentTemplate:
+      properties:
+        compute:
+          description: The compute allocated for Deployments using this Template,
+            described in millicores
+          type: integer
+        datastoreCockroachDBTxOverlapStrategy:
+          $ref: '#/components/schemas/CockroachDBOverlapStrategy'
+        datastoreColumnOptimization:
+          description: Whether the experimental datastore column optimization is enabled
+            in Deployments using this Template
+          type: boolean
+        datastoreFollowerReadDelay:
+          description: amount of time to subtract from computed revision to ensure
+            they are sufficiently in the past to enable follower reads. Used for cockroach/spanner
+            and postgres read-replicas. Described in seconds
+          type: number
+        datastoreGCInterval:
+          description: The interval at which revision garbage collection runs in the
+            datastore for Deployments using this Template, in seconds
+          minimum: 0
+          type: integer
+        datastoreGCWindow:
+          description: The window of time before which revisions are garbage collected
+            in the datastore for Deployments using this Template, in seconds
+          minimum: 0
+          type: integer
+        datastoreRevisionQuantizationInterval:
+          description: The quantization interval for revisions in the datastore for
+            Deployments using this Template, in seconds
+          minimum: 0
+          type: integer
+        datastoreRevisionQuantizationMaxStalenessPercent:
+          description: The maximum staleness percentage for revision quantization
+            in Deployments using this Template, where 0.1 is 10%, 1 = 100%
+          type: number
+        grpcMaxConnectionAge:
+          description: The maximum age of a gRPC connection in Deployments using this
+            Template, described in seconds
+          minimum: 0
+          type: integer
+        httpGatewayEnabled:
+          description: Whether the HTTP gateway is enabled for Deployments using this
+            Template
+          type: boolean
+        id:
+          description: The globally unique ID for this Deployment Template
+          type: string
+        internalReference:
+          deprecated: true
+          description: The internal reference of the Deployment Template. DO NOT USE.
+            Prefer ID or the normal name.
+          type: string
+        limitBulkExportRelationships:
+          description: The maximum number of relationships that can be exported in
+            a single BulkExport request in Deployments using this Template
+          minimum: 0
+          type: integer
+        limitDatastoreReadPageSize:
+          description: The maximum page size that will be loaded into memory from
+            the datastore at a time in Deployments using this Template
+          minimum: 0
+          type: integer
+        limitDeleteRelationships:
+          description: The maximum number of relationships that can be deleted in
+            a single request in Deployments using this Template
+          minimum: 0
+          type: integer
+        limitDispatchChunkSize:
+          description: The maximum number of object IDs in a dispatched request in
+            Deployments using this Template
+          minimum: 0
+          type: integer
+        limitDispatchDepth:
+          description: The maximum recursion depth for nested calls in Deployments
+            using this Template. This is used to prevent infinite recursion in dispatches.
+          minimum: 0
+          type: integer
+        limitLookupResourcesPageSize:
+          description: The maximum page size that can be used for LookupResources
+            requests in Deployments using this Template
+          minimum: 0
+          type: integer
+        limitReadRelationshipsPageSize:
+          description: The maximum page size that can be used for ReadRelationships
+            requests in Deployments using this Template
+          minimum: 0
+          type: integer
+        limitRelationshipsPreconditions:
+          description: The maximum number of preconditions that can be included in
+            a single WriteRelationships or DeleteRelationships request in Deployments
+            using this Template
+          minimum: 0
+          type: integer
+        limitRequestCaveatContextSize:
+          description: The maximum allowed size of request caveat context in bytes
+            for Deployments using this Template. A value of zero or less means no
+            limit
+          minimum: 0
+          type: integer
+        limitStoredCaveatContextSize:
+          description: The maximum allowed size of stored caveat context per relationship
+            in bytes for Deployments using this Template
+          minimum: 0
+          type: integer
+        limitWriteRelationshipsUpdates:
+          description: The maximum number of updates that can be made in a single
+            WriteRelationships request in Deployments using this Template
+          minimum: 0
+          type: integer
+        memory:
+          description: The memory allocated for Deployments using this Template, described
+            in MiB
+          type: integer
+        name:
+          description: The name of the Deployment Template
+          type: string
+        relationshipExpirationEnabled:
+          description: Whether experimental support for first-class relationship expiration
+            is enabled in Deployments using this Template
+          type: boolean
+        requireSchemaPrefixes:
+          description: Whether schema prefixes are required in Deployments using this
+            Template
+          type: boolean
+        systemType:
+          $ref: '#/components/schemas/SystemType'
+        watchableSchemaCacheEnabled:
+          description: Whether the experimental schema cache which makes use of the
+            Watch API to keep the cache updated is enabled in Deployments using this
+            Template
+          type: boolean
+        watchableSchemaHeartbeatInterval:
+          description: The heartbeat interval for the experimental schema cache in
+            Deployments using this Template, described in seconds
+          minimum: 0
+          type: integer
+      required:
+      - id
+      type: object
     DownloadFGAMConfigResponse:
       properties:
         configYAML:
@@ -2323,8 +2639,147 @@ components:
           description: Whether a specific feature is enabled or disabled
           type: boolean
         id:
-          description: The feature identifier
+          $ref: '#/components/schemas/PermissionsSystemFeature'
+      type: object
+    GetDeploymentTemplateResponse:
+      properties:
+        compute:
+          description: The compute allocated for Deployments using this Template,
+            described in millicores
+          type: integer
+        datastoreCockroachDBTxOverlapStrategy:
+          $ref: '#/components/schemas/CockroachDBOverlapStrategy'
+        datastoreColumnOptimization:
+          description: Whether the experimental datastore column optimization is enabled
+            in Deployments using this Template
+          type: boolean
+        datastoreFollowerReadDelay:
+          description: amount of time to subtract from computed revision to ensure
+            they are sufficiently in the past to enable follower reads. Used for cockroach/spanner
+            and postgres read-replicas. Described in seconds
+          type: number
+        datastoreGCInterval:
+          description: The interval at which revision garbage collection runs in the
+            datastore for Deployments using this Template, in seconds
+          minimum: 0
+          type: integer
+        datastoreGCWindow:
+          description: The window of time before which revisions are garbage collected
+            in the datastore for Deployments using this Template, in seconds
+          minimum: 0
+          type: integer
+        datastoreRevisionQuantizationInterval:
+          description: The quantization interval for revisions in the datastore for
+            Deployments using this Template, in seconds
+          minimum: 0
+          type: integer
+        datastoreRevisionQuantizationMaxStalenessPercent:
+          description: The maximum staleness percentage for revision quantization
+            in Deployments using this Template, where 0.1 is 10%, 1 = 100%
+          type: number
+        grpcMaxConnectionAge:
+          description: The maximum age of a gRPC connection in Deployments using this
+            Template, described in seconds
+          minimum: 0
+          type: integer
+        httpGatewayEnabled:
+          description: Whether the HTTP gateway is enabled for Deployments using this
+            Template
+          type: boolean
+        id:
+          description: The globally unique ID for this Deployment Template
           type: string
+        internalReference:
+          deprecated: true
+          description: The internal reference of the Deployment Template. DO NOT USE.
+            Prefer ID or the normal name.
+          type: string
+        limitBulkExportRelationships:
+          description: The maximum number of relationships that can be exported in
+            a single BulkExport request in Deployments using this Template
+          minimum: 0
+          type: integer
+        limitDatastoreReadPageSize:
+          description: The maximum page size that will be loaded into memory from
+            the datastore at a time in Deployments using this Template
+          minimum: 0
+          type: integer
+        limitDeleteRelationships:
+          description: The maximum number of relationships that can be deleted in
+            a single request in Deployments using this Template
+          minimum: 0
+          type: integer
+        limitDispatchChunkSize:
+          description: The maximum number of object IDs in a dispatched request in
+            Deployments using this Template
+          minimum: 0
+          type: integer
+        limitDispatchDepth:
+          description: The maximum recursion depth for nested calls in Deployments
+            using this Template. This is used to prevent infinite recursion in dispatches.
+          minimum: 0
+          type: integer
+        limitLookupResourcesPageSize:
+          description: The maximum page size that can be used for LookupResources
+            requests in Deployments using this Template
+          minimum: 0
+          type: integer
+        limitReadRelationshipsPageSize:
+          description: The maximum page size that can be used for ReadRelationships
+            requests in Deployments using this Template
+          minimum: 0
+          type: integer
+        limitRelationshipsPreconditions:
+          description: The maximum number of preconditions that can be included in
+            a single WriteRelationships or DeleteRelationships request in Deployments
+            using this Template
+          minimum: 0
+          type: integer
+        limitRequestCaveatContextSize:
+          description: The maximum allowed size of request caveat context in bytes
+            for Deployments using this Template. A value of zero or less means no
+            limit
+          minimum: 0
+          type: integer
+        limitStoredCaveatContextSize:
+          description: The maximum allowed size of stored caveat context per relationship
+            in bytes for Deployments using this Template
+          minimum: 0
+          type: integer
+        limitWriteRelationshipsUpdates:
+          description: The maximum number of updates that can be made in a single
+            WriteRelationships request in Deployments using this Template
+          minimum: 0
+          type: integer
+        memory:
+          description: The memory allocated for Deployments using this Template, described
+            in MiB
+          type: integer
+        name:
+          description: The name of the Deployment Template
+          type: string
+        relationshipExpirationEnabled:
+          description: Whether experimental support for first-class relationship expiration
+            is enabled in Deployments using this Template
+          type: boolean
+        requireSchemaPrefixes:
+          description: Whether schema prefixes are required in Deployments using this
+            Template
+          type: boolean
+        systemType:
+          $ref: '#/components/schemas/SystemType'
+        watchableSchemaCacheEnabled:
+          description: Whether the experimental schema cache which makes use of the
+            Watch API to keep the cache updated is enabled in Deployments using this
+            Template
+          type: boolean
+        watchableSchemaHeartbeatInterval:
+          description: The heartbeat interval for the experimental schema cache in
+            Deployments using this Template, described in seconds
+          minimum: 0
+          type: integer
+      required:
+      - id
       type: object
     GetFeatureAuditLogResponse:
       properties:
@@ -2337,8 +2792,7 @@ components:
           description: Whether a specific feature is enabled or disabled
           type: boolean
         id:
-          description: The feature identifier
-          type: string
+          $ref: '#/components/schemas/PermissionsSystemFeature'
       type: object
     GetFeatureDatadogExportResponse:
       properties:
@@ -2351,8 +2805,7 @@ components:
           description: Whether a specific feature is enabled or disabled
           type: boolean
         id:
-          description: The feature identifier
-          type: string
+          $ref: '#/components/schemas/PermissionsSystemFeature'
       type: object
     GetPermissionsSystemResponse:
       properties:
@@ -2603,6 +3056,11 @@ components:
         $ref: '#/components/schemas/Datastore'
       nullable: true
       type: array
+    ListDeploymentTemplatesResponse:
+      items:
+        $ref: '#/components/schemas/DeploymentTemplate'
+      nullable: true
+      type: array
     ListDeploymentsResponse:
       items:
         $ref: '#/components/schemas/Deployment'
@@ -2643,6 +3101,17 @@ components:
           type: array
       required:
       - clusters
+      type: object
+    ListOrganizationsResponse:
+      properties:
+        organizations:
+          description: List of organizations
+          items:
+            $ref: '#/components/schemas/Organization'
+          nullable: true
+          type: array
+      required:
+      - organizations
       type: object
     ListPermissionsSystemRolesResponse:
       properties:
@@ -2783,6 +3252,24 @@ components:
       - lastTransitionTime
       - reason
       type: object
+    Organization:
+      properties:
+        description:
+          description: The organization description
+          example: An example organization
+          type: string
+        id:
+          description: The organization ID
+          example: org-example
+          type: string
+        title:
+          description: The organization title
+          example: Example Organization
+          type: string
+      required:
+      - id
+      - title
+      type: object
     PerfInsightsTopKResponse:
       properties:
         shapes:
@@ -2886,6 +3373,15 @@ components:
       required:
       - id
       type: object
+    PermissionsSystemFeature:
+      enum:
+      - WorkloadIsolation
+      - RestrictedAPIAccess
+      - DatadogExport
+      - AuditLog
+      - PerfInsights
+      - ScheduledRestore
+      type: string
     PermissionsSystemState:
       properties:
         message:
@@ -3121,8 +3617,7 @@ components:
           description: Whether a specific feature is enabled or disabled
           type: boolean
         id:
-          description: The feature identifier
-          type: string
+          $ref: '#/components/schemas/PermissionsSystemFeature'
       type: object
     SetFeatureDatadogExportRequest:
       properties:
@@ -3150,8 +3645,7 @@ components:
           description: Whether a specific feature is enabled or disabled
           type: boolean
         id:
-          description: The feature identifier
-          type: string
+          $ref: '#/components/schemas/PermissionsSystemFeature'
       type: object
     SetPermissionsSystemRoleRequest:
       properties:
@@ -3165,6 +3659,16 @@ components:
       - kind
       - subjectId
       type: object
+    ShapeField:
+      enum:
+      - api_kind
+      - resource_type
+      - resource_relation
+      - subject_type
+      - subject_relation
+      - name
+      - filter
+      type: string
     SortBy:
       enum:
       - impact
@@ -3209,7 +3713,7 @@ components:
         supportedFeatureNames:
           description: The features supported by the version
           items:
-            type: string
+            $ref: '#/components/schemas/PermissionsSystemFeature'
           type: array
         version:
           description: The version of SpiceDB
