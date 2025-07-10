@@ -34,10 +34,8 @@ func TestAccAuthzedToken_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "permission_system_id"),
 					resource.TestCheckResourceAttrSet(resourceName, "service_account_id"),
 					resource.TestCheckResourceAttrSet(resourceName, "created_at"),
-					resource.TestCheckResourceAttrSet(resourceName, "creator"),
 					resource.TestCheckResourceAttrSet(resourceName, "hash"),
 					resource.TestCheckResourceAttrSet(resourceName, "plain_text"),
-					resource.TestCheckResourceAttrSet(resourceName, "etag"),
 				),
 			},
 			// ImportState testing

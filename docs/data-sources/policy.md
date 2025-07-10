@@ -38,6 +38,5 @@ In addition to all arguments above, the following attributes are exported:
 * `principal_id` - The ID of the service account this policy applies to.
 * `role_ids` - A list of role IDs assigned by this policy. Currently limited to exactly one role ID.
 * `created_at` - The timestamp when the policy was created (RFC 3339 format).
-* `creator` - The name of the user that created this policy.
-* `updated_at` - The timestamp when the policy was last updated (RFC 3339 format).
-* `updater` - The name of the user that last updated this policy. 
+* `creator` - Name of the user that created this policy.
+* `etag` - Version identifier for the resource, used by update operations to prevent conflicts. 

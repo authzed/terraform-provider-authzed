@@ -30,7 +30,6 @@ type TokenDataSourceModel struct {
 	ServiceAccountID    types.String `tfsdk:"service_account_id"`
 	CreatedAt           types.String `tfsdk:"created_at"`
 	Creator             types.String `tfsdk:"creator"`
-	ETag                types.String `tfsdk:"etag"`
 }
 
 func (d *TokenDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -72,10 +71,6 @@ func (d *TokenDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 			"creator": schema.StringAttribute{
 				Description: "The name of the user that created this token",
 				Computed:    true,
-			},
-			"etag": schema.StringAttribute{
-				Computed:    true,
-				Description: "Version identifier for the resource, used by update operations to prevent conflicts",
 			},
 		},
 	}
@@ -126,7 +121,6 @@ func (d *TokenDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	config.Description = types.StringValue(tokenWithETag.Token.Description)
 	config.CreatedAt = types.StringValue(tokenWithETag.Token.CreatedAt)
 	config.Creator = types.StringValue(tokenWithETag.Token.Creator)
-	config.ETag = types.StringValue(tokenWithETag.ETag)
 
 	// Save the data into Terraform state
 	diags = resp.State.Set(ctx, config)

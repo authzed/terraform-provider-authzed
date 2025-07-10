@@ -35,9 +35,8 @@ In addition to the arguments listed above, the following attributes are exported
 
 * `id` - The unique identifier for the policy. Will start with `apc-` followed by alphanumeric characters or hyphens.
 * `created_at` - The timestamp when the policy was created (RFC 3339 format).
-* `creator` - The name of the user that created this policy.
-* `updated_at` - The timestamp when the policy was last updated (RFC 3339 format).
-* `updater` - The name of the user that last updated this policy.
+* `creator` - Name of the user that created this policy.
+* `etag` - Version identifier used to prevent conflicts from concurrent updates, ensuring safe resource modifications.
 
 ## Import
 

@@ -239,7 +239,6 @@ func (r *policyResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	data.CreatedAt = types.StringValue(updatedPolicyWithETag.Policy.CreatedAt)
-	data.Creator = types.StringValue(updatedPolicyWithETag.Policy.Creator)
 	data.ETag = types.StringValue(updatedPolicyWithETag.ETag)
 
 	// Update role IDs in case the order or values changed

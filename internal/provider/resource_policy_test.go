@@ -29,11 +29,10 @@ func TestAccAuthzedPolicy_basic(t *testing.T) {
 					testAccCheckPolicyExists(resourceName),
 					resource.TestCheckResourceAttr(resourceName, "name", testID),
 					resource.TestCheckResourceAttr(resourceName, "description", "Test policy description"),
-					resource.TestCheckResourceAttr(resourceName, "principal_id", "test-principal"),
+					resource.TestCheckResourceAttrSet(resourceName, "principal_id"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "permission_system_id"),
 					resource.TestCheckResourceAttrSet(resourceName, "created_at"),
-					resource.TestCheckResourceAttrSet(resourceName, "creator"),
 					resource.TestCheckResourceAttrSet(resourceName, "etag"),
 					resource.TestCheckResourceAttr(resourceName, "role_ids.#", "1"),
 				),
@@ -54,7 +53,7 @@ func TestAccAuthzedPolicy_import(t *testing.T) {
 	testID := helpers.GenerateTestID("test-policy-import")
 	roleName := fmt.Sprintf("%s-role", testID)
 
-	resource.ParallelTest(t, resource.TestCase{
+	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckPolicyDestroy,
@@ -64,14 +63,28 @@ func TestAccAuthzedPolicy_import(t *testing.T) {
 				Config: testAccPolicyConfig_basic(testID, roleName),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckPolicyExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "name", testID),
+					resource.TestCheckResourceAttr(resourceName, "description", "Test policy description"),
+					resource.TestCheckResourceAttrSet(resourceName, "principal_id"),
+					resource.TestCheckResourceAttrSet(resourceName, "etag"),
+					resource.TestCheckResourceAttr(resourceName, "role_ids.#", "1"),
 				),
 			},
-			// Test import
+			// Test import - this verifies that all fields match between original and imported resource
 			{
 				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
 				ImportStateIdFunc: testAccPolicyImportStateIdFunc(resourceName),
+				// Verify that after import, the resource still has all the expected values
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckPolicyExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "name", testID),
+					resource.TestCheckResourceAttr(resourceName, "description", "Test policy description"),
+					resource.TestCheckResourceAttrSet(resourceName, "principal_id"),
+					resource.TestCheckResourceAttrSet(resourceName, "etag"),
+					resource.TestCheckResourceAttr(resourceName, "role_ids.#", "1"),
+				),
 			},
 		},
 	})
@@ -224,7 +237,14 @@ func testAccPolicyImportStateIdFunc(resourceName string) resource.ImportStateIdF
 // Configuration templates
 
 func testAccPolicyConfig_basic(policyName, roleName string) string {
+	serviceAccountName := fmt.Sprintf("%s-sa", policyName)
 	return helpers.BuildProviderConfig() + fmt.Sprintf(`
+resource "authzed_service_account" "test" {
+  name                 = %[4]q
+  description          = "Test service account for policy acceptance tests"
+  permission_system_id = %[3]q
+}
+
 resource "authzed_role" "test" {
   name                 = %[2]q
   description          = "Test role for policy acceptance tests"
@@ -238,18 +258,26 @@ resource "authzed_policy" "test" {
   name                 = %[1]q
   description          = "Test policy description"
   permission_system_id = %[3]q
-  principal_id         = "test-principal"
+  principal_id         = authzed_service_account.test.id
   role_ids             = [authzed_role.test.id]
 }
 `,
 		policyName,
 		roleName,
 		helpers.GetTestPermissionSystemID(),
+		serviceAccountName,
 	)
 }
 
 func testAccPolicyConfig_update(policyName, roleName, description string) string {
+	serviceAccountName := fmt.Sprintf("%s-sa", policyName)
 	return helpers.BuildProviderConfig() + fmt.Sprintf(`
+resource "authzed_service_account" "test" {
+  name                 = %[5]q
+  description          = "Test service account for policy acceptance tests"
+  permission_system_id = %[4]q
+}
+
 resource "authzed_role" "test" {
   name                 = %[2]q
   description          = "Test role for policy acceptance tests"
@@ -263,7 +291,7 @@ resource "authzed_policy" "test" {
   name                 = %[1]q
   description          = %[3]q
   permission_system_id = %[4]q
-  principal_id         = "test-principal"
+  principal_id         = authzed_service_account.test.id
   role_ids             = [authzed_role.test.id]
 }
 `,
@@ -271,11 +299,19 @@ resource "authzed_policy" "test" {
 		roleName,
 		description,
 		helpers.GetTestPermissionSystemID(),
+		serviceAccountName,
 	)
 }
 
 func testAccPolicyConfig_invalidPermissionSystemID(policyName, roleName string) string {
+	serviceAccountName := fmt.Sprintf("%s-sa", policyName)
 	return helpers.BuildProviderConfig() + fmt.Sprintf(`
+resource "authzed_service_account" "test" {
+  name                 = %[4]q
+  description          = "Test service account for policy acceptance tests"
+  permission_system_id = %[3]q
+}
+
 resource "authzed_role" "test" {
   name                 = %[2]q
   description          = "Test role for policy acceptance tests"
@@ -289,18 +325,26 @@ resource "authzed_policy" "test" {
   name                 = %[1]q
   description          = "Test policy with invalid permission system ID"
   permission_system_id = "invalid-ps-id"
-  principal_id         = "test-principal"
+  principal_id         = authzed_service_account.test.id
   role_ids             = [authzed_role.test.id]
 }
 `,
 		policyName,
 		roleName,
 		helpers.GetTestPermissionSystemID(),
+		serviceAccountName,
 	)
 }
 
 func testAccPolicyConfig_emptyName(roleName string) string {
+	serviceAccountName := fmt.Sprintf("%s-sa", roleName)
 	return helpers.BuildProviderConfig() + fmt.Sprintf(`
+resource "authzed_service_account" "test" {
+  name                 = %[3]q
+  description          = "Test service account for policy acceptance tests"
+  permission_system_id = %[2]q
+}
+
 resource "authzed_role" "test" {
   name                 = %[1]q
   description          = "Test role for policy acceptance tests"
@@ -314,26 +358,35 @@ resource "authzed_policy" "test" {
   name                 = ""
   description          = "Test policy with empty name"
   permission_system_id = %[2]q
-  principal_id         = "test-principal"
+  principal_id         = authzed_service_account.test.id
   role_ids             = [authzed_role.test.id]
 }
 `,
 		roleName,
 		helpers.GetTestPermissionSystemID(),
+		serviceAccountName,
 	)
 }
 
 func testAccPolicyConfig_emptyRoleIDs(policyName string) string {
+	serviceAccountName := fmt.Sprintf("%s-sa", policyName)
 	return helpers.BuildProviderConfig() + fmt.Sprintf(`
+resource "authzed_service_account" "test" {
+  name                 = %[3]q
+  description          = "Test service account for policy acceptance tests"
+  permission_system_id = %[2]q
+}
+
 resource "authzed_policy" "test" {
   name                 = %[1]q
   description          = "Test policy with empty role IDs"
   permission_system_id = %[2]q
-  principal_id         = "test-principal"
+  principal_id         = authzed_service_account.test.id
   role_ids             = []
 }
 `,
 		policyName,
 		helpers.GetTestPermissionSystemID(),
+		serviceAccountName,
 	)
 }

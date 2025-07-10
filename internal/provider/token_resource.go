@@ -40,7 +40,6 @@ type TokenResourceModel struct {
 	Creator             types.String `tfsdk:"creator"`
 	Hash                types.String `tfsdk:"hash"`
 	PlainText           types.String `tfsdk:"plain_text"`
-	ETag                types.String `tfsdk:"etag"`
 }
 
 func (r *TokenResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -96,10 +95,6 @@ func (r *TokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
-			},
-			"etag": schema.StringAttribute{
-				Computed:    true,
-				Description: "Version identifier used to prevent conflicts from concurrent updates",
 			},
 		},
 	}
@@ -157,7 +152,6 @@ func (r *TokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	plan.ServiceAccountID = types.StringValue(createdTokenWithETag.Token.ServiceAccountID)
 	plan.CreatedAt = types.StringValue(createdTokenWithETag.Token.CreatedAt)
 	plan.Creator = types.StringValue(createdTokenWithETag.Token.Creator)
-	plan.ETag = types.StringValue(createdTokenWithETag.ETag)
 
 	// Set the one-time plain text value and hash during creation
 	if createdTokenWithETag.Token.Secret != "" {
@@ -213,7 +207,6 @@ func (r *TokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	state.ServiceAccountID = types.StringValue(tokenWithETag.Token.ServiceAccountID)
 	state.CreatedAt = types.StringValue(tokenWithETag.Token.CreatedAt)
 	state.Creator = types.StringValue(tokenWithETag.Token.Creator)
-	state.ETag = types.StringValue(tokenWithETag.ETag)
 
 	// Only set the hash, never reset plain_text
 	if tokenWithETag.Token.Hash != "" {
@@ -254,8 +247,8 @@ func (r *TokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		ServiceAccountID:    plan.ServiceAccountID.ValueString(),
 	}
 
-	// Use the ETag from state for optimistic concurrency control
-	updatedTokenWithETag, err := r.client.UpdateToken(token, state.ETag.ValueString())
+	// Update token without ETag (tokens don't support optimistic concurrency control)
+	updatedTokenWithETag, err := r.client.UpdateToken(token, "")
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating token",
@@ -267,7 +260,6 @@ func (r *TokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	// Update resource data with the response
 	plan.CreatedAt = types.StringValue(updatedTokenWithETag.Token.CreatedAt)
 	plan.Creator = types.StringValue(updatedTokenWithETag.Token.Creator)
-	plan.ETag = types.StringValue(updatedTokenWithETag.ETag)
 
 	// Preserve the token value and hash from state since they won't be returned in updates
 	plan.PlainText = state.PlainText
