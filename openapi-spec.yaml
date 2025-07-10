@@ -1385,6 +1385,81 @@ paths:
       - auth: []
       tags:
       - permissions system
+    post:
+      description: create a deployment for a permissions system
+      operationId: CreateDeployment
+      parameters:
+      - description: The ID of the Permissions System to create the Deployment in
+        in: path
+        name: permissionsSystemID
+        required: true
+        schema:
+          description: The ID of the Permissions System to create the Deployment in
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDeploymentRequest'
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - permissions system
+  /ps/{permissionsSystemID}/deployments/{deploymentID}:
+    delete:
+      description: delete a deployment for a permissions system. All associated resources
+        will be deleted.
+      operationId: DeleteDeployment
+      parameters:
+      - in: path
+        name: permissionsSystemID
+        required: true
+        schema:
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - in: path
+        name: deploymentID
+        required: true
+        schema:
+          pattern: ^dp-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "202":
+          description: Accepted
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - permissions system
   /ps/{permissionsSystemID}/externalmetrics/tokens:
     get:
       description: get a token used to export metrics to Prometheus
@@ -1835,6 +1910,63 @@ paths:
       tags:
       - permissions system
       - performance insights
+  /ps/{permissionsSystemID}/perf-insights/topk-range:
+    get:
+      description: returns a range query over the top K most expensive permissions
+        API calls
+      operationId: PerformanceInsightsTopKRange
+      parameters:
+      - description: The time period to analyze. The default is the last hour.
+        in: query
+        name: period
+        schema:
+          $ref: '#/components/schemas/Period'
+      - description: The number of times this API shape was called
+        in: query
+        name: count
+        schema:
+          description: The number of times this API shape was called
+          type: integer
+      - description: The field to sort the results by. The default is total impact,
+          which is defined as P50 latency * count over the period.
+        in: query
+        name: sortBy
+        schema:
+          $ref: '#/components/schemas/SortBy'
+      - description: The globally unique ID for the Permissions System
+        in: path
+        name: permissionsSystemID
+        required: true
+        schema:
+          description: The globally unique ID for the Permissions System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          readOnly: true
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerfInsightsTopKRangeResponse'
+          description: OK
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - permissions system
+      - performance insights
   /ps/{permissionsSystemID}/roles:
     get:
       description: list all roles on a permissions systems
@@ -2214,6 +2346,32 @@ components:
       - insecure
       - unknown
       type: string
+    CreateDeploymentRequest:
+      properties:
+        deploymentTemplateID:
+          description: The ID of the Deployment Template to use for this Deployment
+          example: dt-dev
+          type: string
+        name:
+          description: The name of the Deployment
+          maxLength: 64
+          minLength: 1
+          type: string
+        region:
+          description: The region where the Deployment will be created
+          example: us-west-2
+          type: string
+        replicas:
+          description: The number of replicas on this Deployment
+          maximum: 32
+          minimum: 1
+          type: integer
+      required:
+      - name
+      - deploymentTemplateID
+      - replicas
+      - region
+      type: object
     CreateExternalMetricsTokenResponse:
       properties:
         id:
@@ -2587,6 +2745,7 @@ components:
           $ref: '#/components/schemas/CloudProviderDetails'
         id:
           description: The globally unique ID for this Deployment
+          pattern: ^dp-[a-zA-Z0-9-]+$
           type: string
         internalReference:
           deprecated: true
@@ -3396,6 +3555,13 @@ components:
       required:
       - id
       - title
+      type: object
+    PerfInsightsTopKRangeResponse:
+      properties:
+        prometheusJSON:
+          description: The Prometheus query result in JSON format for the top K API
+            shapes over the specified time range.
+          type: string
       type: object
     PerfInsightsTopKResponse:
       properties:
