@@ -1460,6 +1460,51 @@ paths:
       - auth: []
       tags:
       - permissions system
+    put:
+      description: update a deployment for a permissions system
+      operationId: UpdateDeployment
+      parameters:
+      - description: The ID of the Permissions System
+        in: path
+        name: permissionsSystemID
+        required: true
+        schema:
+          description: The ID of the Permissions System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - description: The ID of the Deployment to update
+        in: path
+        name: deploymentID
+        required: true
+        schema:
+          description: The ID of the Deployment to update
+          pattern: ^dp-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDeploymentRequest'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - permissions system
   /ps/{permissionsSystemID}/externalmetrics/tokens:
     get:
       description: get a token used to export metrics to Prometheus
@@ -3338,10 +3383,15 @@ components:
       nullable: true
       type: array
     ListDeploymentTemplatesResponse:
-      items:
-        $ref: '#/components/schemas/DeploymentTemplate'
-      nullable: true
-      type: array
+      properties:
+        deploymentTemplates:
+          description: The list of DeploymentTemplate
+          items:
+            $ref: '#/components/schemas/DeploymentTemplate'
+          type: array
+      required:
+      - deploymentTemplates
+      type: object
     ListDeploymentsResponse:
       items:
         $ref: '#/components/schemas/Deployment'
@@ -4115,6 +4165,42 @@ components:
       required:
       - name
       - id
+      type: object
+    UpdateDeploymentIPAllowFilterPolicy:
+      properties:
+        cidr:
+          description: CIDR of the IP allow filter policy for the Deployment
+          type: string
+        source:
+          $ref: '#/components/schemas/UpdateDeploymentIPAllowFilterPolicySource'
+      type: object
+    UpdateDeploymentIPAllowFilterPolicySource:
+      enum:
+      - Peer
+      - Remote
+      type: string
+    UpdateDeploymentRequest:
+      properties:
+        deploymentTemplateID:
+          description: Optional, the new ID of the Deployment Template to use for
+            this Deployment
+          type: string
+        ipAllowFilterPolicy:
+          description: Optional, the new IP allow filter policy for the Deployment
+          items:
+            $ref: '#/components/schemas/UpdateDeploymentIPAllowFilterPolicy'
+          nullable: true
+          type: array
+        name:
+          description: Optional, the new name of the Deployment
+          minLength: 1
+          type: string
+        replicas:
+          description: Optional, the new number of replicas on this Deployment
+          maximum: 32
+          minimum: 1
+          nullable: true
+          type: integer
       type: object
     UpdatePermissionsSystemRequest:
       properties:
