@@ -3720,10 +3720,18 @@ components:
       type: object
     PermissionsSystemDatastore:
       properties:
+        identifier:
+          description: The identifier for the Datastore used by this Permissions System.
+          type: string
+        region:
+          description: The region of the Datastore used by this Permissions System.
+          type: string
         type:
           $ref: '#/components/schemas/DatastoreType'
       required:
       - type
+      - identifier
+      - region
       type: object
     PermissionsSystemFeature:
       enum:
