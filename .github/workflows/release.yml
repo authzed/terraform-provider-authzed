@@ -42,7 +42,7 @@ jobs:
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
       - name: Notify Slack of release (success)
         if: ${{ success() }}
-        uses: slackapi/slack-github-action@v2.1.0
+        uses: slackapi/slack-github-action@v2.1.1
         with:
           webhook: "${{ secrets.SLACK_WEBHOOK_URL }}"
           webhook-type: "incoming-webhook"
@@ -62,7 +62,7 @@ jobs:
 
       - name: Notify Slack of release (failure)
         if: ${{ failure() }}
-        uses: slackapi/slack-github-action@v2.1.0
+        uses: slackapi/slack-github-action@v2.1.1
         with:
           webhook: "${{ secrets.SLACK_WEBHOOK_URL }}"
           webhook-type: "incoming-webhook"
