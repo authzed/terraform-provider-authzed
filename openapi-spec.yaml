@@ -2135,7 +2135,7 @@ paths:
       - access management
   /ps/{permissionsSystemID}/tokens:
     get:
-      description: list all tokens for a permissions system
+      description: list all preshared keys/tokens for a permissions system
       operationId: ListPermissionsSystemTokens
       parameters:
       - in: path
@@ -2168,8 +2168,9 @@ paths:
       - auth: []
       tags:
       - permissions system
+      - access management
     post:
-      description: create a new token for a permissions system
+      description: create a new preshared key/token for a permissions system
       operationId: CreatePermissionsSystemToken
       parameters:
       - in: path
@@ -2202,9 +2203,10 @@ paths:
       - auth: []
       tags:
       - permissions system
+      - access management
   /ps/{permissionsSystemID}/tokens/{tokenName}:
     delete:
-      description: revoke a token for a permissions system
+      description: revokes a preshared key/token for a permissions system
       operationId: RevokePermissionsSystemToken
       parameters:
       - in: path
@@ -2240,6 +2242,7 @@ paths:
       - auth: []
       tags:
       - permissions system
+      - access management
   /regions:
     get:
       description: list all regions available for SpiceDB clusters
@@ -2788,24 +2791,68 @@ components:
       properties:
         cloudProviderDetails:
           $ref: '#/components/schemas/CloudProviderDetails'
+        createdAt:
+          description: The timestamp when the Deployment was created (RFC 3339). May
+            not be specified.
+          format: date-time
+          nullable: true
+          type: string
+        deploymentTemplateId:
+          description: The ID of the DeploymentTemplate used by this Deployment
+          type: string
+        dnsName:
+          description: The DNS name for this Deployment
+          type: string
         id:
           description: The globally unique ID for this Deployment
           pattern: ^dp-[a-zA-Z0-9-]+$
           type: string
         internalReference:
           deprecated: true
-          description: The internal reference of the Permissions System. DO NOT USE.
-            Prefer ID or the normal name.
+          description: The internal reference of the Deployment. DO NOT USE. Prefer
+            ID or the normal name.
           type: string
         name:
           description: The name of the Deployment
           type: string
+        regionId:
+          description: The ID of the Region associated with this Deployment
+          type: string
         replicas:
           description: The number of replicas on this Deployment
           type: integer
+        systemState:
+          $ref: '#/components/schemas/DeploymentState'
       required:
       - id
+      - internalReference
+      - deploymentTemplateId
+      - systemState
+      - dnsName
+      - regionId
       type: object
+    DeploymentState:
+      properties:
+        message:
+          description: The message associated with the status
+          type: string
+        status:
+          $ref: '#/components/schemas/DeploymentStatus'
+      required:
+      - status
+      type: object
+    DeploymentStatus:
+      enum:
+      - CONFIGURATION_WARNING
+      - MIGRATING
+      - MIGRATION_FAILED
+      - MODIFYING
+      - PROVISIONING
+      - RUNNING
+      - UNKNOWN
+      - VALIDATING
+      - VALIDATION_FAILED
+      type: string
     DeploymentTemplate:
       properties:
         compute:
@@ -3730,8 +3777,6 @@ components:
           $ref: '#/components/schemas/DatastoreType'
       required:
       - type
-      - identifier
-      - region
       type: object
     PermissionsSystemFeature:
       enum:
