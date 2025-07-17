@@ -228,6 +228,39 @@ paths:
       - auth: []
       tags:
       - organization
+    post:
+      description: create a new organization
+      operationId: CreateOrganization
+      parameters:
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrganizationRequest'
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateOrganizationResponse'
+          description: Created
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - organization
   /organizations/{organizationID}:
     get:
       description: lookup an organization by its ID
@@ -285,6 +318,40 @@ paths:
               schema:
                 $ref: '#/components/schemas/ListPermissionsSystemsResponse'
           description: OK
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - permissions system
+    post:
+      description: create a new permissions system with associated database and secret
+        resources
+      operationId: CreatePermissionsSystem
+      parameters:
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePermissionsSystemRequest'
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatePermissionsSystemResponse'
+          description: Created
         "400":
           description: Input parameters are incorrect
         "401":
@@ -2437,6 +2504,92 @@ components:
       - id
       - secret
       type: object
+    CreateOrganizationRequest:
+      properties:
+        description:
+          description: The organization description
+          maxLength: 1000
+          type: string
+        sub:
+          description: The subject ID that will become the admin user of the organization
+          minLength: 1
+          type: string
+        title:
+          description: The organization title
+          maxLength: 255
+          minLength: 1
+          type: string
+      required:
+      - title
+      - sub
+      type: object
+    CreateOrganizationResponse:
+      properties:
+        description:
+          description: The organization description
+          type: string
+        id:
+          description: The created organization ID
+          pattern: ^org-[a-zA-Z0-9-]+$
+          type: string
+        slug:
+          description: The organization slug
+          type: string
+        title:
+          description: The organization title
+          type: string
+      required:
+      - id
+      - title
+      type: object
+    CreatePermissionsSystemRequest:
+      properties:
+        channel:
+          description: The SpiceDB channel to use
+          example: rapid
+          type: string
+        datastoreId:
+          description: The ID of the datastore instance to use (from ListDatastores)
+          example: dbi-qRGmqnr3EUxBZitpC3Moh
+          pattern: ^dbi-[a-zA-Z0-9-]+$
+          type: string
+        deployments:
+          description: The deployment configurations for the Permissions System
+          items:
+            $ref: '#/components/schemas/DeploymentConfig'
+          minItems: 1
+          nullable: true
+          type: array
+        name:
+          description: The name of the Permissions System
+          example: My Permissions System
+          maxLength: 100
+          minLength: 1
+          type: string
+        systemType:
+          $ref: '#/components/schemas/InternalSystemType'
+      required:
+      - name
+      - systemType
+      - datastoreId
+      - deployments
+      - channel
+      type: object
+    CreatePermissionsSystemResponse:
+      properties:
+        databaseID:
+          description: The ID of the created database
+          type: string
+        permissionsSystem:
+          $ref: '#/components/schemas/PermissionsSystem'
+        secretName:
+          description: The name of the created secret
+          type: string
+      required:
+      - permissionsSystem
+      - databaseID
+      - secretName
+      type: object
     CreatePermissionsSystemTokenResponse:
       properties:
         tokenContents:
@@ -2830,6 +2983,22 @@ components:
       - systemState
       - dnsName
       - regionId
+      type: object
+    DeploymentConfig:
+      properties:
+        deploymentTemplateID:
+          description: The ID of the deployment template to use
+          example: dt-basic-template
+          pattern: ^dt-[a-zA-Z0-9-]+$
+          type: string
+        regionID:
+          description: The ID of the region where the deployment will be created
+          example: rg-us-west-1
+          pattern: ^rg-[a-zA-Z0-9-]+$
+          type: string
+      required:
+      - deploymentTemplateID
+      - regionID
       type: object
     DeploymentState:
       properties:
@@ -3413,6 +3582,11 @@ components:
       - name
       - id
       type: object
+    InternalSystemType:
+      enum:
+      - development
+      - production
+      type: string
     ListChannelsAndVersionsResponse:
       properties:
         channels:
@@ -3644,6 +3818,7 @@ components:
         id:
           description: The organization ID
           example: org-example
+          pattern: ^org-[a-zA-Z0-9-]+$
           type: string
         title:
           description: The organization title
