@@ -3505,7 +3505,6 @@ components:
           description: List of organizations
           items:
             $ref: '#/components/schemas/Organization'
-          nullable: true
           type: array
       required:
       - organizations
