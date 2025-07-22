@@ -97,20 +97,95 @@ func (c *CloudClient) CreatePolicy(policy *models.Policy) (*PolicyWithETag, erro
 func (c *CloudClient) UpdatePolicy(policy *models.Policy, etag string) (*PolicyWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/policies/%s", policy.PermissionsSystemID, policy.ID)
 
-	// Create a direct PUT request without using UpdateResource
-	req, err := c.NewRequest(http.MethodPut, path, policy)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+	// Define a function to get the latest ETag
+	getLatestETag := func() (string, error) {
+		getReq, err := c.NewRequest(http.MethodGet, path, nil)
+		if err != nil {
+			return "", fmt.Errorf("failed to create GET request: %w", err)
+		}
+
+		getResp, err := c.Do(getReq)
+		if err != nil {
+			return "", fmt.Errorf("failed to send GET request: %w", err)
+		}
+		defer func() {
+			if getResp.Response.Body != nil {
+				_ = getResp.Response.Body.Close()
+			}
+		}()
+
+		if getResp.Response.StatusCode != http.StatusOK {
+			return "", fmt.Errorf("failed to get latest ETag, status: %d", getResp.Response.StatusCode)
+		}
+
+		// Extract ETag from response header
+		latestETag := getResp.ETag
+		return latestETag, nil
 	}
 
-	// Only set If-Match header if we have a non-empty ETag
-	if etag != "" {
-		req.Header.Set("If-Match", etag)
+	// Try update with provided ETag
+	updateWithETag := func(currentETag string) (*ResponseWithETag, error) {
+		req, err := c.NewRequest(http.MethodPut, path, policy)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request: %w", err)
+		}
+
+		// Only set If-Match header if we have a non-empty ETag
+		if currentETag != "" {
+			req.Header.Set("If-Match", currentETag)
+		}
+
+		respWithETag, err := c.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to send request: %w", err)
+		}
+
+		return respWithETag, nil
 	}
 
-	respWithETag, err := c.Do(req)
+	// First attempt with the provided ETag
+	respWithETag, err := updateWithETag(etag)
 	if err != nil {
-		return nil, fmt.Errorf("failed to send request: %w", err)
+		return nil, err
+	}
+
+	// Handle the 412 Precondition Failed error by retrying with the latest ETag
+	if respWithETag.Response.StatusCode == http.StatusPreconditionFailed {
+		// Close the body of the first response
+		if respWithETag.Response.Body != nil {
+			_ = respWithETag.Response.Body.Close()
+		}
+
+		// Get the latest ETag
+		latestETag, err := getLatestETag()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get latest ETag for retry: %w", err)
+		}
+
+		// Retry the update with the latest ETag
+		respWithETag, err = updateWithETag(latestETag)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Handle 409 Conflict error, FGAM config changes, by retrying with fresh ETag
+	if respWithETag.Response.StatusCode == http.StatusConflict {
+		if respWithETag.Response.Body != nil {
+			_ = respWithETag.Response.Body.Close()
+		}
+
+		// Get the latest ETag after FGAM configuration change
+		latestETag, err := getLatestETag()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get latest ETag after FGAM configuration change: %w", err)
+		}
+
+		// Retry the update with the fresh ETag
+		respWithETag, err = updateWithETag(latestETag)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Keep the response body for potential error reporting
@@ -127,53 +202,54 @@ func (c *CloudClient) UpdatePolicy(policy *models.Policy, etag string) (*PolicyW
 		}
 	}()
 
-	if respWithETag.Response.StatusCode != http.StatusOK {
-		// If it's a 404 error, attempt to recreate the resource
-		if respWithETag.Response.StatusCode == http.StatusNotFound {
-			// Recreate the policy using POST to the base endpoint
-			createPath := fmt.Sprintf("/ps/%s/access/policies", policy.PermissionsSystemID)
-			originalID := policy.ID
+	// Handle 404 Not Found
+	if respWithETag.Response.StatusCode == http.StatusNotFound {
+		// Recreate the policy using POST to the base endpoint
+		createPath := fmt.Sprintf("/ps/%s/access/policies", policy.PermissionsSystemID)
+		originalID := policy.ID
 
-			createReq, err := c.NewRequest(http.MethodPost, createPath, policy)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create request for recreation: %w", err)
-			}
-
-			createResp, err := c.Do(createReq)
-			if err != nil {
-				return nil, fmt.Errorf("failed to send create request for recreation: %w", err)
-			}
-
-			defer func() {
-				if createResp.Response.Body != nil {
-					_ = createResp.Response.Body.Close()
-				}
-			}()
-
-			if createResp.Response.StatusCode != http.StatusCreated {
-				return nil, NewAPIError(createResp)
-			}
-
-			// Decode the created policy
-			var createdPolicy models.Policy
-			if err := json.NewDecoder(createResp.Response.Body).Decode(&createdPolicy); err != nil {
-				return nil, fmt.Errorf("failed to decode recreated policy: %w", err)
-			}
-
-			// Create the result with the original ID to maintain consistency
-			result := &PolicyWithETag{
-				Policy: &createdPolicy,
-				ETag:   createResp.ETag,
-			}
-
-			// Force the right ID to maintain Terraform state consistency
-			if result.Policy.ID != originalID {
-				result.Policy.ID = originalID
-			}
-
-			return result, nil
+		createReq, err := c.NewRequest(http.MethodPost, createPath, policy)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request for recreation: %w", err)
 		}
 
+		createResp, err := c.Do(createReq)
+		if err != nil {
+			return nil, fmt.Errorf("failed to send create request for recreation: %w", err)
+		}
+
+		defer func() {
+			if createResp.Response.Body != nil {
+				_ = createResp.Response.Body.Close()
+			}
+		}()
+
+		if createResp.Response.StatusCode != http.StatusCreated {
+			return nil, NewAPIError(createResp)
+		}
+
+		// Decode the created policy
+		var createdPolicy models.Policy
+		if err := json.NewDecoder(createResp.Response.Body).Decode(&createdPolicy); err != nil {
+			return nil, fmt.Errorf("failed to decode recreated policy: %w", err)
+		}
+
+		// Create the result with the original ID to maintain consistency
+		result := &PolicyWithETag{
+			Policy: &createdPolicy,
+			ETag:   createResp.ETag,
+		}
+
+		// Force the right ID to maintain Terraform state consistency
+		if result.Policy.ID != originalID {
+			result.Policy.ID = originalID
+		}
+
+		return result, nil
+	}
+
+	// Handle other error status codes
+	if respWithETag.Response.StatusCode != http.StatusOK {
 		return nil, NewAPIError(respWithETag)
 	}
 

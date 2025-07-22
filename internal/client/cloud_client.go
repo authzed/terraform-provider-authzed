@@ -110,15 +110,84 @@ func (c *CloudClient) Do(req *http.Request) (*ResponseWithETag, error) {
 
 // UpdateResource updates any resource that implements the Resource interface
 func (c *CloudClient) UpdateResource(resource Resource, endpoint string, body any) (Resource, error) {
-	req, err := c.NewRequest(http.MethodPut, endpoint, body, WithETag(resource.GetETag()))
+	// Define a function to get the latest ETag
+	getLatestETag := func() (string, error) {
+		getReq, err := c.NewRequest(http.MethodGet, endpoint, nil)
+		if err != nil {
+			return "", fmt.Errorf("failed to create GET request: %w", err)
+		}
+
+		getResp, err := c.Do(getReq)
+		if err != nil {
+			return "", fmt.Errorf("failed to send GET request: %w", err)
+		}
+		defer func() {
+			if getResp.Response.Body != nil {
+				_ = getResp.Response.Body.Close()
+			}
+		}()
+
+		if getResp.Response.StatusCode != http.StatusOK {
+			return "", fmt.Errorf("failed to get latest ETag, status: %d", getResp.Response.StatusCode)
+		}
+
+		// Extract ETag from response header
+		return getResp.ETag, nil
+	}
+
+	// Try update with current ETag
+	updateWithETag := func(currentETag string) (*ResponseWithETag, error) {
+		req, err := c.NewRequest(http.MethodPut, endpoint, body, WithETag(currentETag))
+		if err != nil {
+			return nil, err
+		}
+
+		return c.Do(req)
+	}
+
+	respWithETag, err := updateWithETag(resource.GetETag())
 	if err != nil {
 		return nil, err
 	}
 
-	respWithETag, err := c.Do(req)
-	if err != nil {
-		return nil, err
+	// Handle the 412 Precondition Failed error by retrying with the latest ETag
+	if respWithETag.Response.StatusCode == http.StatusPreconditionFailed {
+		// Close the body of the first response
+		if respWithETag.Response.Body != nil {
+			_ = respWithETag.Response.Body.Close()
+		}
+
+		// Get the latest ETag
+		latestETag, err := getLatestETag()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get latest ETag for retry: %w", err)
+		}
+
+		// Retry the update with the latest ETag
+		respWithETag, err = updateWithETag(latestETag)
+		if err != nil {
+			return nil, err
+		}
 	}
+
+	if respWithETag.Response.StatusCode == http.StatusConflict {
+		// Close the body of the first response
+		if respWithETag.Response.Body != nil {
+			_ = respWithETag.Response.Body.Close()
+		}
+
+		latestETag, err := getLatestETag()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get latest ETag after FGAM configuration change: %w", err)
+		}
+
+		// Retry the update with the fresh ETag
+		respWithETag, err = updateWithETag(latestETag)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	defer func() {
 		// ignore the error
 		_ = respWithETag.Response.Body.Close()

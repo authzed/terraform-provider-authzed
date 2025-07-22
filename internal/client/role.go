@@ -106,20 +106,94 @@ func (c *CloudClient) CreateRole(role *models.Role) (*RoleWithETag, error) {
 func (c *CloudClient) UpdateRole(role *models.Role, etag string) (*RoleWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/roles/%s", role.PermissionsSystemID, role.ID)
 
-	// Create a direct PUT request without using UpdateResource
-	req, err := c.NewRequest(http.MethodPut, path, role)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+	getLatestETag := func() (string, error) {
+		getReq, err := c.NewRequest(http.MethodGet, path, nil)
+		if err != nil {
+			return "", fmt.Errorf("failed to create GET request: %w", err)
+		}
+
+		getResp, err := c.Do(getReq)
+		if err != nil {
+			return "", fmt.Errorf("failed to send GET request: %w", err)
+		}
+		defer func() {
+			if getResp.Response.Body != nil {
+				_ = getResp.Response.Body.Close()
+			}
+		}()
+
+		if getResp.Response.StatusCode != http.StatusOK {
+			return "", fmt.Errorf("failed to get latest ETag, status: %d", getResp.Response.StatusCode)
+		}
+
+		// Extract ETag from response header
+		latestETag := getResp.ETag
+		return latestETag, nil
 	}
 
-	// Only set If-Match header if we have a non-empty ETag
-	if etag != "" {
-		req.Header.Set("If-Match", etag)
+	updateWithETag := func(currentETag string) (*ResponseWithETag, error) {
+		req, err := c.NewRequest(http.MethodPut, path, role)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request: %w", err)
+		}
+
+		// Only set If-Match header if we have a non-empty ETag
+		if currentETag != "" {
+			req.Header.Set("If-Match", currentETag)
+		}
+
+		respWithETag, err := c.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to send request: %w", err)
+		}
+
+		return respWithETag, nil
 	}
 
-	respWithETag, err := c.Do(req)
+	// First attempt with the provided ETag
+	respWithETag, err := updateWithETag(etag)
 	if err != nil {
-		return nil, fmt.Errorf("failed to send request: %w", err)
+		return nil, err
+	}
+
+	// Handle the 412 Precondition Failed error by retrying with the latest ETag
+	if respWithETag.Response.StatusCode == http.StatusPreconditionFailed {
+		// Close the body of the first response
+		if respWithETag.Response.Body != nil {
+			_ = respWithETag.Response.Body.Close()
+		}
+
+		// Get the latest ETag
+		latestETag, err := getLatestETag()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get latest ETag for retry: %w", err)
+		}
+
+		// Retry the update with the latest ETag
+		respWithETag, err = updateWithETag(latestETag)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Handle 409 Conflict error (FGAM configuration changes) by retrying with fresh ETag
+	if respWithETag.Response.StatusCode == http.StatusConflict {
+		// Close the body of the first response
+		if respWithETag.Response.Body != nil {
+			_ = respWithETag.Response.Body.Close()
+		}
+
+		// Get the latest ETag after FGAM configuration change
+		latestETag, err := getLatestETag()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get latest ETag after FGAM configuration change: %w", err)
+		}
+
+		// Retry the update with the fresh ETag
+		respWithETag, err = updateWithETag(latestETag)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Keep the response body for potential error reporting
@@ -136,53 +210,54 @@ func (c *CloudClient) UpdateRole(role *models.Role, etag string) (*RoleWithETag,
 		}
 	}()
 
-	if respWithETag.Response.StatusCode != http.StatusOK {
-		// If it's a 404 error, attempt to recreate the resource
-		if respWithETag.Response.StatusCode == http.StatusNotFound {
-			// Recreate the role using POST to the base endpoint
-			createPath := fmt.Sprintf("/ps/%s/access/roles", role.PermissionsSystemID)
-			originalID := role.ID
+	// Handle 404 Not Found
+	if respWithETag.Response.StatusCode == http.StatusNotFound {
+		// Recreate the role using POST to the base endpoint
+		createPath := fmt.Sprintf("/ps/%s/access/roles", role.PermissionsSystemID)
+		originalID := role.ID
 
-			createReq, err := c.NewRequest(http.MethodPost, createPath, role)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create request for recreation: %w", err)
-			}
-
-			createResp, err := c.Do(createReq)
-			if err != nil {
-				return nil, fmt.Errorf("failed to send create request for recreation: %w", err)
-			}
-
-			defer func() {
-				if createResp.Response.Body != nil {
-					_ = createResp.Response.Body.Close()
-				}
-			}()
-
-			if createResp.Response.StatusCode != http.StatusCreated {
-				return nil, NewAPIError(createResp)
-			}
-
-			// Decode the created role
-			var createdRole models.Role
-			if err := json.NewDecoder(createResp.Response.Body).Decode(&createdRole); err != nil {
-				return nil, fmt.Errorf("failed to decode recreated role: %w", err)
-			}
-
-			// Create the result with the original ID to maintain consistency
-			result := &RoleWithETag{
-				Role: &createdRole,
-				ETag: createResp.ETag,
-			}
-
-			// Force the right ID to maintain Terraform state consistency
-			if result.Role.ID != originalID {
-				result.Role.ID = originalID
-			}
-
-			return result, nil
+		createReq, err := c.NewRequest(http.MethodPost, createPath, role)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request for recreation: %w", err)
 		}
 
+		createResp, err := c.Do(createReq)
+		if err != nil {
+			return nil, fmt.Errorf("failed to send create request for recreation: %w", err)
+		}
+
+		defer func() {
+			if createResp.Response.Body != nil {
+				_ = createResp.Response.Body.Close()
+			}
+		}()
+
+		if createResp.Response.StatusCode != http.StatusCreated {
+			return nil, NewAPIError(createResp)
+		}
+
+		// Decode the created role
+		var createdRole models.Role
+		if err := json.NewDecoder(createResp.Response.Body).Decode(&createdRole); err != nil {
+			return nil, fmt.Errorf("failed to decode recreated role: %w", err)
+		}
+
+		// Create the result with the original ID to maintain consistency
+		result := &RoleWithETag{
+			Role: &createdRole,
+			ETag: createResp.ETag,
+		}
+
+		// Force the right ID to maintain Terraform state consistency
+		if result.Role.ID != originalID {
+			result.Role.ID = originalID
+		}
+
+		return result, nil
+	}
+
+	// Handle other error status codes
+	if respWithETag.Response.StatusCode != http.StatusOK {
 		return nil, NewAPIError(respWithETag)
 	}
 

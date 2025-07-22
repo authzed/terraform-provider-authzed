@@ -192,6 +192,26 @@ func (c *CloudClient) UpdateServiceAccount(serviceAccount *models.ServiceAccount
 		}
 	}
 
+	// Handle 409 Conflict error, FGAM config changes, by retrying with fresh ETag
+	if respWithETag.Response.StatusCode == http.StatusConflict {
+		// Close the body of the first response
+		if respWithETag.Response.Body != nil {
+			_ = respWithETag.Response.Body.Close()
+		}
+
+		// Get the latest ETag after FGAM config change
+		latestETag, err := getLatestETag()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get latest ETag after FGAM configuration change: %w", err)
+		}
+
+		// Retry the update with the fresh ETag
+		respWithETag, err = updateWithETag(latestETag)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// Keep the response body for potential error reporting
 	var respBody []byte
 	if respWithETag.Response.Body != nil {
