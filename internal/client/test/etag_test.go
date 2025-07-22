@@ -151,4 +151,94 @@ func TestETagSupport(t *testing.T) {
 		// After retry, the result should have the updated ETag
 		assert.Equal(t, updatedETag, result.ETag, "Result should have updated ETag after retry")
 	})
+
+	t.Run("Handles409ConflictRetry", func(t *testing.T) {
+		// Reset tracking variables
+		ifMatchHeaderReceived = false
+		receivedETag = ""
+		firstReceivedETag = ""
+		firstPUTRequest = true
+
+		// Create test server that returns 409 on first PUT, then succeeds
+		server409 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+
+			if r.URL.Path == "/ps/ps-test123/access/service-accounts/asa-test123" {
+				if r.Method == http.MethodPut {
+					receivedETag = r.Header.Get("If-Match")
+					ifMatchHeaderReceived = receivedETag != ""
+
+					if firstPUTRequest {
+						firstReceivedETag = receivedETag
+						firstPUTRequest = false
+						// Return 409 Conflict on first attempt
+						w.WriteHeader(http.StatusConflict)
+						_, err := w.Write([]byte(`{"error":"restricted API access configuration for permission system \"ps-test123\" has changed"}`))
+						if err != nil {
+							t.Errorf("Failed to write response: %v", err)
+						}
+						return
+					}
+				}
+
+				// For GET requests or second PUT, return success
+				w.Header().Set("ETag", testETag)
+				switch r.Method {
+				case http.MethodGet:
+					w.WriteHeader(http.StatusOK)
+					_, err := w.Write([]byte(`{
+						"id": "asa-test123",
+						"permissionsSystemId": "ps-test123",
+						"name": "Test Service Account",
+						"description": "Test Description",
+						"createdAt": "2023-05-01T12:00:00Z",
+						"creator": "test-user"
+					}`))
+					if err != nil {
+						t.Errorf("Failed to write response: %v", err)
+					}
+				case http.MethodPut:
+					// Second PUT succeeds
+					w.Header().Set("ETag", updatedETag)
+					w.WriteHeader(http.StatusOK)
+					_, err := w.Write([]byte(`{
+						"id": "asa-test123",
+						"permissionsSystemId": "ps-test123",
+						"name": "Updated Service Account",
+						"description": "Updated Description",
+						"createdAt": "2023-05-01T12:00:00Z",
+						"creator": "test-user"
+					}`))
+					if err != nil {
+						t.Errorf("Failed to write response: %v", err)
+					}
+				}
+			}
+		}))
+		defer server409.Close()
+
+		// Create client with 409 test server
+		c409 := client.NewCloudClient(&client.CloudClientConfig{
+			Host:  server409.URL,
+			Token: "test-token",
+		})
+
+		// Perform update that will trigger 409 conflict
+		sa := &models.ServiceAccount{
+			ID:                  "asa-test123",
+			PermissionsSystemID: "ps-test123",
+			Name:                "Updated Service Account",
+			Description:         "Updated Description",
+		}
+
+		result, err := c409.UpdateServiceAccount(sa, testETag)
+		// Should succeed after retry
+		assert.NoError(t, err, "Update with 409 conflict should retry and succeed")
+		assert.NotNil(t, result, "Result should not be nil after successful retry")
+		assert.True(t, ifMatchHeaderReceived, "If-Match header should be sent")
+		assert.Equal(t, testETag, firstReceivedETag, "Original ETag should be sent initially")
+
+		// After retry, the result should have the updated ETag
+		assert.Equal(t, updatedETag, result.ETag, "Result should have updated ETag after retry")
+	})
 }

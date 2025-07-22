@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 )
 
 // HTTPResponder interface for any type that can provide an HTTP response
@@ -36,9 +37,21 @@ type APIError struct {
 
 func (e *APIError) Error() string {
 	if e.Message != "" {
+		// Check if this is a FGAM configuration conflict and provide helpful context
+		if e.StatusCode == 409 && containsFGAMConfigConflict(e.Message) {
+			return fmt.Sprintf("API error (status %d): %s\n\nThis error occurs when the Fine-Grained Access Management (FGAM) configuration for the permission system has been modified by another process. The Terraform provider will automatically retry this operation.", e.StatusCode, e.Message)
+		}
 		return fmt.Sprintf("API error (status %d): %s", e.StatusCode, e.Message)
 	}
 	return fmt.Sprintf("API error (status %d)", e.StatusCode)
+}
+
+// containsFGAMConfigConflict checks if the error message indicates a FGAM configuration conflict
+func containsFGAMConfigConflict(message string) bool {
+	lowerMessage := strings.ToLower(message)
+
+	return strings.Contains(lowerMessage, "restricted api access configuration") &&
+		strings.Contains(lowerMessage, "has changed")
 }
 
 // NewAPIError creates a new APIError from an HTTPResponder
