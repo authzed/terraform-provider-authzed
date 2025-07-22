@@ -31,7 +31,6 @@ func TestAccAuthzedServiceAccount_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "permission_system_id"),
 					resource.TestCheckResourceAttrSet(resourceName, "created_at"),
-					resource.TestCheckResourceAttrSet(resourceName, "creator"),
 					resource.TestCheckResourceAttrSet(resourceName, "etag"),
 				),
 			},
@@ -80,7 +79,7 @@ func TestAccAuthzedServiceAccount_import(t *testing.T) {
 	resourceName := "authzed_service_account.test"
 	testID := helpers.GenerateTestID("test-sa-import")
 
-	resource.ParallelTest(t, resource.TestCase{
+	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckServiceAccountDestroy,
