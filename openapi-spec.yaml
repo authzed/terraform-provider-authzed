@@ -2316,6 +2316,10 @@ components:
       - kind
       - subjectId
       type: object
+    Capability:
+      enum:
+      - version_pinning
+      type: string
     CloudKind:
       enum:
       - AWS
@@ -3220,6 +3224,11 @@ components:
       type: object
     GetPermissionsSystemResponse:
       properties:
+        capabilities:
+          description: The capabilities on the Permissions System.
+          items:
+            $ref: '#/components/schemas/Capability'
+          type: array
         datastore:
           $ref: '#/components/schemas/PermissionsSystemDatastore'
         features:
@@ -3505,7 +3514,6 @@ components:
           description: List of organizations
           items:
             $ref: '#/components/schemas/Organization'
-          nullable: true
           type: array
       required:
       - organizations
@@ -3758,6 +3766,11 @@ components:
           type: string
     PermissionsSystem:
       properties:
+        capabilities:
+          description: The capabilities on the Permissions System.
+          items:
+            $ref: '#/components/schemas/Capability'
+          type: array
         datastore:
           $ref: '#/components/schemas/PermissionsSystemDatastore'
         features:
@@ -4285,6 +4298,11 @@ components:
       type: object
     UpdatePermissionsSystemResponse:
       properties:
+        capabilities:
+          description: The capabilities on the Permissions System.
+          items:
+            $ref: '#/components/schemas/Capability'
+          type: array
         datastore:
           $ref: '#/components/schemas/PermissionsSystemDatastore'
         features:
