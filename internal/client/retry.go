@@ -59,42 +59,36 @@ func (rc *RetryConfig) RetryWithExponentialBackoff(
 
 	for attempt := 0; attempt <= rc.MaxRetries; attempt++ {
 		if attempt > 0 {
-			// Wait before retrying
 			delay := rc.calculateDelay(attempt - 1)
 			time.Sleep(delay)
 		}
 
-		// First attempt uses the operation as-is, subsequent attempts need fresh ETag
+		// First attempt uses the operation as-is, subsequent attempts need fresh e-tag
 		if attempt == 0 {
 			resp, lastErr = operation()
 		} else {
-			// Get fresh ETag for retry
+			// Get fresh e-tag for retry
 			latestETag, etagErr := getLatestETag()
 			if etagErr != nil {
-				lastErr = fmt.Errorf("failed to get latest ETag for retry attempt %d (%s): %w", attempt, operationName, etagErr)
 				continue
 			}
 
-			// Retry with fresh ETag
+			// Retry with fresh e-tag
 			resp, lastErr = updateWithETag(latestETag)
 		}
 
-		// If no error or non-retryable error, return
 		if lastErr != nil {
 			return nil, lastErr
 		}
 
-		// Check if we should retry based on status code
 		if !rc.ShouldRetry(resp.Response.StatusCode) {
 			return resp, nil
 		}
 
-		// Close the response body before retrying
 		if resp.Response.Body != nil {
 			_ = resp.Response.Body.Close()
 		}
 
-		// Log retry attempt for debugging
 		if attempt < rc.MaxRetries {
 			fmt.Printf("FGAM conflict detected (status %d) for %s, retrying in %v (attempt %d/%d)\n",
 				resp.Response.StatusCode, operationName, rc.calculateDelay(attempt), attempt+1, rc.MaxRetries)
