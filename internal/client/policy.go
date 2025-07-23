@@ -143,39 +143,18 @@ func (c *CloudClient) UpdatePolicy(policy *models.Policy, etag string) (*PolicyW
 		return respWithETag, nil
 	}
 
-	// First attempt with the provided ETag
-	respWithETag, err := updateWithETag(etag)
+	// Use enhanced retry logic with exponential backoff for FGAM conflicts
+	retryConfig := DefaultRetryConfig()
+	respWithETag, err := retryConfig.RetryWithExponentialBackoff(
+		func() (*ResponseWithETag, error) {
+			return updateWithETag(etag)
+		},
+		getLatestETag,
+		updateWithETag,
+		"policy update",
+	)
 	if err != nil {
 		return nil, err
-	}
-
-	// Handle retryable errors (412 Precondition Failed, 409 Conflict) by refreshing ETag and retrying
-	retryWithFreshETag := func(errorContext string) error {
-		// Close the body of the first response
-		if respWithETag.Response.Body != nil {
-			_ = respWithETag.Response.Body.Close()
-		}
-
-		// Get the latest ETag
-		latestETag, err := getLatestETag()
-		if err != nil {
-			return fmt.Errorf("failed to get latest ETag for retry (%s): %w", errorContext, err)
-		}
-
-		// Retry the update with the latest ETag
-		respWithETag, err = updateWithETag(latestETag)
-		return err
-	}
-
-	switch respWithETag.Response.StatusCode {
-	case http.StatusPreconditionFailed:
-		if err := retryWithFreshETag("precondition failed"); err != nil {
-			return nil, err
-		}
-	case http.StatusConflict:
-		if err := retryWithFreshETag("FGAM configuration change"); err != nil {
-			return nil, err
-		}
 	}
 
 	// Keep the response body for potential error reporting

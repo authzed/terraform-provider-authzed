@@ -145,38 +145,18 @@ func (c *CloudClient) UpdateResource(resource Resource, endpoint string, body an
 		return c.Do(req)
 	}
 
-	respWithETag, err := updateWithETag(resource.GetETag())
+	// Use enhanced retry logic with exponential backoff for FGAM conflicts
+	retryConfig := DefaultRetryConfig()
+	respWithETag, err := retryConfig.RetryWithExponentialBackoff(
+		func() (*ResponseWithETag, error) {
+			return updateWithETag(resource.GetETag())
+		},
+		getLatestETag,
+		updateWithETag,
+		"resource update",
+	)
 	if err != nil {
 		return nil, err
-	}
-
-	// Handle retryable errors (412 Precondition Failed, 409 Conflict) by refreshing ETag and retrying
-	retryWithFreshETag := func(errorContext string) error {
-		// Close the body of the first response
-		if respWithETag.Response.Body != nil {
-			_ = respWithETag.Response.Body.Close()
-		}
-
-		// Get the latest ETag
-		latestETag, err := getLatestETag()
-		if err != nil {
-			return fmt.Errorf("failed to get latest ETag for retry (%s): %w", errorContext, err)
-		}
-
-		// Retry the update with the latest ETag
-		respWithETag, err = updateWithETag(latestETag)
-		return err
-	}
-
-	switch respWithETag.Response.StatusCode {
-	case http.StatusPreconditionFailed:
-		if err := retryWithFreshETag("precondition failed"); err != nil {
-			return nil, err
-		}
-	case http.StatusConflict:
-		if err := retryWithFreshETag("FGAM configuration change"); err != nil {
-			return nil, err
-		}
 	}
 
 	defer func() {
