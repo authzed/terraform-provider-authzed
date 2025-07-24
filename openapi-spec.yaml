@@ -162,7 +162,7 @@ paths:
       - deployment
   /deployment-templates/{deploymentTemplateID}:
     get:
-      description: list all deployments templates available to an organization
+      description: get a deployment template available to an organization by its ID
       operationId: GetDeploymentTemplate
       parameters:
       - description: The ID of the Deployment Template
@@ -263,8 +263,8 @@ paths:
       - organization
   /organizations/{organizationID}:
     get:
-      description: lookup an organization by its ID
-      operationId: LookupOrganization
+      description: get an organization by its ID
+      operationId: GetOrganization
       parameters:
       - description: The ID of the Organization
         in: path
@@ -2319,6 +2319,7 @@ components:
     Capability:
       enum:
       - version_pinning
+      - materialize
       type: string
     CloudKind:
       enum:
@@ -2352,6 +2353,7 @@ components:
         deploymentTemplateID:
           description: The ID of the Deployment Template to use for this Deployment
           example: dt-dev
+          minLength: 1
           type: string
         name:
           description: The name of the Deployment
@@ -2361,6 +2363,7 @@ components:
         region:
           description: The region where the Deployment will be created
           example: us-west-2
+          minLength: 1
           type: string
         replicas:
           description: The number of replicas on this Deployment
@@ -2424,9 +2427,10 @@ components:
           example: rapid
           type: string
         datastoreId:
-          description: The ID of the datastore instance to use (from ListDatastores)
+          description: The ID of the datastore instance to use (from ListDatastores).
+            If empty, a standard CockroachDB cluster will be created.
           example: dbi-qRGmqnr3EUxBZitpC3Moh
-          pattern: ^dbi-[a-zA-Z0-9-]+$
+          pattern: ^(dbi-[a-zA-Z0-9-]+)?$
           type: string
         deployments:
           description: The deployment configurations for the Permissions System
@@ -2446,7 +2450,6 @@ components:
       required:
       - name
       - systemType
-      - datastoreId
       - deployments
       - channel
       type: object
@@ -2866,14 +2869,28 @@ components:
           example: dt-basic-template
           pattern: ^dt-[a-zA-Z0-9-]+$
           type: string
+        name:
+          description: Optional name for the deployment. If not provided, will be
+            auto-generated based on the region.
+          example: my-deployment
+          maxLength: 64
+          minLength: 1
+          type: string
         regionID:
           description: The ID of the region where the deployment will be created
           example: rg-us-west-1
           pattern: ^rg-[a-zA-Z0-9-]+$
           type: string
+        replicas:
+          description: The number of replicas for the deployment
+          example: 3
+          maximum: 32
+          minimum: 1
+          type: integer
       required:
       - deploymentTemplateID
       - regionID
+      - replicas
       type: object
     DeploymentState:
       properties:
