@@ -299,8 +299,13 @@ func (r *TokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 		return
 	}
 
+	// Coordinate operations to prevent conflicts
+	permissionSystemID := state.PermissionsSystemID.ValueString()
+	r.fgamCoordinator.Lock(permissionSystemID)
+	defer r.fgamCoordinator.Unlock(permissionSystemID)
+
 	err := r.client.DeleteToken(
-		state.PermissionsSystemID.ValueString(),
+		permissionSystemID,
 		state.ServiceAccountID.ValueString(),
 		state.ID.ValueString(),
 	)

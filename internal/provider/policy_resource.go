@@ -272,7 +272,12 @@ func (r *policyResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	err := r.client.DeletePolicy(data.PermissionsSystemID.ValueString(), data.ID.ValueString())
+	// Coordinate operations to prevent conflicts
+	permissionSystemID := data.PermissionsSystemID.ValueString()
+	r.fgamCoordinator.Lock(permissionSystemID)
+	defer r.fgamCoordinator.Unlock(permissionSystemID)
+
+	err := r.client.DeletePolicy(permissionSystemID, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete policy, got error: %s", err))
 		return

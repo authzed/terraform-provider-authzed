@@ -244,7 +244,12 @@ func (r *roleResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		return
 	}
 
-	err := r.client.DeleteRole(data.PermissionsSystemID.ValueString(), data.ID.ValueString())
+	// Coordinate operations to prevent conflicts
+	permissionSystemID := data.PermissionsSystemID.ValueString()
+	r.fgamCoordinator.Lock(permissionSystemID)
+	defer r.fgamCoordinator.Unlock(permissionSystemID)
+
+	err := r.client.DeleteRole(permissionSystemID, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete role, got error: %s", err))
 		return

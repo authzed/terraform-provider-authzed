@@ -222,7 +222,12 @@ func (r *serviceAccountResource) Delete(ctx context.Context, req resource.Delete
 		return
 	}
 
-	err := r.client.DeleteServiceAccount(data.PermissionsSystemID.ValueString(), data.ID.ValueString())
+	// Coordinate operations to prevent conflicts
+	permissionSystemID := data.PermissionsSystemID.ValueString()
+	r.fgamCoordinator.Lock(permissionSystemID)
+	defer r.fgamCoordinator.Unlock(permissionSystemID)
+
+	err := r.client.DeleteServiceAccount(permissionSystemID, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete service account, got error: %s", err))
 		return
