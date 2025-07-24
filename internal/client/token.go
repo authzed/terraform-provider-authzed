@@ -51,7 +51,7 @@ func (c *CloudClient) CreateToken(ctx context.Context, token *models.TokenReques
 		Description: token.Description,
 	}
 
-	// Use enhanced retry logic with exponential backoff for FGAM conflicts
+	// Use retry logic with exponential backoff
 	retryConfig := DefaultRetryConfig()
 
 	// Define the create operation

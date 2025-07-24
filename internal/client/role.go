@@ -151,7 +151,7 @@ func (c *CloudClient) UpdateRole(ctx context.Context, role *models.Role, etag st
 		return respWithETag, nil
 	}
 
-	// Use enhanced retry logic with exponential backoff for FGAM conflicts
+	// Use retry logic with exponential backoff
 	retryConfig := DefaultRetryConfig()
 	respWithETag, err := retryConfig.RetryWithExponentialBackoffLegacy(
 		ctx,

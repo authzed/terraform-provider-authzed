@@ -27,19 +27,19 @@ type RetryResult struct {
 	Diagnostics diag.Diagnostics
 }
 
-// DefaultRetryConfig returns the default retry configuration for FGAM conflicts
+// DefaultRetryConfig returns the default retry configuration
 func DefaultRetryConfig() *RetryConfig {
 	return &RetryConfig{
 		MaxRetries:  DefaultMaxRetries,
 		BaseDelay:   DefaultBaseRetryDelay,
 		MaxDelay:    DefaultMaxRetryDelay,
 		MaxJitter:   DefaultMaxJitter,
-		ShouldRetry: shouldRetryForFGAMConflict,
+		ShouldRetry: shouldRetryForConflict,
 	}
 }
 
-// shouldRetryForFGAMConflict determines if a status code should trigger a retry
-func shouldRetryForFGAMConflict(statusCode int) bool {
+// shouldRetryForConflict determines if a status code should trigger a retry
+func shouldRetryForConflict(statusCode int) bool {
 	return statusCode == http.StatusConflict || statusCode == http.StatusPreconditionFailed
 }
 
@@ -51,14 +51,14 @@ func (rc *RetryConfig) calculateDelay(attempt int) time.Duration {
 	// Cap at max delay
 	exponentialDelay = min(exponentialDelay, rc.MaxDelay)
 
-	// Add random jitter to prevent thundering herd
+	// Add random jitter
 	jitter := time.Duration(rand.Intn(int(rc.MaxJitter)))
 
 	return exponentialDelay + jitter
 }
 
 // RetryWithExponentialBackoff executes a function with exponential backoff retry logic
-// Returns RetryResult with diagnostics that appear in normal Terraform output
+// Returns RetryResult with diagnostics
 func (rc *RetryConfig) RetryWithExponentialBackoff(
 	ctx context.Context,
 	operation func() (*ResponseWithETag, error),
@@ -74,15 +74,13 @@ func (rc *RetryConfig) RetryWithExponentialBackoff(
 		if attempt > 0 {
 			delay := rc.calculateDelay(attempt - 1)
 
-			// Add user-visible warning about retry - this shows in normal terraform output
 			diagnostics.AddWarning(
-				"FGAM Conflict - Retrying Operation",
-				fmt.Sprintf("Fine-Grained Access Management configuration changed during %s. Retrying in %v (attempt %d of %d).",
+				"Retrying Operation",
+				fmt.Sprintf("Configuration changed during %s. Retrying in %v (attempt %d of %d).",
 					operationName, delay, attempt+1, rc.MaxRetries+1),
 			)
 
-			// Also log for debugging
-			tflog.Warn(ctx, "FGAM conflict detected, retrying with exponential backoff", map[string]interface{}{
+			tflog.Warn(ctx, "conflict detected, retrying with exponential backoff", map[string]interface{}{
 				"operation":    operationName,
 				"status_code":  resp.Response.StatusCode,
 				"attempt":      attempt + 1,
@@ -117,15 +115,13 @@ func (rc *RetryConfig) RetryWithExponentialBackoff(
 		// Check if we should retry based on status code
 		if !rc.ShouldRetry(resp.Response.StatusCode) {
 			if attempt > 0 {
-				// Add user-visible info about successful retry
 				diagnostics.AddWarning(
-					"FGAM Retry Successful",
-					fmt.Sprintf("%s succeeded after %d retries due to FGAM configuration changes.",
+					"Retry Successful",
+					fmt.Sprintf("%s succeeded after %d retries.",
 						operationName, attempt),
 				)
 
-				// Also log for debugging
-				tflog.Info(ctx, "FGAM retry succeeded", map[string]interface{}{
+				tflog.Info(ctx, "retry succeeded", map[string]interface{}{
 					"operation":     operationName,
 					"final_attempt": attempt + 1,
 					"total_retries": attempt,
@@ -143,15 +139,13 @@ func (rc *RetryConfig) RetryWithExponentialBackoff(
 		}
 	}
 
-	// Max retries exceeded - add user-visible error
 	diagnostics.AddError(
-		"FGAM Retries Exhausted",
-		fmt.Sprintf("Maximum retries (%d) exceeded for %s due to persistent FGAM conflicts. The Fine-Grained Access Management configuration is changing too frequently.",
+		"Retries Exhausted",
+		fmt.Sprintf("Maximum retries (%d) exceeded for %s. The configuration is changing too frequently.",
 			rc.MaxRetries, operationName),
 	)
 
-	// Also log for debugging
-	tflog.Error(ctx, "FGAM retries exhausted", map[string]interface{}{
+	tflog.Error(ctx, "retries exhausted", map[string]interface{}{
 		"operation":    operationName,
 		"max_attempts": rc.MaxRetries + 1,
 		"final_status": resp.Response.StatusCode,

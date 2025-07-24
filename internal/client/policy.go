@@ -144,7 +144,7 @@ func (c *CloudClient) UpdatePolicy(ctx context.Context, policy *models.Policy, e
 		return respWithETag, nil
 	}
 
-	// Use enhanced retry logic with exponential backoff for FGAM conflicts
+	// Use retry logic with exponential backoff
 	retryConfig := DefaultRetryConfig()
 	respWithETag, err := retryConfig.RetryWithExponentialBackoffLegacy(
 		ctx,

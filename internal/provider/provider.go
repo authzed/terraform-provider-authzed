@@ -13,14 +13,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// FGAMCoordinator handles serialization of FGAM operations per permission system
+// FGAMCoordinator handles serialization of operations per permission system
 type FGAMCoordinator struct {
 	enabled  bool
 	mutexes  map[string]*sync.Mutex
 	mapMutex sync.RWMutex
 }
 
-// NewFGAMCoordinator creates a new FGAM coordinator
+// NewFGAMCoordinator creates a new coordinator
 func NewFGAMCoordinator(enabled bool) *FGAMCoordinator {
 	return &FGAMCoordinator{
 		enabled: enabled,
@@ -114,7 +114,7 @@ func (p *CloudProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp
 			},
 			"fgam_serialization": schema.BoolAttribute{
 				Optional:    true,
-				Description: "Enable serialization of Fine-Grained Access Management operations to prevent conflicts. When enabled, FGAM resources within the same permission system will be created/updated sequentially instead of in parallel.",
+				Description: "Enable serialization of operations to prevent conflicts. When enabled, resources within the same permission system will be created/updated sequentially instead of in parallel.",
 			},
 		},
 	}
@@ -135,7 +135,7 @@ func (p *CloudProvider) Configure(ctx context.Context, req provider.ConfigureReq
 
 	cloudClient := client.NewCloudClient(clientConfig)
 
-	// Create FGAM coordinator based on configuration
+	// Create coordinator based on configuration
 	fgamSerialization := config.FGAMSerialization.ValueBool()
 	fgamCoordinator := NewFGAMCoordinator(fgamSerialization)
 

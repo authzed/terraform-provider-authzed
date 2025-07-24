@@ -162,7 +162,7 @@ func (c *CloudClient) UpdateResource(ctx context.Context, resource Resource, end
 		return resp, nil
 	}
 
-	// Use enhanced retry logic with exponential backoff for FGAM conflicts
+	// Use retry logic with exponential backoff
 	retryConfig := DefaultRetryConfig()
 	respWithETag, err := retryConfig.RetryWithExponentialBackoffLegacy(
 		ctx,
@@ -351,7 +351,7 @@ func (c *CloudClient) GetResourceWithFactory(endpoint string, dest any, factory 
 
 // CreateResourceWithFactory combines CreateResource with a factory to create a proper Resource
 func (c *CloudClient) CreateResourceWithFactory(ctx context.Context, endpoint string, body any, dest any, factory ResourceFactory) (Resource, error) {
-	// Use enhanced retry logic with exponential backoff for FGAM conflicts
+	// Use retry logic with exponential backoff
 	retryConfig := DefaultRetryConfig()
 
 	// Define the create operation

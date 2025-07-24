@@ -132,15 +132,7 @@ func (c *CloudClient) UpdateServiceAccount(ctx context.Context, serviceAccount *
 			return nil, fmt.Errorf("failed to send request: %w", err)
 		}
 
-		if resp.Response.StatusCode != http.StatusOK {
-			defer func() {
-				if resp.Response.Body != nil {
-					_ = resp.Response.Body.Close()
-				}
-			}()
-			return nil, NewAPIError(resp)
-		}
-
+		// Return the response regardless of status code for retry logic to handle
 		return resp, nil
 	}
 
@@ -168,7 +160,7 @@ func (c *CloudClient) UpdateServiceAccount(ctx context.Context, serviceAccount *
 		return getResp.ETag, nil
 	}
 
-	// Use enhanced retry logic with exponential backoff for FGAM conflicts
+	// Use retry logic with exponential backoff
 	retryConfig := DefaultRetryConfig()
 	retryResult := retryConfig.RetryWithExponentialBackoff(
 		ctx,

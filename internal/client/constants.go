@@ -12,13 +12,10 @@ const (
 	// DefaultDeletePollInterval is the default interval between polling attempts during delete operations
 	DefaultDeletePollInterval = 2 * time.Second
 
-	// FGAM retry configuration for handling concurrent operations
-	// DefaultMaxRetries is the default number of retry attempts for FGAM conflicts
-	DefaultMaxRetries = 8
-	// DefaultBaseRetryDelay is the base delay for exponential backoff
+	// Retry configuration for handling concurrent operations
+	// DefaultMaxRetries is the default number of retry attempts
+	DefaultMaxRetries     = 8
 	DefaultBaseRetryDelay = 100 * time.Millisecond
-	// DefaultMaxRetryDelay is the maximum delay between retry attempts
-	DefaultMaxRetryDelay = 5 * time.Second
-	// DefaultMaxJitter is the maximum random jitter added to retry delays
-	DefaultMaxJitter = 500 * time.Millisecond
+	DefaultMaxRetryDelay  = 5 * time.Second
+	DefaultMaxJitter      = 500 * time.Millisecond
 )

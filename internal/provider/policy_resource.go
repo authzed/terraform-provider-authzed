@@ -24,7 +24,8 @@ func NewPolicyResource() resource.Resource {
 }
 
 type policyResource struct {
-	client *client.CloudClient
+	client          *client.CloudClient
+	fgamCoordinator *FGAMCoordinator
 }
 
 type policyResourceModel struct {
@@ -93,16 +94,17 @@ func (r *policyResource) Configure(_ context.Context, req resource.ConfigureRequ
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.CloudClient)
+	providerData, ok := req.ProviderData.(*CloudProviderData)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *client.CloudClient, got: %T", req.ProviderData),
+			fmt.Sprintf("Expected *CloudProviderData, got: %T", req.ProviderData),
 		)
 		return
 	}
 
-	r.client = client
+	r.client = providerData.Client
+	r.fgamCoordinator = providerData.FGAMCoordinator
 }
 
 func (r *policyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -127,6 +129,11 @@ func (r *policyResource) Create(ctx context.Context, req resource.CreateRequest,
 		PrincipalID:         data.PrincipalID.ValueString(),
 		RoleIDs:             roleIDs,
 	}
+
+	// Coordinate operations to prevent conflicts
+	permissionSystemID := data.PermissionsSystemID.ValueString()
+	r.fgamCoordinator.Lock(permissionSystemID)
+	defer r.fgamCoordinator.Unlock(permissionSystemID)
 
 	createdPolicyWithETag, err := r.client.CreatePolicy(ctx, policy)
 	if err != nil {
@@ -222,6 +229,11 @@ func (r *policyResource) Update(ctx context.Context, req resource.UpdateRequest,
 		PrincipalID:         data.PrincipalID.ValueString(),
 		RoleIDs:             roleIDs,
 	}
+
+	// Coordinate operations to prevent conflicts
+	permissionSystemID := data.PermissionsSystemID.ValueString()
+	r.fgamCoordinator.Lock(permissionSystemID)
+	defer r.fgamCoordinator.Unlock(permissionSystemID)
 
 	// Use the ETag from state for optimistic concurrency control
 	updatedPolicyWithETag, err := r.client.UpdatePolicy(ctx, policy, state.ETag.ValueString())

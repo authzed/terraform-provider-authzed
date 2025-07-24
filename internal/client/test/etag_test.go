@@ -16,13 +16,23 @@ func TestETagSupport(t *testing.T) {
 	const testETag = "W/\"etag-service-account\""
 	const updatedETag = "W/\"updated-etag-service-account\""
 	updateRequestCount := 0
+	getRequestCount := 0
 
-	// Create test server
+	// Create test server that simulates the full retry flow
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			// For GET requests, return service account with ETag
-			w.Header().Set("ETag", testETag)
+			getRequestCount++
+
+			// Return appropriate ETag based on whether we've had a PUT failure
+			// If we've had any PUT requests (meaning the first PUT failed with 412), return updated ETag
+			// Otherwise, return the original ETag
+			currentETag := testETag
+			if updateRequestCount > 0 {
+				currentETag = updatedETag
+			}
+
+			w.Header().Set("ETag", currentETag)
 			w.WriteHeader(http.StatusOK)
 			_, err := w.Write([]byte(`{
 				"id": "asa-test123",
@@ -38,8 +48,6 @@ func TestETagSupport(t *testing.T) {
 
 		case http.MethodPut:
 			updateRequestCount++
-
-			// Check if If-Match header is present and correct
 			ifMatch := r.Header.Get("If-Match")
 
 			if updateRequestCount == 1 {
@@ -56,6 +64,16 @@ func TestETagSupport(t *testing.T) {
 				// Return 412 to simulate concurrent modification
 				w.WriteHeader(http.StatusPreconditionFailed)
 				_, err := w.Write([]byte(`{"error": "Precondition failed"}`))
+				if err != nil {
+					t.Errorf("Failed to write response: %v", err)
+				}
+				return
+			}
+
+			// Second PUT: should succeed with updated ETag
+			if ifMatch != updatedETag {
+				w.WriteHeader(http.StatusBadRequest)
+				_, err := w.Write([]byte(`{"error": "Invalid ETag for retry"}`))
 				if err != nil {
 					t.Errorf("Failed to write response: %v", err)
 				}
@@ -90,13 +108,19 @@ func TestETagSupport(t *testing.T) {
 	c := client.NewCloudClient(cfg)
 
 	t.Run("GetCaptures_ETag", func(t *testing.T) {
+		// Reset counters for this test
+		updateRequestCount = 0
+		getRequestCount = 0
+
 		sa, err := c.GetServiceAccount("ps-test123", "asa-test123")
 		assert.NoError(t, err)
 		assert.Equal(t, testETag, sa.GetETag())
 	})
 
 	t.Run("UpdateSends_IfMatch", func(t *testing.T) {
-		t.Skip("TODO: Fix mock server for new retry logic")
+		// Reset counters for this test
+		updateRequestCount = 0
+		getRequestCount = 0
 		serviceAccount := &models.ServiceAccount{
 			ID:                  "asa-test123",
 			PermissionsSystemID: "ps-test123",
@@ -104,16 +128,24 @@ func TestETagSupport(t *testing.T) {
 			Description:         "Updated Description",
 		}
 
-		// This should work after retry
+		// This should work after retry (first PUT fails with 412, GET fetches new ETag, second PUT succeeds)
 		result := c.UpdateServiceAccount(context.Background(), serviceAccount, testETag)
+
 		assert.False(t, result.Diagnostics.HasError())
 		assert.NotNil(t, result.ServiceAccount)
-		assert.Equal(t, updatedETag, result.ServiceAccount.ETag)
+		if result.ServiceAccount != nil {
+			assert.Equal(t, updatedETag, result.ServiceAccount.ETag)
+		}
+
+		// Verify the retry flow: 1 PUT (412) + 1 GET (fetch new ETag) + 1 PUT (success)
+		assert.Equal(t, 1, getRequestCount, "Should have made 1 GET request (to fetch new ETag after 412)")
+		assert.Equal(t, 2, updateRequestCount, "Should have made 2 PUT requests (initial fail + retry success)")
 	})
 
 	t.Run("DetectsConcurrentModification", func(t *testing.T) {
-		// Reset counter for this test
+		// Reset counters for this test
 		updateRequestCount = 0
+		getRequestCount = 0
 
 		serviceAccount := &models.ServiceAccount{
 			ID:                  "asa-test123",
@@ -126,7 +158,10 @@ func TestETagSupport(t *testing.T) {
 		assert.False(t, result.Diagnostics.HasError())
 		assert.NotNil(t, result.ServiceAccount)
 		assert.Equal(t, updatedETag, result.ServiceAccount.ETag)
-		assert.Equal(t, 2, updateRequestCount)
+
+		// Verify retry flow occurred
+		assert.Equal(t, 1, getRequestCount, "Should have made 1 GET request (to fetch new ETag after 412)")
+		assert.Equal(t, 2, updateRequestCount, "Should have made 2 PUT requests (initial fail + retry success)")
 	})
 
 	t.Run("Handles409ConflictRetry", func(t *testing.T) {

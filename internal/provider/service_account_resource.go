@@ -110,7 +110,7 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 		PermissionsSystemID: data.PermissionsSystemID.ValueString(),
 	}
 
-	// Coordinate FGAM operations to prevent conflicts
+	// Coordinate operations to prevent conflicts
 	permissionSystemID := data.PermissionsSystemID.ValueString()
 	r.fgamCoordinator.Lock(permissionSystemID)
 	defer r.fgamCoordinator.Unlock(permissionSystemID)
@@ -181,7 +181,7 @@ func (r *serviceAccountResource) Update(ctx context.Context, req resource.Update
 		PermissionsSystemID: data.PermissionsSystemID.ValueString(),
 	}
 
-	// Coordinate FGAM operations to prevent conflicts
+	// Coordinate operations to prevent conflicts
 	permissionSystemID := data.PermissionsSystemID.ValueString()
 	r.fgamCoordinator.Lock(permissionSystemID)
 	defer r.fgamCoordinator.Unlock(permissionSystemID)
