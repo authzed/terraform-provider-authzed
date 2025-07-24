@@ -277,8 +277,10 @@ func (r *TokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 
 	// Update resource data with the response
-	plan.CreatedAt = types.StringValue(updatedTokenWithETag.Token.CreatedAt)
-	plan.Creator = types.StringValue(updatedTokenWithETag.Token.Creator)
+	// Preserve immutable fields from state
+	plan.CreatedAt = state.CreatedAt
+	plan.Creator = state.Creator
+	// Only update fields that can actually change
 	plan.ETag = types.StringValue(updatedTokenWithETag.ETag)
 
 	// Preserve the token value and hash from state since they won't be returned in updates

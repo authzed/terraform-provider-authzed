@@ -243,15 +243,11 @@ func (r *policyResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	// Update resource data with the response
-	data.ID = types.StringValue(updatedPolicyWithETag.Policy.ID)
-
-	// If the ID is empty, preserve the original ID
-	if data.ID.ValueString() == "" {
-		data.ID = state.ID
-	}
-
-	data.CreatedAt = types.StringValue(updatedPolicyWithETag.Policy.CreatedAt)
-	data.Creator = types.StringValue(updatedPolicyWithETag.Policy.Creator)
+	// Preserve immutable fields from state
+	data.ID = state.ID
+	data.CreatedAt = state.CreatedAt
+	data.Creator = state.Creator
+	// Only update fields that can actually change
 	data.ETag = types.StringValue(updatedPolicyWithETag.ETag)
 
 	// Update role IDs in case the order or values changed
