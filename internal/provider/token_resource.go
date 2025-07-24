@@ -140,7 +140,7 @@ func (r *TokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		ReturnPlainText:     true, // Always request plain text during creation
 	}
 
-	createdTokenWithETag, err := r.client.CreateToken(token)
+	createdTokenWithETag, err := r.client.CreateToken(ctx, token)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating token",
@@ -255,7 +255,7 @@ func (r *TokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 
 	// Use the ETag from state for optimistic concurrency control
-	updatedTokenWithETag, err := r.client.UpdateToken(token, state.ETag.ValueString())
+	updatedTokenWithETag, err := r.client.UpdateToken(ctx, token, state.ETag.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating token",

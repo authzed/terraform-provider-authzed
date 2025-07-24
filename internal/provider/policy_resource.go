@@ -128,7 +128,7 @@ func (r *policyResource) Create(ctx context.Context, req resource.CreateRequest,
 		RoleIDs:             roleIDs,
 	}
 
-	createdPolicyWithETag, err := r.client.CreatePolicy(policy)
+	createdPolicyWithETag, err := r.client.CreatePolicy(ctx, policy)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create policy, got error: %s", err))
 		return
@@ -224,7 +224,7 @@ func (r *policyResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	// Use the ETag from state for optimistic concurrency control
-	updatedPolicyWithETag, err := r.client.UpdatePolicy(policy, state.ETag.ValueString())
+	updatedPolicyWithETag, err := r.client.UpdatePolicy(ctx, policy, state.ETag.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update policy, got error: %s", err))
 		return

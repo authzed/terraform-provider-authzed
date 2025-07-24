@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -109,45 +110,62 @@ func (c *CloudClient) Do(req *http.Request) (*ResponseWithETag, error) {
 }
 
 // UpdateResource updates any resource that implements the Resource interface
-func (c *CloudClient) UpdateResource(resource Resource, endpoint string, body any) (Resource, error) {
+func (c *CloudClient) UpdateResource(ctx context.Context, resource Resource, endpoint string, body any) (Resource, error) {
 	// Define a function to get the latest ETag
 	getLatestETag := func() (string, error) {
-		getReq, err := c.NewRequest(http.MethodGet, endpoint, nil)
+		req, err := c.NewRequest(http.MethodGet, endpoint, nil)
 		if err != nil {
 			return "", fmt.Errorf("failed to create GET request: %w", err)
 		}
 
-		getResp, err := c.Do(getReq)
+		resp, err := c.Do(req)
 		if err != nil {
 			return "", fmt.Errorf("failed to send GET request: %w", err)
 		}
 		defer func() {
-			if getResp.Response.Body != nil {
-				_ = getResp.Response.Body.Close()
+			if resp.Response.Body != nil {
+				_ = resp.Response.Body.Close()
 			}
 		}()
 
-		if getResp.Response.StatusCode != http.StatusOK {
-			return "", fmt.Errorf("failed to get latest ETag, status: %d", getResp.Response.StatusCode)
+		if resp.Response.StatusCode != http.StatusOK {
+			return "", NewAPIError(resp)
 		}
 
-		// Extract ETag from response header
-		return getResp.ETag, nil
+		return resp.ETag, nil
 	}
 
-	// Try update with current ETag
+	// Define a function to update with a specific ETag
 	updateWithETag := func(currentETag string) (*ResponseWithETag, error) {
-		req, err := c.NewRequest(http.MethodPut, endpoint, body, WithETag(currentETag))
+		req, err := c.NewRequest(http.MethodPut, endpoint, body)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
 
-		return c.Do(req)
+		// Set the If-Match header for optimistic concurrency control
+		req.Header.Set("If-Match", currentETag)
+
+		resp, err := c.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to send request: %w", err)
+		}
+
+		if resp.Response.StatusCode != http.StatusOK {
+			defer func() {
+				if resp.Response.Body != nil {
+					_ = resp.Response.Body.Close()
+				}
+			}()
+			return nil, NewAPIError(resp)
+		}
+
+		return resp, nil
 	}
 
 	// Use enhanced retry logic with exponential backoff for FGAM conflicts
 	retryConfig := DefaultRetryConfig()
-	respWithETag, err := retryConfig.RetryWithExponentialBackoff(
+	respWithETag, err := retryConfig.RetryWithExponentialBackoffLegacy(
+		ctx,
 		func() (*ResponseWithETag, error) {
 			return updateWithETag(resource.GetETag())
 		},
@@ -160,16 +178,14 @@ func (c *CloudClient) UpdateResource(resource Resource, endpoint string, body an
 	}
 
 	defer func() {
-		// ignore the error
-		_ = respWithETag.Response.Body.Close()
+		if respWithETag.Response.Body != nil {
+			_ = respWithETag.Response.Body.Close()
+		}
 	}()
-
-	if respWithETag.Response.StatusCode != http.StatusOK {
-		return nil, NewAPIError(respWithETag)
-	}
 
 	// Update the resource's ETag
 	resource.SetETag(respWithETag.ETag)
+
 	return resource, nil
 }
 
@@ -334,16 +350,47 @@ func (c *CloudClient) GetResourceWithFactory(endpoint string, dest any, factory 
 }
 
 // CreateResourceWithFactory combines CreateResource with a factory to create a proper Resource
-func (c *CloudClient) CreateResourceWithFactory(endpoint string, body any, dest any, factory ResourceFactory) (Resource, error) {
-	req, err := c.NewRequest(http.MethodPost, endpoint, body)
+func (c *CloudClient) CreateResourceWithFactory(ctx context.Context, endpoint string, body any, dest any, factory ResourceFactory) (Resource, error) {
+	// Use enhanced retry logic with exponential backoff for FGAM conflicts
+	retryConfig := DefaultRetryConfig()
+
+	// Define the create operation
+	createOperation := func() (*ResponseWithETag, error) {
+		req, err := c.NewRequest(http.MethodPost, endpoint, body)
+		if err != nil {
+			return nil, err
+		}
+
+		respWithETag, err := c.Do(req)
+		if err != nil {
+			return nil, err
+		}
+
+		return respWithETag, nil
+	}
+
+	// For CREATE operations, we don't need to get fresh ETags since there's no existing resource
+	// We just retry the same operation
+	getLatestETag := func() (string, error) {
+		return "", nil // Not used for CREATE operations
+	}
+
+	createWithETag := func(etag string) (*ResponseWithETag, error) {
+		return createOperation() // Retry the same CREATE operation
+	}
+
+	// Execute with retry logic
+	respWithETag, err := retryConfig.RetryWithExponentialBackoffLegacy(
+		ctx,
+		createOperation,
+		getLatestETag,
+		createWithETag,
+		"resource create",
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	respWithETag, err := c.Do(req)
-	if err != nil {
-		return nil, err
-	}
 	defer func() {
 		// ignore the error
 		_ = respWithETag.Response.Body.Close()

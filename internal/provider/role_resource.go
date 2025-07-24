@@ -119,7 +119,7 @@ func (r *roleResource) Create(ctx context.Context, req resource.CreateRequest, r
 		Permissions:         permissionsMap,
 	}
 
-	createdRoleWithETag, err := r.client.CreateRole(role)
+	createdRoleWithETag, err := r.client.CreateRole(ctx, role)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create role, got error: %s", err))
 		return
@@ -204,7 +204,7 @@ func (r *roleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	}
 
 	// Use the ETag from state for optimistic concurrency control
-	updatedRoleWithETag, err := r.client.UpdateRole(role, state.ETag.ValueString())
+	updatedRoleWithETag, err := r.client.UpdateRole(ctx, role, state.ETag.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update role, got error: %s", err))
 		return

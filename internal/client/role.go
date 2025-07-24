@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -83,11 +84,11 @@ func (c *CloudClient) GetRole(permissionsSystemID, roleID string) (*RoleWithETag
 }
 
 // CreateRole creates a new role
-func (c *CloudClient) CreateRole(role *models.Role) (*RoleWithETag, error) {
+func (c *CloudClient) CreateRole(ctx context.Context, role *models.Role) (*RoleWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/roles", role.PermissionsSystemID)
 
 	var createdRole models.Role
-	resource, err := c.CreateResourceWithFactory(path, role, &createdRole, NewRoleResource)
+	resource, err := c.CreateResourceWithFactory(ctx, path, role, &createdRole, NewRoleResource)
 	if err != nil {
 		// Special handling for specific errors
 		if apiErr, ok := err.(*APIError); ok && apiErr.StatusCode == http.StatusInternalServerError {
@@ -103,7 +104,7 @@ func (c *CloudClient) CreateRole(role *models.Role) (*RoleWithETag, error) {
 }
 
 // UpdateRole updates an existing role using the PUT method
-func (c *CloudClient) UpdateRole(role *models.Role, etag string) (*RoleWithETag, error) {
+func (c *CloudClient) UpdateRole(ctx context.Context, role *models.Role, etag string) (*RoleWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/roles/%s", role.PermissionsSystemID, role.ID)
 
 	getLatestETag := func() (string, error) {
@@ -152,7 +153,8 @@ func (c *CloudClient) UpdateRole(role *models.Role, etag string) (*RoleWithETag,
 
 	// Use enhanced retry logic with exponential backoff for FGAM conflicts
 	retryConfig := DefaultRetryConfig()
-	respWithETag, err := retryConfig.RetryWithExponentialBackoff(
+	respWithETag, err := retryConfig.RetryWithExponentialBackoffLegacy(
+		ctx,
 		func() (*ResponseWithETag, error) {
 			return updateWithETag(etag)
 		},

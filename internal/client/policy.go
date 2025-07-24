@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -81,11 +82,11 @@ func (c *CloudClient) GetPolicy(permissionsSystemID, policyID string) (*PolicyWi
 }
 
 // CreatePolicy creates a new policy
-func (c *CloudClient) CreatePolicy(policy *models.Policy) (*PolicyWithETag, error) {
+func (c *CloudClient) CreatePolicy(ctx context.Context, policy *models.Policy) (*PolicyWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/policies", policy.PermissionsSystemID)
 
 	var createdPolicy models.Policy
-	resource, err := c.CreateResourceWithFactory(path, policy, &createdPolicy, NewPolicyResource)
+	resource, err := c.CreateResourceWithFactory(ctx, path, policy, &createdPolicy, NewPolicyResource)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +95,7 @@ func (c *CloudClient) CreatePolicy(policy *models.Policy) (*PolicyWithETag, erro
 }
 
 // UpdatePolicy updates an existing policy using the PUT method
-func (c *CloudClient) UpdatePolicy(policy *models.Policy, etag string) (*PolicyWithETag, error) {
+func (c *CloudClient) UpdatePolicy(ctx context.Context, policy *models.Policy, etag string) (*PolicyWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/policies/%s", policy.PermissionsSystemID, policy.ID)
 
 	// Define a function to get the latest ETag
@@ -145,7 +146,8 @@ func (c *CloudClient) UpdatePolicy(policy *models.Policy, etag string) (*PolicyW
 
 	// Use enhanced retry logic with exponential backoff for FGAM conflicts
 	retryConfig := DefaultRetryConfig()
-	respWithETag, err := retryConfig.RetryWithExponentialBackoff(
+	respWithETag, err := retryConfig.RetryWithExponentialBackoffLegacy(
+		ctx,
 		func() (*ResponseWithETag, error) {
 			return updateWithETag(etag)
 		},

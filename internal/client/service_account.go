@@ -1,12 +1,14 @@
 package client
 
 import (
-	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"terraform-provider-authzed/internal/models"
+
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 )
 
 // ServiceAccountWithETag represents a service account resource with its ETag
@@ -92,11 +94,12 @@ func (c *CloudClient) GetServiceAccount(permissionsSystemID, serviceAccountID st
 	return resource.(*ServiceAccountWithETag), nil
 }
 
-func (c *CloudClient) CreateServiceAccount(serviceAccount *models.ServiceAccount) (*ServiceAccountWithETag, error) {
+// CreateServiceAccount creates a new service account using the POST method
+func (c *CloudClient) CreateServiceAccount(ctx context.Context, serviceAccount *models.ServiceAccount) (*ServiceAccountWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/service-accounts", serviceAccount.PermissionsSystemID)
 
 	var createdServiceAccount models.ServiceAccount
-	resource, err := c.CreateResourceWithFactory(path, serviceAccount, &createdServiceAccount, NewServiceAccountResource)
+	resource, err := c.CreateResourceWithFactory(ctx, path, serviceAccount, &createdServiceAccount, NewServiceAccountResource)
 	if err != nil {
 		return nil, err
 	}
@@ -104,20 +107,41 @@ func (c *CloudClient) CreateServiceAccount(serviceAccount *models.ServiceAccount
 	return resource.(*ServiceAccountWithETag), nil
 }
 
+// ServiceAccountUpdateResult contains the result of a service account update and any diagnostics
+type ServiceAccountUpdateResult struct {
+	ServiceAccount *ServiceAccountWithETag
+	Diagnostics    diag.Diagnostics
+}
+
 // UpdateServiceAccount updates an existing service account using the PUT method
-func (c *CloudClient) UpdateServiceAccount(serviceAccount *models.ServiceAccount, etag string) (*ServiceAccountWithETag, error) {
+func (c *CloudClient) UpdateServiceAccount(ctx context.Context, serviceAccount *models.ServiceAccount, etag string) *ServiceAccountUpdateResult {
 	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s", serviceAccount.PermissionsSystemID, serviceAccount.ID)
 
-	// First, verify that the service account exists
-	existingServiceAccount, err := c.GetServiceAccount(serviceAccount.PermissionsSystemID, serviceAccount.ID)
-	if err != nil {
-		// Proceed with the update attempt even if verification fails
-		// This provides better resilience against transient API issues
-	} else {
-		// If we found the service account, use its ETag if the provided ETag is empty
-		if etag == "" && existingServiceAccount.ETag != "" {
-			etag = existingServiceAccount.ETag
+	// Define a function to update with a specific ETag
+	updateWithETag := func(currentETag string) (*ResponseWithETag, error) {
+		req, err := c.NewRequest(http.MethodPut, path, serviceAccount)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
+
+		// Set the If-Match header for optimistic concurrency control
+		req.Header.Set("If-Match", currentETag)
+
+		resp, err := c.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to send request: %w", err)
+		}
+
+		if resp.Response.StatusCode != http.StatusOK {
+			defer func() {
+				if resp.Response.Body != nil {
+					_ = resp.Response.Body.Close()
+				}
+			}()
+			return nil, NewAPIError(resp)
+		}
+
+		return resp, nil
 	}
 
 	// Define a function to get the latest ETag
@@ -138,37 +162,16 @@ func (c *CloudClient) UpdateServiceAccount(serviceAccount *models.ServiceAccount
 		}()
 
 		if getResp.Response.StatusCode != http.StatusOK {
-			return "", fmt.Errorf("failed to get latest ETag, status: %d", getResp.Response.StatusCode)
+			return "", NewAPIError(getResp)
 		}
 
-		// Extract ETag from response header
-		latestETag := getResp.ETag
-		return latestETag, nil
-	}
-
-	// Try update with provided ETag
-	updateWithETag := func(currentETag string) (*ResponseWithETag, error) {
-		req, err := c.NewRequest(http.MethodPut, path, serviceAccount)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create request: %w", err)
-		}
-
-		// Only set If-Match header if we have a non-empty ETag
-		if currentETag != "" {
-			req.Header.Set("If-Match", currentETag)
-		}
-
-		respWithETag, err := c.Do(req)
-		if err != nil {
-			return nil, fmt.Errorf("failed to send request: %w", err)
-		}
-
-		return respWithETag, nil
+		return getResp.ETag, nil
 	}
 
 	// Use enhanced retry logic with exponential backoff for FGAM conflicts
 	retryConfig := DefaultRetryConfig()
-	respWithETag, err := retryConfig.RetryWithExponentialBackoff(
+	retryResult := retryConfig.RetryWithExponentialBackoff(
+		ctx,
 		func() (*ResponseWithETag, error) {
 			return updateWithETag(etag)
 		},
@@ -176,100 +179,37 @@ func (c *CloudClient) UpdateServiceAccount(serviceAccount *models.ServiceAccount
 		updateWithETag,
 		"service account update",
 	)
-	if err != nil {
-		return nil, err
+
+	if retryResult.Response == nil {
+		return &ServiceAccountUpdateResult{
+			ServiceAccount: nil,
+			Diagnostics:    retryResult.Diagnostics,
+		}
 	}
 
-	// Keep the response body for potential error reporting
-	var respBody []byte
-	if respWithETag.Response.Body != nil {
-		respBody, _ = io.ReadAll(respWithETag.Response.Body)
-		// Replace the body for further use
-		respWithETag.Response.Body = io.NopCloser(bytes.NewBuffer(respBody))
-	}
-
+	respWithETag := retryResult.Response
 	defer func() {
 		if respWithETag.Response.Body != nil {
 			_ = respWithETag.Response.Body.Close()
 		}
 	}()
 
-	// Handle 404 Not Found
-	if respWithETag.Response.StatusCode == http.StatusNotFound {
-		// Recreate the service account using POST to the base endpoint
-		createPath := fmt.Sprintf("/ps/%s/access/service-accounts", serviceAccount.PermissionsSystemID)
-		originalID := serviceAccount.ID
-
-		createReq, err := c.NewRequest(http.MethodPost, createPath, serviceAccount)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create request for recreation: %w", err)
-		}
-
-		createResp, err := c.Do(createReq)
-		if err != nil {
-			return nil, fmt.Errorf("failed to send create request for recreation: %w", err)
-		}
-
-		defer func() {
-			if createResp.Response.Body != nil {
-				_ = createResp.Response.Body.Close()
-			}
-		}()
-
-		if createResp.Response.StatusCode != http.StatusCreated {
-			return nil, NewAPIError(createResp)
-		}
-
-		// Decode the created service account
-		var createdServiceAccount models.ServiceAccount
-		if err := json.NewDecoder(createResp.Response.Body).Decode(&createdServiceAccount); err != nil {
-			return nil, fmt.Errorf("failed to decode recreated service account: %w", err)
-		}
-
-		// Create the result with the ETag
-		etag := createResp.ETag
-		if etag == "" && createdServiceAccount.ConfigETag != "" {
-			etag = createdServiceAccount.ConfigETag
-		}
-
-		// Create the result with the original ID to maintain consistency
-		result := &ServiceAccountWithETag{
-			ServiceAccount: &createdServiceAccount,
-			ETag:           etag,
-		}
-
-		// Force the right ID to maintain Terraform state consistency
-		if result.ServiceAccount.ID != originalID {
-			result.ServiceAccount.ID = originalID
-		}
-
-		return result, nil
-	}
-
-	// Handle other error status codes
-	if respWithETag.Response.StatusCode != http.StatusOK {
-		return nil, NewAPIError(respWithETag)
-	}
-
-	// Decode the updated service account from the response
 	var updatedServiceAccount models.ServiceAccount
-	if err := json.NewDecoder(io.NopCloser(bytes.NewBuffer(respBody))).Decode(&updatedServiceAccount); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+	if err := json.NewDecoder(respWithETag.Response.Body).Decode(&updatedServiceAccount); err != nil {
+		retryResult.Diagnostics.AddError("Decode Error", fmt.Sprintf("Failed to decode response: %v", err))
+		return &ServiceAccountUpdateResult{
+			ServiceAccount: nil,
+			Diagnostics:    retryResult.Diagnostics,
+		}
 	}
 
-	// Check for ConfigETag in the response
-	etag = respWithETag.ETag
-	if etag == "" && updatedServiceAccount.ConfigETag != "" {
-		etag = updatedServiceAccount.ConfigETag
+	return &ServiceAccountUpdateResult{
+		ServiceAccount: &ServiceAccountWithETag{
+			ServiceAccount: &updatedServiceAccount,
+			ETag:           respWithETag.ETag,
+		},
+		Diagnostics: retryResult.Diagnostics,
 	}
-
-	// Create and return the wrapped service account with ETag
-	result := &ServiceAccountWithETag{
-		ServiceAccount: &updatedServiceAccount,
-		ETag:           etag,
-	}
-
-	return result, nil
 }
 
 func (c *CloudClient) DeleteServiceAccount(permissionsSystemID, serviceAccountID string) error {
