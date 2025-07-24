@@ -163,7 +163,7 @@ func (rc *RetryConfig) RetryWithExponentialBackoff(
 	}
 }
 
-// RetryWithExponentialBackoffLegacy executes a function with exponential backoff retry logic (legacy version)
+// RetryWithExponentialBackoffLegacy executes a function with exponential backoff retry logic (OG version)
 func (rc *RetryConfig) RetryWithExponentialBackoffLegacy(
 	ctx context.Context,
 	operation func() (*ResponseWithETag, error),

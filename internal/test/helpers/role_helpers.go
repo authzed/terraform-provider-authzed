@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"context"
 	"fmt"
 
 	"terraform-provider-authzed/internal/client"
@@ -223,7 +224,7 @@ func CreateTestRole(roleName string, permissions map[string]string) (*models.Rol
 		Permissions:         permissions,
 	}
 
-	roleWithETag, err := testClient.CreateRole(role)
+	roleWithETag, err := testClient.CreateRole(context.Background(), role)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create test role: %s", err)
 	}

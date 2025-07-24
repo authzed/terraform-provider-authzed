@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -123,7 +124,7 @@ func CreateTestServiceAccount(name string) (*models.ServiceAccount, error) {
 		PermissionsSystemID: GetTestPermissionSystemID(),
 	}
 
-	created, err := testClient.CreateServiceAccount(serviceAccount)
+	created, err := testClient.CreateServiceAccount(context.Background(), serviceAccount)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create test service account: %v", err)
 	}
