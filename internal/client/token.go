@@ -38,7 +38,8 @@ func (t *TokenWithETag) GetResource() interface{} {
 	return t.Token
 }
 
-func (c *CloudClient) CreateToken(token *models.TokenRequest) (*TokenWithETag, error) {
+// CreateToken creates a new token
+func (c *CloudClient) CreateToken(ctx context.Context, token *models.TokenRequest) (*TokenWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s/tokens", token.PermissionsSystemID, token.ServiceAccountID)
 
 	// Create the request body
@@ -50,15 +51,46 @@ func (c *CloudClient) CreateToken(token *models.TokenRequest) (*TokenWithETag, e
 		Description: token.Description,
 	}
 
-	req, err := c.NewRequest(http.MethodPost, path, reqBody)
+	// Use retry logic with exponential backoff
+	retryConfig := DefaultRetryConfig()
+
+	// Define the create operation
+	createOperation := func() (*ResponseWithETag, error) {
+		req, err := c.NewRequest(http.MethodPost, path, reqBody)
+		if err != nil {
+			return nil, err
+		}
+
+		respWithETag, err := c.Do(req)
+		if err != nil {
+			return nil, err
+		}
+
+		return respWithETag, nil
+	}
+
+	// For CREATE operations, we don't need to get fresh ETags since there's no existing resource
+	// We just retry the same operation
+	getLatestETag := func() (string, error) {
+		return "", nil // Not used for CREATE operations
+	}
+
+	createWithETag := func(etag string) (*ResponseWithETag, error) {
+		return createOperation() // Retry the same CREATE operation
+	}
+
+	// Execute with retry logic
+	respWithETag, err := retryConfig.RetryWithExponentialBackoffLegacy(
+		ctx,
+		createOperation,
+		getLatestETag,
+		createWithETag,
+		"token create",
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	respWithETag, err := c.Do(req)
-	if err != nil {
-		return nil, err
-	}
 	defer func() {
 		// ignore the error
 		_ = respWithETag.Response.Body.Close()
@@ -79,8 +111,8 @@ func (c *CloudClient) CreateToken(token *models.TokenRequest) (*TokenWithETag, e
 		ID                  string `json:"id"`
 		Name                string `json:"name"`
 		Description         string `json:"description"`
-		PermissionsSystemID string `json:"permissionsSystemID"`
-		ServiceAccountID    string `json:"serviceAccountID"`
+		PermissionsSystemID string `json:"permissionsSystemId"`
+		ServiceAccountID    string `json:"serviceAccountId"`
 		CreatedAt           string `json:"createdAt"`
 		Creator             string `json:"creator"`
 		UpdatedAt           string `json:"updatedAt"`
@@ -89,12 +121,13 @@ func (c *CloudClient) CreateToken(token *models.TokenRequest) (*TokenWithETag, e
 		Secret              string `json:"secret"`
 		ConfigETag          string `json:"ConfigETag"`
 	}
+
 	if err := json.Unmarshal(body, &createResp); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	// Create a new Token with all fields
-	createdToken := &models.TokenRequest{
+	// Convert to our model structure
+	tokenModel := &models.TokenRequest{
 		ID:                  createResp.ID,
 		Name:                createResp.Name,
 		Description:         createResp.Description,
@@ -102,15 +135,12 @@ func (c *CloudClient) CreateToken(token *models.TokenRequest) (*TokenWithETag, e
 		ServiceAccountID:    createResp.ServiceAccountID,
 		CreatedAt:           createResp.CreatedAt,
 		Creator:             createResp.Creator,
-		UpdatedAt:           createResp.UpdatedAt,
-		Updater:             createResp.Updater,
 		Hash:                createResp.Hash,
 		Secret:              createResp.Secret,
-		ReturnPlainText:     token.ReturnPlainText,
 	}
 
 	return &TokenWithETag{
-		Token: createdToken,
+		Token: tokenModel,
 		ETag:  respWithETag.ETag,
 	}, nil
 }
@@ -187,7 +217,7 @@ func (c *CloudClient) ListTokens(permissionsSystemID, serviceAccountID string) (
 }
 
 // UpdateToken updates an existing token using PUT
-func (c *CloudClient) UpdateToken(token *models.TokenRequest, etag string) (*TokenWithETag, error) {
+func (c *CloudClient) UpdateToken(ctx context.Context, token *models.TokenRequest, etag string) (*TokenWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s/tokens/%s", token.PermissionsSystemID, token.ServiceAccountID, token.ID)
 
 	resourceWrapper := &TokenWithETag{
@@ -195,7 +225,7 @@ func (c *CloudClient) UpdateToken(token *models.TokenRequest, etag string) (*Tok
 		ETag:  etag,
 	}
 
-	updatedResource, err := c.UpdateResource(resourceWrapper, path, token)
+	updatedResource, err := c.UpdateResource(ctx, resourceWrapper, path, token)
 	if err != nil {
 		return nil, err
 	}

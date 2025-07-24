@@ -24,7 +24,8 @@ func NewServiceAccountResource() resource.Resource {
 }
 
 type serviceAccountResource struct {
-	client *client.CloudClient
+	client          *client.CloudClient
+	fgamCoordinator *FGAMCoordinator
 }
 
 type serviceAccountResourceModel struct {
@@ -82,16 +83,17 @@ func (r *serviceAccountResource) Configure(_ context.Context, req resource.Confi
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.CloudClient)
+	providerData, ok := req.ProviderData.(*CloudProviderData)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *client.CloudClient, got: %T", req.ProviderData),
+			fmt.Sprintf("Expected *CloudProviderData, got: %T", req.ProviderData),
 		)
 		return
 	}
 
-	r.client = client
+	r.client = providerData.Client
+	r.fgamCoordinator = providerData.FGAMCoordinator
 }
 
 func (r *serviceAccountResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -108,7 +110,12 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 		PermissionsSystemID: data.PermissionsSystemID.ValueString(),
 	}
 
-	createdServiceAccountWithETag, err := r.client.CreateServiceAccount(serviceAccount)
+	// Coordinate operations to prevent conflicts
+	permissionSystemID := data.PermissionsSystemID.ValueString()
+	r.fgamCoordinator.Lock(permissionSystemID)
+	defer r.fgamCoordinator.Unlock(permissionSystemID)
+
+	createdServiceAccountWithETag, err := r.client.CreateServiceAccount(ctx, serviceAccount)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create service account, got error: %s", err))
 		return
@@ -174,12 +181,21 @@ func (r *serviceAccountResource) Update(ctx context.Context, req resource.Update
 		PermissionsSystemID: data.PermissionsSystemID.ValueString(),
 	}
 
+	// Coordinate operations to prevent conflicts
+	permissionSystemID := data.PermissionsSystemID.ValueString()
+	r.fgamCoordinator.Lock(permissionSystemID)
+	defer r.fgamCoordinator.Unlock(permissionSystemID)
+
 	// Use the ETag from state for optimistic concurrency control
-	updatedServiceAccountWithETag, err := r.client.UpdateServiceAccount(serviceAccount, state.ETag.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update service account, got error: %s", err))
+	updateResult := r.client.UpdateServiceAccount(ctx, serviceAccount, state.ETag.ValueString())
+	resp.Diagnostics.Append(updateResult.Diagnostics...)
+
+	if updateResult.ServiceAccount == nil {
+		resp.Diagnostics.AddError("Client Error", "Unable to update service account")
 		return
 	}
+
+	updatedServiceAccountWithETag := updateResult.ServiceAccount
 
 	// Update resource data with the response - ensure all fields are set
 	data.ID = types.StringValue(updatedServiceAccountWithETag.ServiceAccount.ID)
@@ -206,7 +222,12 @@ func (r *serviceAccountResource) Delete(ctx context.Context, req resource.Delete
 		return
 	}
 
-	err := r.client.DeleteServiceAccount(data.PermissionsSystemID.ValueString(), data.ID.ValueString())
+	// Coordinate operations to prevent conflicts
+	permissionSystemID := data.PermissionsSystemID.ValueString()
+	r.fgamCoordinator.Lock(permissionSystemID)
+	defer r.fgamCoordinator.Unlock(permissionSystemID)
+
+	err := r.client.DeleteServiceAccount(permissionSystemID, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete service account, got error: %s", err))
 		return

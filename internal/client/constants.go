@@ -11,4 +11,11 @@ const (
 	DefaultDeleteTimeout = 5 * time.Minute
 	// DefaultDeletePollInterval is the default interval between polling attempts during delete operations
 	DefaultDeletePollInterval = 2 * time.Second
+
+	// Retry configuration for handling concurrent operations
+	// DefaultMaxRetries is the default number of retry attempts
+	DefaultMaxRetries     = 8
+	DefaultBaseRetryDelay = 100 * time.Millisecond
+	DefaultMaxRetryDelay  = 5 * time.Second
+	DefaultMaxJitter      = 500 * time.Millisecond
 )

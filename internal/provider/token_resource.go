@@ -27,7 +27,8 @@ func NewTokenResource() resource.Resource {
 }
 
 type TokenResource struct {
-	client *client.CloudClient
+	client          *client.CloudClient
+	fgamCoordinator *FGAMCoordinator
 }
 
 type TokenResourceModel struct {
@@ -110,16 +111,17 @@ func (r *TokenResource) Configure(_ context.Context, req resource.ConfigureReque
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.CloudClient)
+	providerData, ok := req.ProviderData.(*CloudProviderData)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *client.CloudClient, got: %T", req.ProviderData),
+			fmt.Sprintf("Expected *CloudProviderData, got: %T", req.ProviderData),
 		)
 		return
 	}
 
-	r.client = client
+	r.client = providerData.Client
+	r.fgamCoordinator = providerData.FGAMCoordinator
 }
 
 func (r *TokenResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -140,7 +142,12 @@ func (r *TokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		ReturnPlainText:     true, // Always request plain text during creation
 	}
 
-	createdTokenWithETag, err := r.client.CreateToken(token)
+	// Coordinate operations to prevent conflicts
+	permissionSystemID := plan.PermissionsSystemID.ValueString()
+	r.fgamCoordinator.Lock(permissionSystemID)
+	defer r.fgamCoordinator.Unlock(permissionSystemID)
+
+	createdTokenWithETag, err := r.client.CreateToken(ctx, token)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating token",
@@ -254,8 +261,13 @@ func (r *TokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		ServiceAccountID:    plan.ServiceAccountID.ValueString(),
 	}
 
+	// Coordinate operations to prevent conflicts
+	permissionSystemID := plan.PermissionsSystemID.ValueString()
+	r.fgamCoordinator.Lock(permissionSystemID)
+	defer r.fgamCoordinator.Unlock(permissionSystemID)
+
 	// Use the ETag from state for optimistic concurrency control
-	updatedTokenWithETag, err := r.client.UpdateToken(token, state.ETag.ValueString())
+	updatedTokenWithETag, err := r.client.UpdateToken(ctx, token, state.ETag.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating token",
@@ -287,8 +299,13 @@ func (r *TokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 		return
 	}
 
+	// Coordinate operations to prevent conflicts
+	permissionSystemID := state.PermissionsSystemID.ValueString()
+	r.fgamCoordinator.Lock(permissionSystemID)
+	defer r.fgamCoordinator.Unlock(permissionSystemID)
+
 	err := r.client.DeleteToken(
-		state.PermissionsSystemID.ValueString(),
+		permissionSystemID,
 		state.ServiceAccountID.ValueString(),
 		state.ID.ValueString(),
 	)

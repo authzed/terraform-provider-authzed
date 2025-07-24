@@ -92,16 +92,16 @@ func (d *policyDataSource) Configure(_ context.Context, req datasource.Configure
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.CloudClient)
+	providerData, ok := req.ProviderData.(*CloudProviderData)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *client.CloudClient, got: %T", req.ProviderData),
+			fmt.Sprintf("Expected *CloudProviderData, got: %T", req.ProviderData),
 		)
 		return
 	}
 
-	d.client = client
+	d.client = providerData.Client
 }
 
 func (d *policyDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {

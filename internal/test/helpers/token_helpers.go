@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -166,7 +167,7 @@ func CreateTestToken(name, serviceAccountID string) (*models.TokenRequest, error
 		ReturnPlainText:     true,
 	}
 
-	created, err := testClient.CreateToken(token)
+	created, err := testClient.CreateToken(context.Background(), token)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create test token: %v", err)
 	}

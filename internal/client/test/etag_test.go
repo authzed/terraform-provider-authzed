@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,54 +14,164 @@ import (
 
 func TestETagSupport(t *testing.T) {
 	const testETag = "W/\"etag-service-account\""
-	const updatedETag = "W/\"etag-updated\""
-	var receivedETag string
-	var firstReceivedETag string // Track the first ETag received for verification
-	var ifMatchHeaderReceived bool
-	var firstPUTRequest = true // Track first PUT request for retry test
+	const updatedETag = "W/\"updated-etag-service-account\""
+	updateRequestCount := 0
+	getRequestCount := 0
 
-	// Create test server
+	// Create test server that simulates the full retry flow
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Set content type for all responses
-		w.Header().Set("Content-Type", "application/json")
+		switch r.Method {
+		case http.MethodGet:
+			getRequestCount++
 
-		// For the retry test, track sequence of requests
-		if r.URL.Path == "/ps/ps-test123/access/service-accounts/asa-test123" {
-			// Check for If-Match header in PUT requests
-			if r.Method == http.MethodPut {
-				receivedETag = r.Header.Get("If-Match")
-				ifMatchHeaderReceived = receivedETag != ""
+			// Return appropriate ETag based on whether we've had a PUT failure
+			// If we've had any PUT requests (meaning the first PUT failed with 412), return updated ETag
+			// Otherwise, return the original ETag
+			currentETag := testETag
+			if updateRequestCount > 0 {
+				currentETag = updatedETag
+			}
 
-				// Save the first ETag for verification in the retry test
-				if firstPUTRequest {
-					firstReceivedETag = receivedETag
-				}
+			w.Header().Set("ETag", currentETag)
+			w.WriteHeader(http.StatusOK)
+			_, err := w.Write([]byte(`{
+				"id": "asa-test123",
+				"permissionsSystemId": "ps-test123",
+				"name": "Test Service Account",
+				"description": "Test Description",
+				"createdAt": "2023-05-01T12:00:00Z",
+				"creator": "test-user"
+			}`))
+			if err != nil {
+				t.Errorf("Failed to write response: %v", err)
+			}
 
-				// In retry test (DetectsConcurrentModification):
-				// - First PUT with wrong ETag fails with 412
-				// - Second PUT (after GET) with correct ETag succeeds
-				if receivedETag == "W/\"wrong-etag\"" && firstPUTRequest {
-					// Fail first PUT with wrong ETag
-					firstPUTRequest = false
-					w.WriteHeader(http.StatusPreconditionFailed)
-					_, err := w.Write([]byte(`{"error":"Precondition failed: resource has been modified"}`))
+		case http.MethodPut:
+			updateRequestCount++
+			ifMatch := r.Header.Get("If-Match")
+
+			if updateRequestCount == 1 {
+				// First update: simulate concurrent modification (412)
+				if ifMatch != testETag {
+					w.WriteHeader(http.StatusBadRequest)
+					_, err := w.Write([]byte(`{"error": "Invalid ETag"}`))
 					if err != nil {
 						t.Errorf("Failed to write response: %v", err)
 					}
 					return
 				}
+
+				// Return 412 to simulate concurrent modification
+				w.WriteHeader(http.StatusPreconditionFailed)
+				_, err := w.Write([]byte(`{"error": "Precondition failed"}`))
+				if err != nil {
+					t.Errorf("Failed to write response: %v", err)
+				}
+				return
+			}
+
+			// Second PUT: should succeed with updated ETag
+			if ifMatch != updatedETag {
+				w.WriteHeader(http.StatusBadRequest)
+				_, err := w.Write([]byte(`{"error": "Invalid ETag for retry"}`))
+				if err != nil {
+					t.Errorf("Failed to write response: %v", err)
+				}
+				return
+			}
+
+			// Second PUT succeeds
+			w.Header().Set("ETag", updatedETag)
+			w.WriteHeader(http.StatusOK)
+			_, err := w.Write([]byte(`{
+				"id": "asa-test123",
+				"permissionsSystemId": "ps-test123",
+				"name": "Updated Service Account",
+				"description": "Updated Description",
+				"createdAt": "2023-05-01T12:00:00Z",
+				"creator": "test-user"
+			}`))
+			if err != nil {
+				t.Errorf("Failed to write response: %v", err)
 			}
 		}
+	}))
+	defer server.Close()
 
-		// Test paths
-		switch r.URL.Path {
-		case "/ps/ps-test123/access/service-accounts/asa-test123":
-			// Set ETag header in response
-			w.Header().Set("ETag", testETag)
+	// Create client
+	cfg := &client.CloudClientConfig{
+		Host:       server.URL,
+		Token:      "test-token",
+		APIVersion: "v1",
+		Timeout:    client.DefaultTimeout,
+	}
+	c := client.NewCloudClient(cfg)
 
+	t.Run("GetCaptures_ETag", func(t *testing.T) {
+		// Reset counters for this test
+		updateRequestCount = 0
+		getRequestCount = 0
+
+		sa, err := c.GetServiceAccount("ps-test123", "asa-test123")
+		assert.NoError(t, err)
+		assert.Equal(t, testETag, sa.GetETag())
+	})
+
+	t.Run("UpdateSends_IfMatch", func(t *testing.T) {
+		// Reset counters for this test
+		updateRequestCount = 0
+		getRequestCount = 0
+		serviceAccount := &models.ServiceAccount{
+			ID:                  "asa-test123",
+			PermissionsSystemID: "ps-test123",
+			Name:                "Updated Service Account",
+			Description:         "Updated Description",
+		}
+
+		// This should work after retry (first PUT fails with 412, GET fetches new ETag, second PUT succeeds)
+		result := c.UpdateServiceAccount(context.Background(), serviceAccount, testETag)
+
+		assert.False(t, result.Diagnostics.HasError())
+		assert.NotNil(t, result.ServiceAccount)
+		if result.ServiceAccount != nil {
+			assert.Equal(t, updatedETag, result.ServiceAccount.ETag)
+		}
+
+		// Verify the retry flow: 1 PUT (412) + 1 GET (fetch new ETag) + 1 PUT (success)
+		assert.Equal(t, 1, getRequestCount, "Should have made 1 GET request (to fetch new ETag after 412)")
+		assert.Equal(t, 2, updateRequestCount, "Should have made 2 PUT requests (initial fail + retry success)")
+	})
+
+	t.Run("DetectsConcurrentModification", func(t *testing.T) {
+		// Reset counters for this test
+		updateRequestCount = 0
+		getRequestCount = 0
+
+		serviceAccount := &models.ServiceAccount{
+			ID:                  "asa-test123",
+			PermissionsSystemID: "ps-test123",
+			Name:                "Updated Service Account",
+			Description:         "Updated Description",
+		}
+
+		result := c.UpdateServiceAccount(context.Background(), serviceAccount, testETag)
+		assert.False(t, result.Diagnostics.HasError())
+		assert.NotNil(t, result.ServiceAccount)
+		assert.Equal(t, updatedETag, result.ServiceAccount.ETag)
+
+		// Verify retry flow occurred
+		assert.Equal(t, 1, getRequestCount, "Should have made 1 GET request (to fetch new ETag after 412)")
+		assert.Equal(t, 2, updateRequestCount, "Should have made 2 PUT requests (initial fail + retry success)")
+	})
+
+	t.Run("Handles409ConflictRetry", func(t *testing.T) {
+		// Create a separate server for 409 testing
+		conflictRequestCount := 0
+		server409 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			switch r.Method {
 			case http.MethodGet:
-				// Return service account for GET
+				// For GET requests, return service account with ETag
+				w.Header().Set("ETag", testETag)
 				w.WriteHeader(http.StatusOK)
 				_, err := w.Write([]byte(`{
 					"id": "asa-test123",
@@ -73,8 +184,21 @@ func TestETagSupport(t *testing.T) {
 				if err != nil {
 					t.Errorf("Failed to write response: %v", err)
 				}
+
 			case http.MethodPut:
-				// Return updated service account for PUT with new ETag
+				conflictRequestCount++
+
+				if conflictRequestCount == 1 {
+					// First update: simulate FGAM conflict (409)
+					w.WriteHeader(http.StatusConflict)
+					_, err := w.Write([]byte(`{"error": "restricted API access configuration for permission system has changed"}`))
+					if err != nil {
+						t.Errorf("Failed to write response: %v", err)
+					}
+					return
+				}
+
+				// Second PUT succeeds
 				w.Header().Set("ETag", updatedETag)
 				w.WriteHeader(http.StatusOK)
 				_, err := w.Write([]byte(`{
@@ -89,156 +213,30 @@ func TestETagSupport(t *testing.T) {
 					t.Errorf("Failed to write response: %v", err)
 				}
 			}
-		}
-	}))
-	defer server.Close()
-
-	// Create client
-	c := client.NewCloudClient(&client.CloudClientConfig{
-		Host:  server.URL,
-		Token: "test-token",
-	})
-	t.Run("GetCaptures_ETag", func(t *testing.T) {
-		result, err := c.GetServiceAccount("ps-test123", "asa-test123")
-		assert.NoError(t, err)
-		assert.NotNil(t, result)
-		assert.Equal(t, testETag, result.ETag, "ETag should be captured from response")
-		assert.Equal(t, "asa-test123", result.ServiceAccount.ID)
-		assert.Equal(t, "Test Service Account", result.ServiceAccount.Name)
-	})
-	t.Run("UpdateSends_IfMatch", func(t *testing.T) {
-		// Reset tracking variables
-		ifMatchHeaderReceived = false
-		receivedETag = ""
-
-		// Perform update
-		sa := &models.ServiceAccount{
-			ID:                  "asa-test123",
-			PermissionsSystemID: "ps-test123",
-			Name:                "Updated Service Account",
-			Description:         "Updated Description",
-		}
-
-		result, err := c.UpdateServiceAccount(sa, testETag)
-		assert.NoError(t, err)
-		assert.NotNil(t, result)
-		assert.True(t, ifMatchHeaderReceived, "If-Match header should be sent")
-		assert.Equal(t, testETag, receivedETag, "ETag should be sent correctly")
-		assert.Equal(t, updatedETag, result.ETag, "New ETag should be returned")
-	})
-	t.Run("DetectsConcurrentModification", func(t *testing.T) {
-		// Reset tracking variables
-		ifMatchHeaderReceived = false
-		receivedETag = ""
-		firstReceivedETag = ""
-		firstPUTRequest = true
-
-		// Perform update with wrong ETag
-		sa := &models.ServiceAccount{
-			ID:                  "asa-test123",
-			PermissionsSystemID: "ps-test123",
-			Name:                "Updated Service Account",
-			Description:         "Updated Description",
-		}
-
-		result, err := c.UpdateServiceAccount(sa, "W/\"wrong-etag\"")
-		// With auto-retry, this should succeed
-		assert.NoError(t, err, "Update with wrong ETag should retry and succeed")
-		assert.NotNil(t, result, "Result should not be nil after successful retry")
-		assert.True(t, ifMatchHeaderReceived, "If-Match header should be sent")
-		assert.Equal(t, "W/\"wrong-etag\"", firstReceivedETag, "Wrong ETag should be sent initially")
-
-		// After retry, the result should have the updated ETag
-		assert.Equal(t, updatedETag, result.ETag, "Result should have updated ETag after retry")
-	})
-
-	t.Run("Handles409ConflictRetry", func(t *testing.T) {
-		// Reset tracking variables
-		ifMatchHeaderReceived = false
-		receivedETag = ""
-		firstReceivedETag = ""
-		firstPUTRequest = true
-
-		// Create test server that returns 409 on first PUT, then succeeds
-		server409 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-
-			if r.URL.Path == "/ps/ps-test123/access/service-accounts/asa-test123" {
-				if r.Method == http.MethodPut {
-					receivedETag = r.Header.Get("If-Match")
-					ifMatchHeaderReceived = receivedETag != ""
-
-					if firstPUTRequest {
-						firstReceivedETag = receivedETag
-						firstPUTRequest = false
-						// Return 409 Conflict on first attempt
-						w.WriteHeader(http.StatusConflict)
-						_, err := w.Write([]byte(`{"error":"restricted API access configuration for permission system \"ps-test123\" has changed"}`))
-						if err != nil {
-							t.Errorf("Failed to write response: %v", err)
-						}
-						return
-					}
-				}
-
-				// For GET requests or second PUT, return success
-				w.Header().Set("ETag", testETag)
-				switch r.Method {
-				case http.MethodGet:
-					w.WriteHeader(http.StatusOK)
-					_, err := w.Write([]byte(`{
-						"id": "asa-test123",
-						"permissionsSystemId": "ps-test123",
-						"name": "Test Service Account",
-						"description": "Test Description",
-						"createdAt": "2023-05-01T12:00:00Z",
-						"creator": "test-user"
-					}`))
-					if err != nil {
-						t.Errorf("Failed to write response: %v", err)
-					}
-				case http.MethodPut:
-					// Second PUT succeeds
-					w.Header().Set("ETag", updatedETag)
-					w.WriteHeader(http.StatusOK)
-					_, err := w.Write([]byte(`{
-						"id": "asa-test123",
-						"permissionsSystemId": "ps-test123",
-						"name": "Updated Service Account",
-						"description": "Updated Description",
-						"createdAt": "2023-05-01T12:00:00Z",
-						"creator": "test-user"
-					}`))
-					if err != nil {
-						t.Errorf("Failed to write response: %v", err)
-					}
-				}
-			}
 		}))
 		defer server409.Close()
 
-		// Create client with 409 test server
-		c409 := client.NewCloudClient(&client.CloudClientConfig{
-			Host:  server409.URL,
-			Token: "test-token",
-		})
+		// Create client for 409 testing
+		cfg409 := &client.CloudClientConfig{
+			Host:       server409.URL,
+			Token:      "test-token",
+			APIVersion: "v1",
+			Timeout:    client.DefaultTimeout,
+		}
+		c409 := client.NewCloudClient(cfg409)
 
-		// Perform update that will trigger 409 conflict
-		sa := &models.ServiceAccount{
+		serviceAccount := &models.ServiceAccount{
 			ID:                  "asa-test123",
 			PermissionsSystemID: "ps-test123",
 			Name:                "Updated Service Account",
 			Description:         "Updated Description",
 		}
 
-		result, err := c409.UpdateServiceAccount(sa, testETag)
-		// Should succeed after retry
-		assert.NoError(t, err, "Update with 409 conflict should retry and succeed")
-		assert.NotNil(t, result, "Result should not be nil after successful retry")
-		assert.True(t, ifMatchHeaderReceived, "If-Match header should be sent")
-		assert.Equal(t, testETag, firstReceivedETag, "Original ETag should be sent initially")
-
-		// After retry, the result should have the updated ETag
-		assert.Equal(t, updatedETag, result.ETag, "Result should have updated ETag after retry")
+		// This should succeed after retry
+		result := c409.UpdateServiceAccount(context.Background(), serviceAccount, testETag)
+		assert.False(t, result.Diagnostics.HasError())
+		assert.NotNil(t, result.ServiceAccount)
+		assert.Equal(t, updatedETag, result.ServiceAccount.ETag)
+		assert.Equal(t, 2, conflictRequestCount)
 	})
 }

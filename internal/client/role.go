@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -83,11 +84,11 @@ func (c *CloudClient) GetRole(permissionsSystemID, roleID string) (*RoleWithETag
 }
 
 // CreateRole creates a new role
-func (c *CloudClient) CreateRole(role *models.Role) (*RoleWithETag, error) {
+func (c *CloudClient) CreateRole(ctx context.Context, role *models.Role) (*RoleWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/roles", role.PermissionsSystemID)
 
 	var createdRole models.Role
-	resource, err := c.CreateResourceWithFactory(path, role, &createdRole, NewRoleResource)
+	resource, err := c.CreateResourceWithFactory(ctx, path, role, &createdRole, NewRoleResource)
 	if err != nil {
 		// Special handling for specific errors
 		if apiErr, ok := err.(*APIError); ok && apiErr.StatusCode == http.StatusInternalServerError {
@@ -103,7 +104,7 @@ func (c *CloudClient) CreateRole(role *models.Role) (*RoleWithETag, error) {
 }
 
 // UpdateRole updates an existing role using the PUT method
-func (c *CloudClient) UpdateRole(role *models.Role, etag string) (*RoleWithETag, error) {
+func (c *CloudClient) UpdateRole(ctx context.Context, role *models.Role, etag string) (*RoleWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/roles/%s", role.PermissionsSystemID, role.ID)
 
 	getLatestETag := func() (string, error) {
@@ -150,39 +151,19 @@ func (c *CloudClient) UpdateRole(role *models.Role, etag string) (*RoleWithETag,
 		return respWithETag, nil
 	}
 
-	// First attempt with the provided ETag
-	respWithETag, err := updateWithETag(etag)
+	// Use retry logic with exponential backoff
+	retryConfig := DefaultRetryConfig()
+	respWithETag, err := retryConfig.RetryWithExponentialBackoffLegacy(
+		ctx,
+		func() (*ResponseWithETag, error) {
+			return updateWithETag(etag)
+		},
+		getLatestETag,
+		updateWithETag,
+		"role update",
+	)
 	if err != nil {
 		return nil, err
-	}
-
-	// Handle retryable errors (412 Precondition Failed, 409 Conflict) by refreshing ETag and retrying
-	retryWithFreshETag := func(errorContext string) error {
-		// Close the body of the first response
-		if respWithETag.Response.Body != nil {
-			_ = respWithETag.Response.Body.Close()
-		}
-
-		// Get the latest ETag
-		latestETag, err := getLatestETag()
-		if err != nil {
-			return fmt.Errorf("failed to get latest ETag for retry (%s): %w", errorContext, err)
-		}
-
-		// Retry the update with the latest ETag
-		respWithETag, err = updateWithETag(latestETag)
-		return err
-	}
-
-	switch respWithETag.Response.StatusCode {
-	case http.StatusPreconditionFailed:
-		if err := retryWithFreshETag("precondition failed"); err != nil {
-			return nil, err
-		}
-	case http.StatusConflict:
-		if err := retryWithFreshETag("FGAM configuration change"); err != nil {
-			return nil, err
-		}
 	}
 
 	// Keep the response body for potential error reporting
