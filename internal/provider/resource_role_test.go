@@ -176,6 +176,55 @@ func TestAccAuthzedRole_validation(t *testing.T) {
 	})
 }
 
+func TestAccAuthzedRole_noDrift(t *testing.T) {
+	resourceName := "authzed_role.test"
+	testID := helpers.GenerateTestID("test-role-drift")
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckRoleDestroy,
+		Steps: []resource.TestStep{
+			// Create initial role
+			{
+				Config: testAccRoleConfig_basic(testID),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckRoleExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "name", testID),
+					resource.TestCheckResourceAttr(resourceName, "description", "Test role description"),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttrSet(resourceName, "created_at"),
+					resource.TestCheckResourceAttrSet(resourceName, "creator"),
+					resource.TestCheckResourceAttrSet(resourceName, "etag"),
+				),
+			},
+			// Verify no drift on second plan. Critical path.
+			{
+				Config:   testAccRoleConfig_basic(testID),
+				PlanOnly: true,
+			},
+			// Update permissions and verify computed fields don't drift
+			{
+				Config: testAccRoleConfig_updatePermissions(testID),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckRoleExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "name", testID),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttrSet(resourceName, "created_at"),
+					resource.TestCheckResourceAttrSet(resourceName, "creator"),
+					resource.TestCheckResourceAttrSet(resourceName, "etag"),
+				),
+			},
+			// Verify no drift after update - computed fields should remain stable
+			{
+				Config:   testAccRoleConfig_updatePermissions(testID),
+				PlanOnly: true,
+				// This verifies that after an update, computed fields don't show as changing
+			},
+		},
+	})
+}
+
 // Helper functions
 
 func testAccCheckRoleExists(resourceName string) resource.TestCheckFunc {

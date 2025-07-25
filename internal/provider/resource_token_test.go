@@ -161,6 +161,56 @@ func TestAccAuthzedToken_validation(t *testing.T) {
 	})
 }
 
+func TestAccAuthzedToken_noDrift(t *testing.T) {
+	resourceName := "authzed_token.test"
+	testID := helpers.GenerateTestID("test-token-drift")
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckTokenDestroy,
+		Steps: []resource.TestStep{
+			// Create initial token
+			{
+				Config: testAccTokenConfig_basic(testID),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckTokenExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "name", testID),
+					resource.TestCheckResourceAttr(resourceName, "description", "Test token description"),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttrSet(resourceName, "created_at"),
+					resource.TestCheckResourceAttrSet(resourceName, "creator"),
+					resource.TestCheckResourceAttrSet(resourceName, "etag"),
+					resource.TestCheckResourceAttrSet(resourceName, "hash"),
+				),
+			},
+			{
+				Config:   testAccTokenConfig_basic(testID),
+				PlanOnly: true,
+			},
+			// Update mutable fields and verify computed fields don't drift
+			{
+				Config: testAccTokenConfig_updated(testID),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckTokenExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "name", testID),
+					resource.TestCheckResourceAttr(resourceName, "description", "Updated test token description"),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttrSet(resourceName, "created_at"),
+					resource.TestCheckResourceAttrSet(resourceName, "creator"),
+					resource.TestCheckResourceAttrSet(resourceName, "etag"),
+					resource.TestCheckResourceAttrSet(resourceName, "hash"),
+				),
+			},
+			{
+				Config:   testAccTokenConfig_updated(testID),
+				PlanOnly: true,
+				// This verifies that after an update, computed fields don't show as changing
+			},
+		},
+	})
+}
+
 // Helper functions
 
 func testAccCheckTokenExists(resourceName string) resource.TestCheckFunc {

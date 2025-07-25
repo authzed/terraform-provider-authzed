@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -51,6 +53,9 @@ func (r *policyResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "Unique identifier for this resource",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -76,14 +81,22 @@ func (r *policyResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"created_at": schema.StringAttribute{
 				Computed:    true,
 				Description: "Timestamp when the policy was created",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"creator": schema.StringAttribute{
 				Computed:    true,
 				Description: "User who created the policy",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"etag": schema.StringAttribute{
-				Computed:    true,
-				Description: "Version identifier used to prevent conflicts from concurrent updates, ensuring safe resource modifications",
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -137,18 +150,21 @@ func (r *policyResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	createdPolicyWithETag, err := r.client.CreatePolicy(ctx, policy)
 	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create policy, got error: %s", err))
+		resp.Diagnostics.AddError("Error creating Policy", err.Error())
 		return
 	}
 
-	createdPolicy := createdPolicyWithETag.Policy
-	data.ID = types.StringValue(createdPolicy.ID)
-	data.CreatedAt = types.StringValue(createdPolicy.CreatedAt)
-	data.Creator = types.StringValue(createdPolicy.Creator)
+	data.ID = types.StringValue(createdPolicyWithETag.Policy.ID)
+	data.CreatedAt = types.StringValue(createdPolicyWithETag.Policy.CreatedAt)
+	if createdPolicyWithETag.Policy.Creator == "" {
+		data.Creator = types.StringNull()
+	} else {
+		data.Creator = types.StringValue(createdPolicyWithETag.Policy.Creator)
+	}
 	data.ETag = types.StringValue(createdPolicyWithETag.ETag)
 
 	// Update role IDs in case the order or values changed
-	roleIDList, diags := types.ListValueFrom(ctx, types.StringType, createdPolicy.RoleIDs)
+	roleIDList, diags := types.ListValueFrom(ctx, types.StringType, createdPolicyWithETag.Policy.RoleIDs)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -181,11 +197,16 @@ func (r *policyResource) Read(ctx context.Context, req resource.ReadRequest, res
 	policy := policyWithETag.Policy
 
 	// Map response to model
+	data.ID = types.StringValue(policy.ID)
 	data.Name = types.StringValue(policy.Name)
 	data.Description = types.StringValue(policy.Description)
 	data.PrincipalID = types.StringValue(policy.PrincipalID)
 	data.CreatedAt = types.StringValue(policy.CreatedAt)
-	data.Creator = types.StringValue(policy.Creator)
+	if policy.Creator == "" {
+		data.Creator = types.StringNull()
+	} else {
+		data.Creator = types.StringValue(policy.Creator)
+	}
 	data.ETag = types.StringValue(policyWithETag.ETag)
 
 	// Map role IDs
@@ -195,7 +216,6 @@ func (r *policyResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 	data.RoleIDs = roleIDList
-
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -220,14 +240,20 @@ func (r *policyResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	// Create policy with updated data
+	// Create policy with updated data - use state values for immutable fields
 	policy := &models.Policy{
-		ID:                  data.ID.ValueString(),
+		ID:                  state.ID.ValueString(), // Use state for immutable ID
 		Name:                data.Name.ValueString(),
 		Description:         data.Description.ValueString(),
 		PermissionsSystemID: data.PermissionsSystemID.ValueString(),
 		PrincipalID:         data.PrincipalID.ValueString(),
 		RoleIDs:             roleIDs,
+		CreatedAt:           state.CreatedAt.ValueString(), // Preserve immutable CreatedAt
+	}
+
+	// Handle Creator field - it might be null in state
+	if !state.Creator.IsNull() {
+		policy.Creator = state.Creator.ValueString()
 	}
 
 	// Coordinate operations to prevent conflicts
@@ -235,7 +261,6 @@ func (r *policyResource) Update(ctx context.Context, req resource.UpdateRequest,
 	r.fgamCoordinator.Lock(permissionSystemID)
 	defer r.fgamCoordinator.Unlock(permissionSystemID)
 
-	// Use the ETag from state for optimistic concurrency control
 	updatedPolicyWithETag, err := r.client.UpdatePolicy(ctx, policy, state.ETag.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update policy, got error: %s", err))
@@ -243,15 +268,9 @@ func (r *policyResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	// Update resource data with the response
-	data.ID = types.StringValue(updatedPolicyWithETag.Policy.ID)
-
-	// If the ID is empty, preserve the original ID
-	if data.ID.ValueString() == "" {
-		data.ID = state.ID
-	}
-
-	data.CreatedAt = types.StringValue(updatedPolicyWithETag.Policy.CreatedAt)
-	data.Creator = types.StringValue(updatedPolicyWithETag.Policy.Creator)
+	data.ID = state.ID
+	data.CreatedAt = state.CreatedAt
+	data.Creator = state.Creator
 	data.ETag = types.StringValue(updatedPolicyWithETag.ETag)
 
 	// Update role IDs in case the order or values changed

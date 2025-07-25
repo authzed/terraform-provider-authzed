@@ -136,6 +136,59 @@ func TestAccAuthzedPolicy_validation(t *testing.T) {
 	})
 }
 
+func TestAccAuthzedPolicy_noDrift(t *testing.T) {
+	resourceName := "authzed_policy.test"
+	testID := helpers.GenerateTestID("test-policy-drift")
+	roleName := fmt.Sprintf("%s-role", testID)
+	updatedDescription := "Updated test policy description"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckPolicyDestroy,
+		Steps: []resource.TestStep{
+			// Create initial policy
+			{
+				Config: testAccPolicyConfig_basic(testID, roleName),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckPolicyExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "name", testID),
+					resource.TestCheckResourceAttr(resourceName, "description", "Test policy description"),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttrSet(resourceName, "created_at"),
+					resource.TestCheckResourceAttrSet(resourceName, "creator"),
+					resource.TestCheckResourceAttrSet(resourceName, "etag"),
+				),
+			},
+			// Verify no drift on second plan - this is the key test
+			{
+				Config:   testAccPolicyConfig_basic(testID, roleName),
+				PlanOnly: true,
+				// If there's drift in computed fields (id, created_at, creator, etag),
+				// this step will fail because Terraform will detect changes
+			},
+			// Update mutable fields and verify computed fields don't drift
+			{
+				Config: testAccPolicyConfig_update(testID, roleName, updatedDescription),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckPolicyExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "name", testID),
+					resource.TestCheckResourceAttr(resourceName, "description", updatedDescription),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttrSet(resourceName, "created_at"),
+					resource.TestCheckResourceAttrSet(resourceName, "creator"),
+					resource.TestCheckResourceAttrSet(resourceName, "etag"),
+				),
+			},
+			{
+				Config:   testAccPolicyConfig_update(testID, roleName, updatedDescription),
+				PlanOnly: true,
+				// This verifies that after an update, computed fields don't show as changing
+			},
+		},
+	})
+}
+
 // Helper functions
 
 func testAccCheckPolicyExists(resourceName string) resource.TestCheckFunc {

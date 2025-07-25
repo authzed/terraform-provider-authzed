@@ -124,6 +124,54 @@ func TestAccAuthzedServiceAccount_validation(t *testing.T) {
 	})
 }
 
+func TestAccAuthzedServiceAccount_noDrift(t *testing.T) {
+	resourceName := "authzed_service_account.test"
+	testID := helpers.GenerateTestID("test-service-account-drift")
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckServiceAccountDestroy,
+		Steps: []resource.TestStep{
+			// Create initial service account
+			{
+				Config: testAccServiceAccountConfig_basic(testID),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckServiceAccountExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "name", testID),
+					resource.TestCheckResourceAttr(resourceName, "description", "Test service account description"),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttrSet(resourceName, "created_at"),
+					resource.TestCheckResourceAttrSet(resourceName, "creator"),
+					resource.TestCheckResourceAttrSet(resourceName, "etag"),
+				),
+			},
+			{
+				Config:   testAccServiceAccountConfig_basic(testID),
+				PlanOnly: true,
+			},
+			{
+				Config: testAccServiceAccountConfig_updated(testID),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckServiceAccountExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "name", testID),
+					resource.TestCheckResourceAttr(resourceName, "description", "Updated test service account description"),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttrSet(resourceName, "created_at"),
+					resource.TestCheckResourceAttrSet(resourceName, "creator"),
+					resource.TestCheckResourceAttrSet(resourceName, "etag"),
+				),
+			},
+			// Verify no drift after update - computed fields should remain stable
+			{
+				Config:   testAccServiceAccountConfig_updated(testID),
+				PlanOnly: true,
+				// This verifies that after an update, computed fields don't show as changing
+			},
+		},
+	})
+}
+
 // Helper functions
 
 func testAccCheckServiceAccountExists(resourceName string) resource.TestCheckFunc {
