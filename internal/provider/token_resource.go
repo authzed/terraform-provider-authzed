@@ -78,10 +78,16 @@ func (r *TokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"created_at": schema.StringAttribute{
 				Description: "The timestamp when the token was created",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"creator": schema.StringAttribute{
 				Description: "The name of the user that created this token",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"hash": schema.StringAttribute{
 				Description: "The SHA256 hash of the token",
@@ -101,6 +107,9 @@ func (r *TokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"etag": schema.StringAttribute{
 				Computed:    true,
 				Description: "Version identifier used to prevent conflicts from concurrent updates",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -252,13 +261,20 @@ func (r *TokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	// Create token with updated data
+	// Create token with updated data - use state values for immutable fields
 	token := &models.TokenRequest{
-		ID:                  plan.ID.ValueString(),
+		ID:                  state.ID.ValueString(), // Use state for immutable ID
 		Name:                plan.Name.ValueString(),
 		Description:         plan.Description.ValueString(),
 		PermissionsSystemID: plan.PermissionsSystemID.ValueString(),
 		ServiceAccountID:    plan.ServiceAccountID.ValueString(),
+		CreatedAt:           state.CreatedAt.ValueString(), // Preserve immutable CreatedAt
+		Hash:                state.Hash.ValueString(),      // Preserve immutable Hash
+	}
+
+	// Handle Creator field - it might be null in state
+	if !state.Creator.IsNull() {
+		token.Creator = state.Creator.ValueString()
 	}
 
 	// Coordinate operations to prevent conflicts
@@ -276,14 +292,13 @@ func (r *TokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	// Update resource data with the response
-	plan.CreatedAt = types.StringValue(updatedTokenWithETag.Token.CreatedAt)
-	plan.Creator = types.StringValue(updatedTokenWithETag.Token.Creator)
-	plan.ETag = types.StringValue(updatedTokenWithETag.ETag)
-
-	// Preserve the token value and hash from state since they won't be returned in updates
-	plan.PlainText = state.PlainText
+	// Update resource data with the response - preserve immutable fields from state
+	plan.ID = state.ID
+	plan.CreatedAt = state.CreatedAt
+	plan.Creator = state.Creator
 	plan.Hash = state.Hash
+	plan.PlainText = state.PlainText
+	plan.ETag = types.StringValue(updatedTokenWithETag.ETag)
 
 	// Save updated data into Terraform state
 	diags = resp.State.Set(ctx, plan)

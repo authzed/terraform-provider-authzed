@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -50,6 +52,9 @@ func (r *roleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "Unique identifier for this resource",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -71,14 +76,23 @@ func (r *roleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			"created_at": schema.StringAttribute{
 				Computed:    true,
 				Description: "Timestamp when the role was created",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"creator": schema.StringAttribute{
 				Computed:    true,
 				Description: "User who created the role",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"etag": schema.StringAttribute{
 				Computed:    true,
 				Description: "Version identifier used to prevent conflicts from concurrent updates, ensuring safe resource modifications",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -201,13 +215,19 @@ func (r *roleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	permissionsMap := make(models.PermissionExprMap)
 	data.Permissions.ElementsAs(ctx, &permissionsMap, false)
 
-	// Create role with updated data
+	// Create role with updated data - use state values for immutable fields
 	role := &models.Role{
-		ID:                  data.ID.ValueString(),
+		ID:                  state.ID.ValueString(), // Use state for immutable ID
 		Name:                data.Name.ValueString(),
 		Description:         data.Description.ValueString(),
 		PermissionsSystemID: data.PermissionsSystemID.ValueString(),
 		Permissions:         permissionsMap,
+		CreatedAt:           state.CreatedAt.ValueString(), // Preserve immutable CreatedAt
+	}
+
+	// Handle Creator field - it might be null in state
+	if !state.Creator.IsNull() {
+		role.Creator = state.Creator.ValueString()
 	}
 
 	// Coordinate operations to prevent conflicts
@@ -222,16 +242,10 @@ func (r *roleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
-	// Update resource data with the response
-	data.ID = types.StringValue(updatedRoleWithETag.Role.ID)
-
-	// If the ID is empty, preserve the original ID
-	if data.ID.ValueString() == "" {
-		data.ID = state.ID
-	}
-
-	data.CreatedAt = types.StringValue(updatedRoleWithETag.Role.CreatedAt)
-	data.Creator = types.StringValue(updatedRoleWithETag.Role.Creator)
+	// Update resource data with the response - preserve immutable fields from state
+	data.ID = state.ID
+	data.CreatedAt = state.CreatedAt
+	data.Creator = state.Creator
 	data.ETag = types.StringValue(updatedRoleWithETag.ETag)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)

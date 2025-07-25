@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -49,6 +51,9 @@ func (r *serviceAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "Unique identifier for this resource",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -65,14 +70,23 @@ func (r *serviceAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 			"created_at": schema.StringAttribute{
 				Computed:    true,
 				Description: "Timestamp when the service account was created",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"creator": schema.StringAttribute{
 				Computed:    true,
 				Description: "User who created the service account",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"etag": schema.StringAttribute{
 				Computed:    true,
 				Description: "Version identifier used to prevent conflicts from concurrent updates, ensuring safe resource modifications",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -173,12 +187,18 @@ func (r *serviceAccountResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	// Create service account with updated data
+	// Create service account with updated data - use state values for immutable fields
 	serviceAccount := &models.ServiceAccount{
-		ID:                  data.ID.ValueString(),
+		ID:                  state.ID.ValueString(), // Use state for immutable ID
 		Name:                data.Name.ValueString(),
 		Description:         data.Description.ValueString(),
 		PermissionsSystemID: data.PermissionsSystemID.ValueString(),
+		CreatedAt:           state.CreatedAt.ValueString(), // Preserve immutable CreatedAt
+	}
+
+	// Handle Creator field - it might be null in state
+	if !state.Creator.IsNull() {
+		serviceAccount.Creator = state.Creator.ValueString()
 	}
 
 	// Coordinate operations to prevent conflicts
@@ -197,20 +217,16 @@ func (r *serviceAccountResource) Update(ctx context.Context, req resource.Update
 
 	updatedServiceAccountWithETag := updateResult.ServiceAccount
 
-	// Update resource data with the response - ensure all fields are set
-	data.ID = types.StringValue(updatedServiceAccountWithETag.ServiceAccount.ID)
+	// Update resource data with the response - preserve immutable fields from state
+	data.ID = state.ID
+	data.CreatedAt = state.CreatedAt
+	data.Creator = state.Creator
+	data.ETag = types.StringValue(updatedServiceAccountWithETag.ETag)
 
-	// If the ID is empty (which might happen due to API behavior), preserve the original ID
-	if data.ID.ValueString() == "" {
-		data.ID = state.ID
-	}
-
+	// Update mutable fields from the response
 	data.Name = types.StringValue(updatedServiceAccountWithETag.ServiceAccount.Name)
 	data.Description = types.StringValue(updatedServiceAccountWithETag.ServiceAccount.Description)
 	data.PermissionsSystemID = types.StringValue(updatedServiceAccountWithETag.ServiceAccount.PermissionsSystemID)
-	data.CreatedAt = types.StringValue(updatedServiceAccountWithETag.ServiceAccount.CreatedAt)
-	data.Creator = types.StringValue(updatedServiceAccountWithETag.ServiceAccount.Creator)
-	data.ETag = types.StringValue(updatedServiceAccountWithETag.ETag)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
