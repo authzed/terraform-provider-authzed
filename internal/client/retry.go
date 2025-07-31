@@ -80,7 +80,7 @@ func (rc *RetryConfig) RetryWithExponentialBackoff(
 					operationName, delay, attempt+1, rc.MaxRetries+1),
 			)
 
-			tflog.Warn(ctx, "conflict detected, retrying with exponential backoff", map[string]interface{}{
+			tflog.Warn(ctx, "conflict detected, retrying with exponential backoff", map[string]any{
 				"operation":    operationName,
 				"status_code":  resp.Response.StatusCode,
 				"attempt":      attempt + 1,
@@ -121,7 +121,7 @@ func (rc *RetryConfig) RetryWithExponentialBackoff(
 						operationName, attempt),
 				)
 
-				tflog.Info(ctx, "retry succeeded", map[string]interface{}{
+				tflog.Info(ctx, "retry succeeded", map[string]any{
 					"operation":     operationName,
 					"final_attempt": attempt + 1,
 					"total_retries": attempt,
@@ -145,7 +145,7 @@ func (rc *RetryConfig) RetryWithExponentialBackoff(
 			rc.MaxRetries, operationName),
 	)
 
-	tflog.Error(ctx, "retries exhausted", map[string]interface{}{
+	tflog.Error(ctx, "retries exhausted", map[string]any{
 		"operation":    operationName,
 		"max_attempts": rc.MaxRetries + 1,
 		"final_status": resp.Response.StatusCode,
