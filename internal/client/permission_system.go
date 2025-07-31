@@ -32,7 +32,7 @@ func (ps *PermissionsSystemWithETag) SetETag(etag string) {
 }
 
 // GetResource returns the underlying permissions system
-func (ps *PermissionsSystemWithETag) GetResource() interface{} {
+func (ps *PermissionsSystemWithETag) GetResource() any {
 	return ps.PermissionsSystem
 }
 

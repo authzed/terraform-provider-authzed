@@ -1,0 +1,59 @@
+---
+version: "2"
+run:
+  allow-parallel-runners: true
+  build-tags:
+    - "mage"
+linters:
+  enable:
+    - "bidichk"
+#    - "bodyclose"
+    - "errcheck"
+    - "errname"
+    - "errorlint"
+    - "gocritic"
+    - "goprintffuncname"
+#    - "gosec"
+    - "govet"
+    - "importas"
+    - "ineffassign"
+    - "makezero"
+    - "prealloc"
+    - "predeclared"
+    - "promlinter"
+#    - "revive"
+    - "rowserrcheck"
+    - "spancheck"
+#    - "staticcheck"
+    - "tagalign"
+    - "testifylint"
+    - "tparallel"
+    - "unconvert"
+#    - "usetesting"
+    - "wastedassign"
+    - "whitespace"
+    - "unused"
+  settings:
+#    staticcheck:
+#      checks:
+#        - "all"
+formatters:
+  enable:
+    - "gci"
+    - "gofmt"
+    - "gofumpt"
+    - "goimports"
+  settings:
+    gofmt:
+      rewrite-rules:
+        - pattern: "interface{}"
+          replacement: "any"
+    gci:
+      sections:
+        - "standard"
+        - "default"
+        - "prefix(github.com/authzed)"
+        - "localmodule"
+    goimports:
+      local-prefixes:
+        - "github.com/authzed/terraform-provider-platform-api"

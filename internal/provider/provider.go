@@ -4,13 +4,13 @@ import (
 	"context"
 	"sync"
 
-	"terraform-provider-authzed/internal/client"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"terraform-provider-authzed/internal/client"
 )
 
 // FGAMCoordinator handles serialization of operations per permission system

@@ -129,7 +129,7 @@ func ValidatePolicyDestroyed(permissionSystemID, policyID string) error {
 	}
 
 	if !IsNotFoundError(err) {
-		return fmt.Errorf("unexpected error checking policy destruction: %v", err)
+		return fmt.Errorf("unexpected error checking policy destruction: %w", err)
 	}
 
 	return nil

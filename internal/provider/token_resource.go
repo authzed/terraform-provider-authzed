@@ -2,11 +2,9 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
-
-	"terraform-provider-authzed/internal/client"
-	"terraform-provider-authzed/internal/models"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -14,6 +12,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"terraform-provider-authzed/internal/client"
+	"terraform-provider-authzed/internal/models"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -207,7 +208,8 @@ func (r *TokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		state.ID.ValueString(),
 	)
 	if err != nil {
-		apiErr, ok := err.(*client.APIError)
+		apiErr := &client.APIError{}
+		ok := errors.As(err, &apiErr)
 		if ok && apiErr.StatusCode == 404 {
 			// Token was deleted outside of Terraform
 			resp.State.RemoveResource(ctx)
@@ -325,7 +327,8 @@ func (r *TokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 		state.ID.ValueString(),
 	)
 	if err != nil {
-		apiErr, ok := err.(*client.APIError)
+		apiErr := &client.APIError{}
+		ok := errors.As(err, &apiErr)
 		if ok && apiErr.StatusCode == 404 {
 			// Token already deleted, ignore
 			return

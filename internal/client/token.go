@@ -7,9 +7,9 @@ import (
 	"io"
 	"net/http"
 
-	"terraform-provider-authzed/internal/models"
-
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"terraform-provider-authzed/internal/models"
 )
 
 // TokenWithETag represents a token resource with its ETag
@@ -34,7 +34,7 @@ func (t *TokenWithETag) SetETag(etag string) {
 }
 
 // GetResource returns the underlying token
-func (t *TokenWithETag) GetResource() interface{} {
+func (t *TokenWithETag) GetResource() any {
 	return t.Token
 }
 

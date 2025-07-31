@@ -5,11 +5,11 @@ import (
 	"regexp"
 	"testing"
 
-	"terraform-provider-authzed/internal/client"
-	"terraform-provider-authzed/internal/test/helpers"
-
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+
+	"terraform-provider-authzed/internal/client"
+	"terraform-provider-authzed/internal/test/helpers"
 )
 
 func TestAccAuthzedRole_basic(t *testing.T) {
@@ -253,7 +253,7 @@ func testAccCheckRoleExists(resourceName string) resource.TestCheckFunc {
 
 		_, err := testClient.GetRole(permissionSystemID, rs.Primary.ID)
 		if err != nil {
-			return fmt.Errorf("Error retrieving role: %s", err)
+			return fmt.Errorf("Error retrieving role: %w", err)
 		}
 
 		return nil
@@ -286,7 +286,7 @@ func testAccCheckRoleDestroy(s *terraform.State) error {
 
 		// Verify it's actually a 404 error, not another error
 		if !helpers.IsNotFoundError(err) {
-			return fmt.Errorf("unexpected error checking role destruction: %v", err)
+			return fmt.Errorf("unexpected error checking role destruction: %w", err)
 		}
 	}
 

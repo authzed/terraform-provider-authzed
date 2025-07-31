@@ -1,7 +1,6 @@
 package test
 
 import (
-	"context"
 	"testing"
 
 	"terraform-provider-authzed/internal/client"
@@ -152,8 +151,7 @@ func TestUpdateResource(t *testing.T) {
 	endpoint := "/ps/test-ps/access/service-accounts/asa-123abc456def"
 	body := map[string]any{"name": "Updated Service Account"}
 
-	updated, err := c.UpdateResource(context.Background(), resource, endpoint, body)
-
+	updated, err := c.UpdateResource(t.Context(), resource, endpoint, body)
 	// Verify results
 	if err != nil {
 		// This is expected since we're not actually making a real HTTP request

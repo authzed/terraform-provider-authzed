@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -34,7 +35,7 @@ func (r *RoleWithETag) SetETag(etag string) {
 }
 
 // GetResource returns the underlying role
-func (r *RoleWithETag) GetResource() interface{} {
+func (r *RoleWithETag) GetResource() any {
 	return r.Role
 }
 
@@ -91,7 +92,8 @@ func (c *CloudClient) CreateRole(ctx context.Context, role *models.Role) (*RoleW
 	resource, err := c.CreateResourceWithFactory(ctx, path, role, &createdRole, NewRoleResource)
 	if err != nil {
 		// Special handling for specific errors
-		if apiErr, ok := err.(*APIError); ok && apiErr.StatusCode == http.StatusInternalServerError {
+		apiErr := &APIError{}
+		if errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusInternalServerError {
 			// Check if the error message indicates a duplicate name
 			if strings.Contains(string(apiErr.Body), "duplicate") || strings.Contains(string(apiErr.Body), "already exists") {
 				return nil, fmt.Errorf("role with name '%s' already exists in permission system '%s'", role.Name, role.PermissionsSystemID)
