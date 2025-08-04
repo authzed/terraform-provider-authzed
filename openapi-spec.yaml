@@ -1572,6 +1572,124 @@ paths:
       - auth: []
       tags:
       - permissions system
+  /ps/{permissionsSystemID}/externalmetrics/tokens:
+    get:
+      description: get a token used to export metrics to Prometheus
+      operationId: ListExternalMetricsToken
+      parameters:
+      - description: The globally unique ID for the Permissions System
+        in: path
+        name: permissionsSystemID
+        required: true
+        schema:
+          description: The globally unique ID for the Permissions System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListExternalMetricsTokenResponse'
+          description: OK
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - permissions system
+    post:
+      description: create a token that can be used to export metrics to Prometheus
+      operationId: CreateExternalMetricsToken
+      parameters:
+      - description: The globally unique ID for the Permissions System
+        in: path
+        name: permissionsSystemID
+        required: true
+        schema:
+          description: The globally unique ID for the Permissions System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateExternalMetricsTokenResponse'
+          description: Created
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - permissions system
+  /ps/{permissionsSystemID}/externalmetrics/tokens/{id}:
+    put:
+      description: rotate a token used to export metrics to Prometheus
+      operationId: RotateExternalMetricsToken
+      parameters:
+      - description: The globally unique ID for the Permissions System
+        in: path
+        name: permissionsSystemID
+        required: true
+        schema:
+          description: The globally unique ID for the Permissions System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+      - description: The globally unique ID for this token
+        in: path
+        name: id
+        required: true
+        schema:
+          description: The globally unique ID for this token
+          pattern: ^em-[a-zA-Z0-9-_]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RotateExternalMetricsTokenResponse'
+          description: OK
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - permissions system
   /ps/{permissionsSystemID}/features/audit-log:
     get:
       description: get the current configuration of the audit log feature
@@ -2320,6 +2438,7 @@ components:
       enum:
       - version_pinning
       - materialize
+      - external_metrics_forwarding
       type: string
     CloudKind:
       enum:
@@ -2375,6 +2494,23 @@ components:
       - deploymentTemplateID
       - replicas
       - region
+      type: object
+    CreateExternalMetricsTokenResponse:
+      properties:
+        id:
+          description: The globally unique ID for this token
+          pattern: ^em-[a-zA-Z0-9-_]+$
+          type: string
+        permissionsSystemID:
+          description: The globally unique ID for the Permissions System
+          pattern: ^ps-[a-zA-Z0-9-]+$
+          type: string
+        secret:
+          description: The secret for the token. Will not be returned again.
+          type: string
+      required:
+      - id
+      - secret
       type: object
     CreateOrganizationRequest:
       properties:
@@ -2517,7 +2653,7 @@ components:
           type: string
         creator:
           description: The name of the user that created this Policy. May be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Policy. May be empty.
@@ -2556,7 +2692,7 @@ components:
         updater:
           description: The name of the user that last updated this Policy. May be
             empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
       required:
       - name
@@ -2595,7 +2731,7 @@ components:
           type: string
         creator:
           description: The name of the user that created this Role. May be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Role. May be empty.
@@ -2624,7 +2760,7 @@ components:
           type: string
         updater:
           description: The name of the user that last updated this Role. May be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
       required:
       - name
@@ -2661,7 +2797,7 @@ components:
         creator:
           description: The name of the user that created this Service Account. May
             be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Service Account. May
@@ -2695,7 +2831,7 @@ components:
         updater:
           description: The name of the user that last updated this Service Account.
             May be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
       required:
       - name
@@ -2733,7 +2869,7 @@ components:
           type: string
         creator:
           description: The name of the user that created this Token. May be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Token. May be empty.
@@ -2772,7 +2908,7 @@ components:
           type: string
         updater:
           description: The name of the user that last updated this Token. May be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
       required:
       - name
@@ -2801,7 +2937,7 @@ components:
           type: string
         name:
           description: The name of the Datastore instance.
-          maxLength: 50
+          maxLength: 55
           minLength: 1
           type: string
         type:
@@ -3241,6 +3377,13 @@ components:
       type: object
     GetPermissionsSystemResponse:
       properties:
+        availableVersions:
+          description: The available versions of SpiceDB that can be used in this
+            Permissions System. This is only populated if the Permissions System is
+            on an update channel.
+          items:
+            $ref: '#/components/schemas/SpiceDBVersion'
+          type: array
         capabilities:
           description: The capabilities on the Permissions System.
           items:
@@ -3283,7 +3426,7 @@ components:
           type: string
         creator:
           description: The name of the user that created this Policy. May be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Policy. May be empty.
@@ -3322,7 +3465,7 @@ components:
         updater:
           description: The name of the user that last updated this Policy. May be
             empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
       required:
       - name
@@ -3340,7 +3483,7 @@ components:
           type: string
         creator:
           description: The name of the user that created this Role. May be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Role. May be empty.
@@ -3369,7 +3512,7 @@ components:
           type: string
         updater:
           description: The name of the user that last updated this Role. May be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
       required:
       - name
@@ -3387,7 +3530,7 @@ components:
         creator:
           description: The name of the user that created this Service Account. May
             be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Service Account. May
@@ -3421,7 +3564,7 @@ components:
         updater:
           description: The name of the user that last updated this Service Account.
             May be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
       required:
       - name
@@ -3437,7 +3580,7 @@ components:
           type: string
         creator:
           description: The name of the user that created this Token. May be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Token. May be empty.
@@ -3473,7 +3616,7 @@ components:
           type: string
         updater:
           description: The name of the user that last updated this Token. May be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
       required:
       - name
@@ -3515,6 +3658,32 @@ components:
         $ref: '#/components/schemas/Deployment'
       nullable: true
       type: array
+    ListExternalMetricsTokenResponse:
+      properties:
+        tokens:
+          description: The list of tokens for the Permissions System. If no tokens
+            exist, this will be empty.
+          items:
+            $ref: '#/components/schemas/ListExternalMetricsTokenResponseElement'
+          type: array
+      required:
+      - tokens
+      type: object
+    ListExternalMetricsTokenResponseElement:
+      properties:
+        hash:
+          description: If the token exists, the SHA256 hash of the secret part of
+            the token, without the prefix
+          pattern: ^[a-zA-Z0-9]{64}$
+          type: string
+        id:
+          description: The globally unique ID for this token
+          pattern: ^em-[a-zA-Z0-9-_]+$
+          type: string
+      required:
+      - id
+      - hash
+      type: object
     ListMaterializeClustersResponse:
       properties:
         clusters:
@@ -3783,6 +3952,13 @@ components:
           type: string
     PermissionsSystem:
       properties:
+        availableVersions:
+          description: The available versions of SpiceDB that can be used in this
+            Permissions System. This is only populated if the Permissions System is
+            on an update channel.
+          items:
+            $ref: '#/components/schemas/SpiceDBVersion'
+          type: array
         capabilities:
           description: The capabilities on the Permissions System.
           items:
@@ -3880,7 +4056,7 @@ components:
           type: string
         creator:
           description: The name of the user that created this Policy. May be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Policy. May be empty.
@@ -3919,7 +4095,7 @@ components:
         updater:
           description: The name of the user that last updated this Policy. May be
             empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
       required:
       - name
@@ -3964,7 +4140,7 @@ components:
           type: string
         creator:
           description: The name of the user that created this Role. May be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Role. May be empty.
@@ -3993,7 +4169,7 @@ components:
           type: string
         updater:
           description: The name of the user that last updated this Role. May be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
       required:
       - name
@@ -4005,6 +4181,14 @@ components:
       - admin
       - viewer
       type: string
+    RotateExternalMetricsTokenResponse:
+      properties:
+        secret:
+          description: The secret for the token. Will not be returned again.
+          type: string
+      required:
+      - secret
+      type: object
     ServiceAccount:
       properties:
         createdAt:
@@ -4016,7 +4200,7 @@ components:
         creator:
           description: The name of the user that created this Service Account. May
             be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Service Account. May
@@ -4050,7 +4234,7 @@ components:
         updater:
           description: The name of the user that last updated this Service Account.
             May be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
       required:
       - name
@@ -4219,7 +4403,7 @@ components:
           type: string
         creator:
           description: The name of the user that created this Token. May be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Token. May be empty.
@@ -4255,7 +4439,7 @@ components:
           type: string
         updater:
           description: The name of the user that last updated this Token. May be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
       required:
       - name
@@ -4315,6 +4499,13 @@ components:
       type: object
     UpdatePermissionsSystemResponse:
       properties:
+        availableVersions:
+          description: The available versions of SpiceDB that can be used in this
+            Permissions System. This is only populated if the Permissions System is
+            on an update channel.
+          items:
+            $ref: '#/components/schemas/SpiceDBVersion'
+          type: array
         capabilities:
           description: The capabilities on the Permissions System.
           items:
@@ -4383,7 +4574,7 @@ components:
           type: string
         creator:
           description: The name of the user that created this Policy. May be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Policy. May be empty.
@@ -4422,7 +4613,7 @@ components:
         updater:
           description: The name of the user that last updated this Policy. May be
             empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
       required:
       - name
@@ -4456,7 +4647,7 @@ components:
           type: string
         creator:
           description: The name of the user that created this Role. May be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Role. May be empty.
@@ -4485,7 +4676,7 @@ components:
           type: string
         updater:
           description: The name of the user that last updated this Role. May be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
       required:
       - name
@@ -4526,7 +4717,7 @@ components:
         creator:
           description: The name of the user that created this Service Account. May
             be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Service Account. May
@@ -4560,7 +4751,7 @@ components:
         updater:
           description: The name of the user that last updated this Service Account.
             May be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
       required:
       - name
@@ -4590,7 +4781,7 @@ components:
           type: string
         creator:
           description: The name of the user that created this Token. May be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         description:
           description: The human-supplied description of the Token. May be empty.
@@ -4626,7 +4817,7 @@ components:
           type: string
         updater:
           description: The name of the user that last updated this Token. May be empty.
-          pattern: ^[a-zA-Z0-9-_]{2,50}$
+          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
       required:
       - name
