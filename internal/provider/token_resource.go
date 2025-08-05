@@ -27,8 +27,7 @@ func NewTokenResource() resource.Resource {
 }
 
 type TokenResource struct {
-	client          *client.CloudClient
-	fgamCoordinator *FGAMCoordinator
+	client *client.CloudClient
 }
 
 type TokenResourceModel struct {
@@ -120,17 +119,16 @@ func (r *TokenResource) Configure(_ context.Context, req resource.ConfigureReque
 		return
 	}
 
-	providerData, ok := req.ProviderData.(*CloudProviderData)
+	client, ok := req.ProviderData.(*client.CloudClient)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *CloudProviderData, got: %T", req.ProviderData),
+			fmt.Sprintf("Expected *client.CloudClient, got: %T", req.ProviderData),
 		)
 		return
 	}
 
-	r.client = providerData.Client
-	r.fgamCoordinator = providerData.FGAMCoordinator
+	r.client = client
 }
 
 func (r *TokenResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -150,11 +148,6 @@ func (r *TokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		ServiceAccountID:    plan.ServiceAccountID.ValueString(),
 		ReturnPlainText:     true, // Always request plain text during creation
 	}
-
-	// Coordinate operations to prevent conflicts
-	permissionSystemID := plan.PermissionsSystemID.ValueString()
-	r.fgamCoordinator.Lock(permissionSystemID)
-	defer r.fgamCoordinator.Unlock(permissionSystemID)
 
 	createdTokenWithETag, err := r.client.CreateToken(ctx, token)
 	if err != nil {
@@ -277,11 +270,6 @@ func (r *TokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		token.Creator = state.Creator.ValueString()
 	}
 
-	// Coordinate operations to prevent conflicts
-	permissionSystemID := plan.PermissionsSystemID.ValueString()
-	r.fgamCoordinator.Lock(permissionSystemID)
-	defer r.fgamCoordinator.Unlock(permissionSystemID)
-
 	// Use the ETag from state for optimistic concurrency control
 	updatedTokenWithETag, err := r.client.UpdateToken(ctx, token, state.ETag.ValueString())
 	if err != nil {
@@ -314,11 +302,7 @@ func (r *TokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 		return
 	}
 
-	// Coordinate operations to prevent conflicts
 	permissionSystemID := state.PermissionsSystemID.ValueString()
-	r.fgamCoordinator.Lock(permissionSystemID)
-	defer r.fgamCoordinator.Unlock(permissionSystemID)
-
 	err := r.client.DeleteToken(
 		permissionSystemID,
 		state.ServiceAccountID.ValueString(),

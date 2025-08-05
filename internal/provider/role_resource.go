@@ -26,8 +26,7 @@ func NewRoleResource() resource.Resource {
 }
 
 type roleResource struct {
-	client          *client.CloudClient
-	fgamCoordinator *FGAMCoordinator
+	client *client.CloudClient
 }
 
 type roleResourceModel struct {
@@ -103,17 +102,16 @@ func (r *roleResource) Configure(_ context.Context, req resource.ConfigureReques
 		return
 	}
 
-	providerData, ok := req.ProviderData.(*CloudProviderData)
+	client, ok := req.ProviderData.(*client.CloudClient)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *CloudProviderData, got: %T", req.ProviderData),
+			fmt.Sprintf("Expected *client.CloudClient, got: %T", req.ProviderData),
 		)
 		return
 	}
 
-	r.client = providerData.Client
-	r.fgamCoordinator = providerData.FGAMCoordinator
+	r.client = client
 }
 
 func (r *roleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -134,11 +132,6 @@ func (r *roleResource) Create(ctx context.Context, req resource.CreateRequest, r
 		PermissionsSystemID: data.PermissionsSystemID.ValueString(),
 		Permissions:         permissionsMap,
 	}
-
-	// Coordinate operations to prevent conflicts
-	permissionSystemID := data.PermissionsSystemID.ValueString()
-	r.fgamCoordinator.Lock(permissionSystemID)
-	defer r.fgamCoordinator.Unlock(permissionSystemID)
 
 	createdRoleWithETag, err := r.client.CreateRole(ctx, role)
 	if err != nil {
@@ -230,11 +223,6 @@ func (r *roleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		role.Creator = state.Creator.ValueString()
 	}
 
-	// Coordinate operations to prevent conflicts
-	permissionSystemID := data.PermissionsSystemID.ValueString()
-	r.fgamCoordinator.Lock(permissionSystemID)
-	defer r.fgamCoordinator.Unlock(permissionSystemID)
-
 	// Use the ETag from state for optimistic concurrency control
 	updatedRoleWithETag, err := r.client.UpdateRole(ctx, role, state.ETag.ValueString())
 	if err != nil {
@@ -258,11 +246,7 @@ func (r *roleResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		return
 	}
 
-	// Coordinate operations to prevent conflicts
 	permissionSystemID := data.PermissionsSystemID.ValueString()
-	r.fgamCoordinator.Lock(permissionSystemID)
-	defer r.fgamCoordinator.Unlock(permissionSystemID)
-
 	err := r.client.DeleteRole(permissionSystemID, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete role, got error: %s", err))
