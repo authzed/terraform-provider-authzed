@@ -10,5 +10,7 @@ type Policy struct {
 	RoleIDs             []string `json:"roleIDs"`
 	CreatedAt           string   `json:"createdAt,omitempty"`
 	Creator             string   `json:"creator,omitempty"`
+	UpdatedAt           string   `json:"updatedAt,omitempty"`
+	Updater             string   `json:"updater,omitempty"`
 	ConfigETag          string   `json:"ConfigETag,omitempty"`
 }
