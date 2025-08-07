@@ -11,8 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -37,6 +35,8 @@ type roleResourceModel struct {
 	Permissions         types.Map    `tfsdk:"permissions"`
 	CreatedAt           types.String `tfsdk:"created_at"`
 	Creator             types.String `tfsdk:"creator"`
+	UpdatedAt           types.String `tfsdk:"updated_at"`
+	Updater             types.String `tfsdk:"updater"`
 	ETag                types.String `tfsdk:"etag"`
 }
 
@@ -51,9 +51,6 @@ func (r *roleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "Unique identifier for this resource",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -75,23 +72,22 @@ func (r *roleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			"created_at": schema.StringAttribute{
 				Computed:    true,
 				Description: "Timestamp when the role was created",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"creator": schema.StringAttribute{
 				Computed:    true,
 				Description: "User who created the role",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
+			},
+			"updated_at": schema.StringAttribute{
+				Computed:    true,
+				Description: "Timestamp when the role was last updated",
+			},
+			"updater": schema.StringAttribute{
+				Computed:    true,
+				Description: "User who last updated the role",
 			},
 			"etag": schema.StringAttribute{
 				Computed:    true,
 				Description: "Version identifier used to prevent conflicts from concurrent updates, ensuring safe resource modifications",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 		},
 	}
@@ -102,16 +98,16 @@ func (r *roleResource) Configure(_ context.Context, req resource.ConfigureReques
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.CloudClient)
+	providerData, ok := req.ProviderData.(*CloudProviderData)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *client.CloudClient, got: %T", req.ProviderData),
+			fmt.Sprintf("Expected *CloudProviderData, got: %T", req.ProviderData),
 		)
 		return
 	}
 
-	r.client = client
+	r.client = providerData.Client
 }
 
 func (r *roleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -142,6 +138,16 @@ func (r *roleResource) Create(ctx context.Context, req resource.CreateRequest, r
 	data.ID = types.StringValue(createdRoleWithETag.Role.ID)
 	data.CreatedAt = types.StringValue(createdRoleWithETag.Role.CreatedAt)
 	data.Creator = types.StringValue(createdRoleWithETag.Role.Creator)
+	if createdRoleWithETag.Role.UpdatedAt == "" {
+		data.UpdatedAt = types.StringNull()
+	} else {
+		data.UpdatedAt = types.StringValue(createdRoleWithETag.Role.UpdatedAt)
+	}
+	if createdRoleWithETag.Role.Updater == "" {
+		data.Updater = types.StringNull()
+	} else {
+		data.Updater = types.StringValue(createdRoleWithETag.Role.Updater)
+	}
 	data.ETag = types.StringValue(createdRoleWithETag.ETag)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -173,6 +179,16 @@ func (r *roleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	data.Description = types.StringValue(roleWithETag.Role.Description)
 	data.CreatedAt = types.StringValue(roleWithETag.Role.CreatedAt)
 	data.Creator = types.StringValue(roleWithETag.Role.Creator)
+	if roleWithETag.Role.UpdatedAt == "" {
+		data.UpdatedAt = types.StringNull()
+	} else {
+		data.UpdatedAt = types.StringValue(roleWithETag.Role.UpdatedAt)
+	}
+	if roleWithETag.Role.Updater == "" {
+		data.Updater = types.StringNull()
+	} else {
+		data.Updater = types.StringValue(roleWithETag.Role.Updater)
+	}
 	data.ETag = types.StringValue(roleWithETag.ETag)
 
 	// Map permissions
@@ -208,17 +224,16 @@ func (r *roleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	permissionsMap := make(models.PermissionExprMap)
 	data.Permissions.ElementsAs(ctx, &permissionsMap, false)
 
-	// Create role with updated data - use state values for immutable fields
+	// Create role with updated data, use state values for immutable fields
 	role := &models.Role{
-		ID:                  state.ID.ValueString(), // Use state for immutable ID
+		ID:                  state.ID.ValueString(),
 		Name:                data.Name.ValueString(),
 		Description:         data.Description.ValueString(),
 		PermissionsSystemID: data.PermissionsSystemID.ValueString(),
 		Permissions:         permissionsMap,
-		CreatedAt:           state.CreatedAt.ValueString(), // Preserve immutable CreatedAt
+		CreatedAt:           state.CreatedAt.ValueString(),
 	}
 
-	// Handle Creator field - it might be null in state
 	if !state.Creator.IsNull() {
 		role.Creator = state.Creator.ValueString()
 	}
@@ -234,6 +249,16 @@ func (r *roleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	data.ID = state.ID
 	data.CreatedAt = state.CreatedAt
 	data.Creator = state.Creator
+	if updatedRoleWithETag.Role.UpdatedAt == "" {
+		data.UpdatedAt = types.StringNull()
+	} else {
+		data.UpdatedAt = types.StringValue(updatedRoleWithETag.Role.UpdatedAt)
+	}
+	if updatedRoleWithETag.Role.Updater == "" {
+		data.Updater = types.StringNull()
+	} else {
+		data.Updater = types.StringValue(updatedRoleWithETag.Role.Updater)
+	}
 	data.ETag = types.StringValue(updatedRoleWithETag.ETag)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)

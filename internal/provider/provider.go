@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"sync"
 
 	"terraform-provider-authzed/internal/client"
 
@@ -13,72 +12,19 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// FGAMCoordinator handles serialization of operations per permission system
-type FGAMCoordinator struct {
-	enabled  bool
-	mutexes  map[string]*sync.Mutex
-	mapMutex sync.RWMutex
-}
-
-// NewFGAMCoordinator creates a new coordinator
-func NewFGAMCoordinator(enabled bool) *FGAMCoordinator {
-	return &FGAMCoordinator{
-		enabled: enabled,
-		mutexes: make(map[string]*sync.Mutex),
-	}
-}
-
-// Lock acquires a lock for the given permission system ID
-func (fc *FGAMCoordinator) Lock(permissionSystemID string) {
-	if !fc.enabled {
-		return
-	}
-
-	fc.mapMutex.RLock()
-	mutex, exists := fc.mutexes[permissionSystemID]
-	fc.mapMutex.RUnlock()
-
-	if !exists {
-		fc.mapMutex.Lock()
-		// Double-check after acquiring write lock
-		if mutex, exists = fc.mutexes[permissionSystemID]; !exists {
-			mutex = &sync.Mutex{}
-			fc.mutexes[permissionSystemID] = mutex
-		}
-		fc.mapMutex.Unlock()
-	}
-
-	mutex.Lock()
-}
-
-// Unlock releases the lock for the given permission system ID
-func (fc *FGAMCoordinator) Unlock(permissionSystemID string) {
-	if !fc.enabled {
-		return
-	}
-
-	fc.mapMutex.RLock()
-	if mutex, exists := fc.mutexes[permissionSystemID]; exists {
-		mutex.Unlock()
-	}
-	fc.mapMutex.RUnlock()
-}
-
 type CloudProvider struct {
 	version string
 }
 
 type CloudProviderModel struct {
-	Endpoint          types.String `tfsdk:"endpoint"`
-	Token             types.String `tfsdk:"token"`
-	APIVersion        types.String `tfsdk:"api_version"`
-	FGAMSerialization types.Bool   `tfsdk:"fgam_serialization"`
+	Endpoint   types.String `tfsdk:"endpoint"`
+	Token      types.String `tfsdk:"token"`
+	APIVersion types.String `tfsdk:"api_version"`
 }
 
 // CloudProviderData contains the configured client and coordinator
 type CloudProviderData struct {
-	Client          *client.CloudClient
-	FGAMCoordinator *FGAMCoordinator
+	Client *client.CloudClient
 }
 
 var _ provider.Provider = &CloudProvider{}
@@ -112,10 +58,6 @@ func (p *CloudProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp
 				Optional:    true,
 				Description: "The version of the API to use (defaults to 25r1)",
 			},
-			"fgam_serialization": schema.BoolAttribute{
-				Optional:    true,
-				Description: "Enable serialization of operations to prevent conflicts. When enabled, resources within the same permission system will be created/updated sequentially instead of in parallel.",
-			},
 		},
 	}
 }
@@ -135,13 +77,8 @@ func (p *CloudProvider) Configure(ctx context.Context, req provider.ConfigureReq
 
 	cloudClient := client.NewCloudClient(clientConfig)
 
-	// Create coordinator based on configuration
-	fgamSerialization := config.FGAMSerialization.ValueBool()
-	fgamCoordinator := NewFGAMCoordinator(fgamSerialization)
-
 	providerData := &CloudProviderData{
-		Client:          cloudClient,
-		FGAMCoordinator: fgamCoordinator,
+		Client: cloudClient,
 	}
 
 	resp.DataSourceData = providerData

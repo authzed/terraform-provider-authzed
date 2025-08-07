@@ -14,8 +14,8 @@ const (
 
 	// Retry configuration for handling concurrent operations
 	// DefaultMaxRetries is the default number of retry attempts
-	DefaultMaxRetries     = 8
+	DefaultMaxRetries     = 12
 	DefaultBaseRetryDelay = 100 * time.Millisecond
-	DefaultMaxRetryDelay  = 5 * time.Second
-	DefaultMaxJitter      = 500 * time.Millisecond
+	DefaultMaxRetryDelay  = 10 * time.Second
+	DefaultMaxJitter      = 1 * time.Second
 )

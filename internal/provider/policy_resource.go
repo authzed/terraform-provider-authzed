@@ -114,16 +114,16 @@ func (r *policyResource) Configure(_ context.Context, req resource.ConfigureRequ
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.CloudClient)
+	providerData, ok := req.ProviderData.(*CloudProviderData)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *client.CloudClient, got: %T", req.ProviderData),
+			fmt.Sprintf("Expected *CloudProviderData, got: %T", req.ProviderData),
 		)
 		return
 	}
 
-	r.client = client
+	r.client = providerData.Client
 }
 
 func (r *policyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -163,7 +163,6 @@ func (r *policyResource) Create(ctx context.Context, req resource.CreateRequest,
 		data.Creator = types.StringValue(createdPolicyWithETag.Policy.Creator)
 	}
 
-	// Map new FGAM fields (managed by API)
 	if createdPolicyWithETag.Policy.UpdatedAt == "" {
 		data.UpdatedAt = types.StringNull()
 	} else {
@@ -222,7 +221,6 @@ func (r *policyResource) Read(ctx context.Context, req resource.ReadRequest, res
 		data.Creator = types.StringValue(policy.Creator)
 	}
 
-	// Map new FGAM fields (managed by API)
 	if policy.UpdatedAt == "" {
 		data.UpdatedAt = types.StringNull()
 	} else {
@@ -294,7 +292,6 @@ func (r *policyResource) Update(ctx context.Context, req resource.UpdateRequest,
 	data.CreatedAt = state.CreatedAt
 	data.Creator = state.Creator
 
-	// Map new FGAM fields from API response (managed by API, not preserved from state)
 	if updatedPolicyWithETag.Policy.UpdatedAt == "" {
 		data.UpdatedAt = types.StringNull()
 	} else {
