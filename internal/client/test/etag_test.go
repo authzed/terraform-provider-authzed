@@ -1,15 +1,15 @@
 package test
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"terraform-provider-authzed/internal/client"
 	"terraform-provider-authzed/internal/models"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestETagSupport(t *testing.T) {
@@ -113,7 +113,7 @@ func TestETagSupport(t *testing.T) {
 		getRequestCount = 0
 
 		sa, err := c.GetServiceAccount("ps-test123", "asa-test123")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, testETag, sa.GetETag())
 	})
 
@@ -129,7 +129,7 @@ func TestETagSupport(t *testing.T) {
 		}
 
 		// This should work after retry (first PUT fails with 412, GET fetches new ETag, second PUT succeeds)
-		result := c.UpdateServiceAccount(context.Background(), serviceAccount, testETag)
+		result := c.UpdateServiceAccount(t.Context(), serviceAccount, testETag)
 
 		assert.False(t, result.Diagnostics.HasError())
 		assert.NotNil(t, result.ServiceAccount)
@@ -154,7 +154,7 @@ func TestETagSupport(t *testing.T) {
 			Description:         "Updated Description",
 		}
 
-		result := c.UpdateServiceAccount(context.Background(), serviceAccount, testETag)
+		result := c.UpdateServiceAccount(t.Context(), serviceAccount, testETag)
 		assert.False(t, result.Diagnostics.HasError())
 		assert.NotNil(t, result.ServiceAccount)
 		assert.Equal(t, updatedETag, result.ServiceAccount.ETag)
@@ -233,7 +233,7 @@ func TestETagSupport(t *testing.T) {
 		}
 
 		// This should succeed after retry
-		result := c409.UpdateServiceAccount(context.Background(), serviceAccount, testETag)
+		result := c409.UpdateServiceAccount(t.Context(), serviceAccount, testETag)
 		assert.False(t, result.Diagnostics.HasError())
 		assert.NotNil(t, result.ServiceAccount)
 		assert.Equal(t, updatedETag, result.ServiceAccount.ETag)
