@@ -62,6 +62,16 @@ tags:
     description: Find out more at the official Authzed Docs site
     url: https://authzed.com/docs
   name: organization
+- description: User management and profile APIs
+  externalDocs:
+    description: Find out more at the official Authzed Docs site
+    url: https://authzed.com/docs
+  name: user
+- description: User metadata management APIs
+  externalDocs:
+    description: Find out more at the official Authzed Docs site
+    url: https://authzed.com/docs
+  name: metadata
 paths:
   /channels:
     get:
@@ -299,6 +309,127 @@ paths:
       - auth: []
       tags:
       - organization
+  /organizations/{organizationID}/roles:
+    get:
+      description: list all roles on an organization
+      operationId: ListOrganizationRoles
+      parameters:
+      - description: The ID of the Organization
+        in: path
+        name: organizationID
+        required: true
+        schema:
+          description: The ID of the Organization
+          example: org-example
+          pattern: ^org-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListOrganizationRolesResponse'
+          description: OK
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - organization
+      - access management
+    post:
+      description: set a role on an organization
+      operationId: SetOrganizationRole
+      parameters:
+      - description: The ID of the Organization
+        in: path
+        name: organizationID
+        required: true
+        schema:
+          description: The ID of the Organization
+          example: org-example
+          pattern: ^org-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetOrganizationRoleRequest'
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - organization
+      - access management
+  /organizations/{organizationID}/roles/{subjectId}:
+    delete:
+      description: delete a role on an organization
+      operationId: DeleteOrganizationRole
+      parameters:
+      - description: The ID of the Organization
+        in: path
+        name: organizationID
+        required: true
+        schema:
+          description: The ID of the Organization
+          example: org-example
+          pattern: ^org-[a-zA-Z0-9-]+$
+          type: string
+      - description: The ID of the subject whose role is to be deleted
+        in: path
+        name: subjectId
+        required: true
+        schema:
+          description: The ID of the subject whose role is to be deleted
+          example: user-12345
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "202":
+          description: Accepted
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - organization
+      - access management
   /ps:
     get:
       description: list all permissions systems
@@ -2339,6 +2470,37 @@ paths:
       - auth: []
       tags:
       - permissions system
+  /user/metadata:
+    put:
+      description: update the current authenticated user's metadata
+      operationId: UpdateMyMetadata
+      parameters:
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMyMetadataRequest'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - user
+      - metadata
 components:
   schemas:
     APICategory:
@@ -2427,6 +2589,8 @@ components:
       properties:
         kind:
           $ref: '#/components/schemas/RoleKind'
+        metadata:
+          $ref: '#/components/schemas/UserMetadata'
         subjectId:
           description: The ID of the subject this role applies to, e.g., 'user-12345'
           type: string
@@ -2439,6 +2603,7 @@ components:
       - version_pinning
       - materialize
       - external_metrics_forwarding
+      - role_management
       type: string
     CloudKind:
       enum:
@@ -2539,6 +2704,11 @@ components:
       type: object
     CreateOrganizationResponse:
       properties:
+        capabilities:
+          description: The capabilities available to the organization
+          items:
+            $ref: '#/components/schemas/OrganizationCapability'
+          type: array
         description:
           description: The organization description
           type: string
@@ -3694,6 +3864,17 @@ components:
       required:
       - clusters
       type: object
+    ListOrganizationRolesResponse:
+      properties:
+        roles:
+          description: List of roles for the Organization. Each role includes its
+            kind and the subject ID it applies to.
+          items:
+            $ref: '#/components/schemas/OrganizationRole'
+          type: array
+      required:
+      - roles
+      type: object
     ListOrganizationsResponse:
       properties:
         organizations:
@@ -3848,8 +4029,18 @@ components:
       - lastTransitionTime
       - reason
       type: object
+    OrgRoleKind:
+      enum:
+      - admin
+      - member
+      type: string
     Organization:
       properties:
+        capabilities:
+          description: The capabilities available to the organization
+          items:
+            $ref: '#/components/schemas/OrganizationCapability'
+          type: array
         description:
           description: The organization description
           example: An example organization
@@ -3866,6 +4057,23 @@ components:
       required:
       - id
       - title
+      type: object
+    OrganizationCapability:
+      enum:
+      - role_management
+      type: string
+    OrganizationRole:
+      properties:
+        kind:
+          $ref: '#/components/schemas/OrgRoleKind'
+        metadata:
+          $ref: '#/components/schemas/UserMetadata'
+        subjectId:
+          description: The ID of the subject this role applies to, e.g., 'user-12345'
+          type: string
+      required:
+      - kind
+      - subjectId
       type: object
     PerfInsightsTopKRangeResponse:
       properties:
@@ -4290,6 +4498,18 @@ components:
         id:
           $ref: '#/components/schemas/PermissionsSystemFeature'
       type: object
+    SetOrganizationRoleRequest:
+      properties:
+        kind:
+          $ref: '#/components/schemas/OrgRoleKind'
+        subjectId:
+          description: The ID of the subject to assign the role to
+          example: user-12345
+          type: string
+      required:
+      - kind
+      - subjectId
+      type: object
     SetPermissionsSystemRoleRequest:
       properties:
         kind:
@@ -4480,6 +4700,24 @@ components:
           minimum: 1
           nullable: true
           type: integer
+      type: object
+    UpdateMyMetadataRequest:
+      properties:
+        email:
+          description: The user's email address
+          example: john.doe@example.com
+          nullable: true
+          type: string
+        name:
+          description: The user's display name
+          example: John Doe
+          nullable: true
+          type: string
+        picture:
+          description: The user's profile picture URL
+          example: https://example.com/avatar.jpg
+          nullable: true
+          type: string
       type: object
     UpdatePermissionsSystemRequest:
       properties:
@@ -4830,6 +5068,24 @@ components:
           type: string
       required:
       - configYAML
+      type: object
+    UserMetadata:
+      properties:
+        email:
+          description: The user's email address; may be redacted for privacy
+          example: j*****e@example.com
+          nullable: true
+          type: string
+        name:
+          description: The user's display name
+          example: John Doe
+          nullable: true
+          type: string
+        pictureUrl:
+          description: The user's profile picture URL
+          example: https://example.com/avatar.jpg
+          nullable: true
+          type: string
       type: object
   securitySchemes:
     auth:
