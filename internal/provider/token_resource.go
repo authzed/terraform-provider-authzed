@@ -27,8 +27,7 @@ func NewTokenResource() resource.Resource {
 }
 
 type TokenResource struct {
-	client          *client.CloudClient
-	fgamCoordinator *FGAMCoordinator
+	client *client.CloudClient
 }
 
 type TokenResourceModel struct {
@@ -39,6 +38,8 @@ type TokenResourceModel struct {
 	ServiceAccountID    types.String `tfsdk:"service_account_id"`
 	CreatedAt           types.String `tfsdk:"created_at"`
 	Creator             types.String `tfsdk:"creator"`
+	UpdatedAt           types.String `tfsdk:"updated_at"`
+	Updater             types.String `tfsdk:"updater"`
 	Hash                types.String `tfsdk:"hash"`
 	PlainText           types.String `tfsdk:"plain_text"`
 	ETag                types.String `tfsdk:"etag"`
@@ -55,9 +56,6 @@ func (r *TokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"id": schema.StringAttribute{
 				Description: "The globally unique ID for this token",
 				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"name": schema.StringAttribute{
 				Description: "The name of the token",
@@ -78,23 +76,22 @@ func (r *TokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"created_at": schema.StringAttribute{
 				Description: "The timestamp when the token was created",
 				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"creator": schema.StringAttribute{
 				Description: "The name of the user that created this token",
 				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
+			},
+			"updated_at": schema.StringAttribute{
+				Description: "The timestamp when the token was last updated",
+				Computed:    true,
+			},
+			"updater": schema.StringAttribute{
+				Description: "The name of the user that last updated this token",
+				Computed:    true,
 			},
 			"hash": schema.StringAttribute{
 				Description: "The SHA256 hash of the token",
 				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"plain_text": schema.StringAttribute{
 				Description: "One-time token value (returned only at creation).",
@@ -107,9 +104,6 @@ func (r *TokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"etag": schema.StringAttribute{
 				Computed:    true,
 				Description: "Version identifier used to prevent conflicts from concurrent updates",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 		},
 	}
@@ -130,7 +124,6 @@ func (r *TokenResource) Configure(_ context.Context, req resource.ConfigureReque
 	}
 
 	r.client = providerData.Client
-	r.fgamCoordinator = providerData.FGAMCoordinator
 }
 
 func (r *TokenResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -151,11 +144,6 @@ func (r *TokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		ReturnPlainText:     true, // Always request plain text during creation
 	}
 
-	// Coordinate operations to prevent conflicts
-	permissionSystemID := plan.PermissionsSystemID.ValueString()
-	r.fgamCoordinator.Lock(permissionSystemID)
-	defer r.fgamCoordinator.Unlock(permissionSystemID)
-
 	createdTokenWithETag, err := r.client.CreateToken(ctx, token)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -173,6 +161,8 @@ func (r *TokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	plan.ServiceAccountID = types.StringValue(createdTokenWithETag.Token.ServiceAccountID)
 	plan.CreatedAt = types.StringValue(createdTokenWithETag.Token.CreatedAt)
 	plan.Creator = types.StringValue(createdTokenWithETag.Token.Creator)
+	plan.UpdatedAt = types.StringValue(createdTokenWithETag.Token.UpdatedAt)
+	plan.Updater = types.StringValue(createdTokenWithETag.Token.Updater)
 	plan.ETag = types.StringValue(createdTokenWithETag.ETag)
 
 	// Set the one-time plain text value and hash during creation
@@ -229,6 +219,8 @@ func (r *TokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	state.ServiceAccountID = types.StringValue(tokenWithETag.Token.ServiceAccountID)
 	state.CreatedAt = types.StringValue(tokenWithETag.Token.CreatedAt)
 	state.Creator = types.StringValue(tokenWithETag.Token.Creator)
+	state.UpdatedAt = types.StringValue(tokenWithETag.Token.UpdatedAt)
+	state.Updater = types.StringValue(tokenWithETag.Token.Updater)
 	state.ETag = types.StringValue(tokenWithETag.ETag)
 
 	// Only set the hash, never reset plain_text
@@ -261,26 +253,21 @@ func (r *TokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	// Create token with updated data - use state values for immutable fields
+	// Create token with updated data, use state values for immutable fields
 	token := &models.TokenRequest{
-		ID:                  state.ID.ValueString(), // Use state for immutable ID
+		ID:                  state.ID.ValueString(),
 		Name:                plan.Name.ValueString(),
 		Description:         plan.Description.ValueString(),
 		PermissionsSystemID: plan.PermissionsSystemID.ValueString(),
 		ServiceAccountID:    plan.ServiceAccountID.ValueString(),
-		CreatedAt:           state.CreatedAt.ValueString(), // Preserve immutable CreatedAt
-		Hash:                state.Hash.ValueString(),      // Preserve immutable Hash
+		CreatedAt:           state.CreatedAt.ValueString(),
+		Hash:                state.Hash.ValueString(),
 	}
 
 	// Handle Creator field - it might be null in state
 	if !state.Creator.IsNull() {
 		token.Creator = state.Creator.ValueString()
 	}
-
-	// Coordinate operations to prevent conflicts
-	permissionSystemID := plan.PermissionsSystemID.ValueString()
-	r.fgamCoordinator.Lock(permissionSystemID)
-	defer r.fgamCoordinator.Unlock(permissionSystemID)
 
 	// Use the ETag from state for optimistic concurrency control
 	updatedTokenWithETag, err := r.client.UpdateToken(ctx, token, state.ETag.ValueString())
@@ -292,10 +279,12 @@ func (r *TokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	// Update resource data with the response - preserve immutable fields from state
+	// Update resource data with the response, preserve immutable fields from state
 	plan.ID = state.ID
 	plan.CreatedAt = state.CreatedAt
 	plan.Creator = state.Creator
+	plan.UpdatedAt = types.StringValue(updatedTokenWithETag.Token.UpdatedAt)
+	plan.Updater = types.StringValue(updatedTokenWithETag.Token.Updater)
 	plan.Hash = state.Hash
 	plan.PlainText = state.PlainText
 	plan.ETag = types.StringValue(updatedTokenWithETag.ETag)
@@ -314,11 +303,7 @@ func (r *TokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 		return
 	}
 
-	// Coordinate operations to prevent conflicts
 	permissionSystemID := state.PermissionsSystemID.ValueString()
-	r.fgamCoordinator.Lock(permissionSystemID)
-	defer r.fgamCoordinator.Unlock(permissionSystemID)
-
 	err := r.client.DeleteToken(
 		permissionSystemID,
 		state.ServiceAccountID.ValueString(),

@@ -11,8 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -26,8 +24,7 @@ func NewServiceAccountResource() resource.Resource {
 }
 
 type serviceAccountResource struct {
-	client          *client.CloudClient
-	fgamCoordinator *FGAMCoordinator
+	client *client.CloudClient
 }
 
 type serviceAccountResourceModel struct {
@@ -37,6 +34,8 @@ type serviceAccountResourceModel struct {
 	PermissionsSystemID types.String `tfsdk:"permission_system_id"`
 	CreatedAt           types.String `tfsdk:"created_at"`
 	Creator             types.String `tfsdk:"creator"`
+	UpdatedAt           types.String `tfsdk:"updated_at"`
+	Updater             types.String `tfsdk:"updater"`
 	ETag                types.String `tfsdk:"etag"`
 }
 
@@ -51,9 +50,6 @@ func (r *serviceAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "Unique identifier for this resource",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -70,23 +66,22 @@ func (r *serviceAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 			"created_at": schema.StringAttribute{
 				Computed:    true,
 				Description: "Timestamp when the service account was created",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"creator": schema.StringAttribute{
 				Computed:    true,
 				Description: "User who created the service account",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
+			},
+			"updated_at": schema.StringAttribute{
+				Computed:    true,
+				Description: "Timestamp when the service account was last updated",
+			},
+			"updater": schema.StringAttribute{
+				Computed:    true,
+				Description: "User who last updated the service account",
 			},
 			"etag": schema.StringAttribute{
 				Computed:    true,
 				Description: "Version identifier used to prevent conflicts from concurrent updates, ensuring safe resource modifications",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 		},
 	}
@@ -107,7 +102,6 @@ func (r *serviceAccountResource) Configure(_ context.Context, req resource.Confi
 	}
 
 	r.client = providerData.Client
-	r.fgamCoordinator = providerData.FGAMCoordinator
 }
 
 func (r *serviceAccountResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -124,11 +118,6 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 		PermissionsSystemID: data.PermissionsSystemID.ValueString(),
 	}
 
-	// Coordinate operations to prevent conflicts
-	permissionSystemID := data.PermissionsSystemID.ValueString()
-	r.fgamCoordinator.Lock(permissionSystemID)
-	defer r.fgamCoordinator.Unlock(permissionSystemID)
-
 	createdServiceAccountWithETag, err := r.client.CreateServiceAccount(ctx, serviceAccount)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create service account, got error: %s", err))
@@ -138,6 +127,16 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 	data.ID = types.StringValue(createdServiceAccountWithETag.ServiceAccount.ID)
 	data.CreatedAt = types.StringValue(createdServiceAccountWithETag.ServiceAccount.CreatedAt)
 	data.Creator = types.StringValue(createdServiceAccountWithETag.ServiceAccount.Creator)
+	if createdServiceAccountWithETag.ServiceAccount.UpdatedAt == "" {
+		data.UpdatedAt = types.StringNull()
+	} else {
+		data.UpdatedAt = types.StringValue(createdServiceAccountWithETag.ServiceAccount.UpdatedAt)
+	}
+	if createdServiceAccountWithETag.ServiceAccount.Updater == "" {
+		data.Updater = types.StringNull()
+	} else {
+		data.Updater = types.StringValue(createdServiceAccountWithETag.ServiceAccount.Updater)
+	}
 	data.ETag = types.StringValue(createdServiceAccountWithETag.ETag)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -168,6 +167,16 @@ func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequ
 	data.Description = types.StringValue(serviceAccountWithETag.ServiceAccount.Description)
 	data.CreatedAt = types.StringValue(serviceAccountWithETag.ServiceAccount.CreatedAt)
 	data.Creator = types.StringValue(serviceAccountWithETag.ServiceAccount.Creator)
+	if serviceAccountWithETag.ServiceAccount.UpdatedAt == "" {
+		data.UpdatedAt = types.StringNull()
+	} else {
+		data.UpdatedAt = types.StringValue(serviceAccountWithETag.ServiceAccount.UpdatedAt)
+	}
+	if serviceAccountWithETag.ServiceAccount.Updater == "" {
+		data.Updater = types.StringNull()
+	} else {
+		data.Updater = types.StringValue(serviceAccountWithETag.ServiceAccount.Updater)
+	}
 	data.ETag = types.StringValue(serviceAccountWithETag.ETag)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -201,11 +210,6 @@ func (r *serviceAccountResource) Update(ctx context.Context, req resource.Update
 		serviceAccount.Creator = state.Creator.ValueString()
 	}
 
-	// Coordinate operations to prevent conflicts
-	permissionSystemID := data.PermissionsSystemID.ValueString()
-	r.fgamCoordinator.Lock(permissionSystemID)
-	defer r.fgamCoordinator.Unlock(permissionSystemID)
-
 	// Use the ETag from state for optimistic concurrency control
 	updateResult := r.client.UpdateServiceAccount(ctx, serviceAccount, state.ETag.ValueString())
 	resp.Diagnostics.Append(updateResult.Diagnostics...)
@@ -221,6 +225,16 @@ func (r *serviceAccountResource) Update(ctx context.Context, req resource.Update
 	data.ID = state.ID
 	data.CreatedAt = state.CreatedAt
 	data.Creator = state.Creator
+	if updatedServiceAccountWithETag.ServiceAccount.UpdatedAt == "" {
+		data.UpdatedAt = types.StringNull()
+	} else {
+		data.UpdatedAt = types.StringValue(updatedServiceAccountWithETag.ServiceAccount.UpdatedAt)
+	}
+	if updatedServiceAccountWithETag.ServiceAccount.Updater == "" {
+		data.Updater = types.StringNull()
+	} else {
+		data.Updater = types.StringValue(updatedServiceAccountWithETag.ServiceAccount.Updater)
+	}
 	data.ETag = types.StringValue(updatedServiceAccountWithETag.ETag)
 
 	// Update mutable fields from the response
@@ -238,11 +252,7 @@ func (r *serviceAccountResource) Delete(ctx context.Context, req resource.Delete
 		return
 	}
 
-	// Coordinate operations to prevent conflicts
 	permissionSystemID := data.PermissionsSystemID.ValueString()
-	r.fgamCoordinator.Lock(permissionSystemID)
-	defer r.fgamCoordinator.Unlock(permissionSystemID)
-
 	err := r.client.DeleteServiceAccount(permissionSystemID, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete service account, got error: %s", err))

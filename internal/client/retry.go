@@ -40,7 +40,9 @@ func DefaultRetryConfig() *RetryConfig {
 
 // shouldRetryForConflict determines if a status code should trigger a retry
 func shouldRetryForConflict(statusCode int) bool {
-	return statusCode == http.StatusConflict || statusCode == http.StatusPreconditionFailed
+	return statusCode == http.StatusConflict ||
+		statusCode == http.StatusPreconditionFailed ||
+		statusCode == http.StatusTooManyRequests
 }
 
 // calculateDelay calculates the delay for a given retry attempt with exponential backoff and jitter

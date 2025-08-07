@@ -26,8 +26,7 @@ func NewPolicyResource() resource.Resource {
 }
 
 type policyResource struct {
-	client          *client.CloudClient
-	fgamCoordinator *FGAMCoordinator
+	client *client.CloudClient
 }
 
 type policyResourceModel struct {
@@ -39,6 +38,8 @@ type policyResourceModel struct {
 	RoleIDs             types.List   `tfsdk:"role_ids"`
 	CreatedAt           types.String `tfsdk:"created_at"`
 	Creator             types.String `tfsdk:"creator"`
+	UpdatedAt           types.String `tfsdk:"updated_at"`
+	Updater             types.String `tfsdk:"updater"`
 	ETag                types.String `tfsdk:"etag"`
 }
 
@@ -92,11 +93,17 @@ func (r *policyResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"updated_at": schema.StringAttribute{
+				Computed:    true,
+				Description: "Timestamp when the policy was last updated (managed by API)",
+			},
+			"updater": schema.StringAttribute{
+				Computed:    true,
+				Description: "User who last updated the policy (managed by API)",
+			},
 			"etag": schema.StringAttribute{
-				Computed: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
+				Computed:    true,
+				Description: "Version identifier used to prevent conflicts from concurrent updates, ensuring safe resource modifications",
 			},
 		},
 	}
@@ -117,7 +124,6 @@ func (r *policyResource) Configure(_ context.Context, req resource.ConfigureRequ
 	}
 
 	r.client = providerData.Client
-	r.fgamCoordinator = providerData.FGAMCoordinator
 }
 
 func (r *policyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -143,11 +149,6 @@ func (r *policyResource) Create(ctx context.Context, req resource.CreateRequest,
 		RoleIDs:             roleIDs,
 	}
 
-	// Coordinate operations to prevent conflicts
-	permissionSystemID := data.PermissionsSystemID.ValueString()
-	r.fgamCoordinator.Lock(permissionSystemID)
-	defer r.fgamCoordinator.Unlock(permissionSystemID)
-
 	createdPolicyWithETag, err := r.client.CreatePolicy(ctx, policy)
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating Policy", err.Error())
@@ -161,6 +162,18 @@ func (r *policyResource) Create(ctx context.Context, req resource.CreateRequest,
 	} else {
 		data.Creator = types.StringValue(createdPolicyWithETag.Policy.Creator)
 	}
+
+	if createdPolicyWithETag.Policy.UpdatedAt == "" {
+		data.UpdatedAt = types.StringNull()
+	} else {
+		data.UpdatedAt = types.StringValue(createdPolicyWithETag.Policy.UpdatedAt)
+	}
+	if createdPolicyWithETag.Policy.Updater == "" {
+		data.Updater = types.StringNull()
+	} else {
+		data.Updater = types.StringValue(createdPolicyWithETag.Policy.Updater)
+	}
+
 	data.ETag = types.StringValue(createdPolicyWithETag.ETag)
 
 	// Update role IDs in case the order or values changed
@@ -207,6 +220,18 @@ func (r *policyResource) Read(ctx context.Context, req resource.ReadRequest, res
 	} else {
 		data.Creator = types.StringValue(policy.Creator)
 	}
+
+	if policy.UpdatedAt == "" {
+		data.UpdatedAt = types.StringNull()
+	} else {
+		data.UpdatedAt = types.StringValue(policy.UpdatedAt)
+	}
+	if policy.Updater == "" {
+		data.Updater = types.StringNull()
+	} else {
+		data.Updater = types.StringValue(policy.Updater)
+	}
+
 	data.ETag = types.StringValue(policyWithETag.ETag)
 
 	// Map role IDs
@@ -256,21 +281,29 @@ func (r *policyResource) Update(ctx context.Context, req resource.UpdateRequest,
 		policy.Creator = state.Creator.ValueString()
 	}
 
-	// Coordinate operations to prevent conflicts
-	permissionSystemID := data.PermissionsSystemID.ValueString()
-	r.fgamCoordinator.Lock(permissionSystemID)
-	defer r.fgamCoordinator.Unlock(permissionSystemID)
-
 	updatedPolicyWithETag, err := r.client.UpdatePolicy(ctx, policy, state.ETag.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update policy, got error: %s", err))
 		return
 	}
 
-	// Update resource data with the response
+	// Update resource data with the response. Preserve immutable fields from state
 	data.ID = state.ID
 	data.CreatedAt = state.CreatedAt
 	data.Creator = state.Creator
+
+	if updatedPolicyWithETag.Policy.UpdatedAt == "" {
+		data.UpdatedAt = types.StringNull()
+	} else {
+		data.UpdatedAt = types.StringValue(updatedPolicyWithETag.Policy.UpdatedAt)
+	}
+	if updatedPolicyWithETag.Policy.Updater == "" {
+		data.Updater = types.StringNull()
+	} else {
+		data.Updater = types.StringValue(updatedPolicyWithETag.Policy.Updater)
+	}
+
+	// ETag should always update to the new value from API response
 	data.ETag = types.StringValue(updatedPolicyWithETag.ETag)
 
 	// Update role IDs in case the order or values changed
@@ -291,11 +324,7 @@ func (r *policyResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	// Coordinate operations to prevent conflicts
 	permissionSystemID := data.PermissionsSystemID.ValueString()
-	r.fgamCoordinator.Lock(permissionSystemID)
-	defer r.fgamCoordinator.Unlock(permissionSystemID)
-
 	err := r.client.DeletePolicy(permissionSystemID, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete policy, got error: %s", err))
@@ -303,23 +332,6 @@ func (r *policyResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	}
 }
 
-// ImportState handles importing an existing policy into Terraform state
 func (r *policyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	idParts := strings.Split(req.ID, ":")
-	if len(idParts) != 2 {
-		resp.Diagnostics.AddError(
-			"Invalid Import ID",
-			fmt.Sprintf("Expected import id in format 'permission_system_id:policy_id', got: %s", req.ID),
-		)
-		return
-	}
-
-	permissionSystemID := idParts[0]
-	policyID := idParts[1]
-
-	// Set the main identifiers
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("permission_system_id"), permissionSystemID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), policyID)...)
-
-	// Terraform automatically calls Read to fetch the rest of the attributes
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
