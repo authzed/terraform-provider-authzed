@@ -56,6 +56,9 @@ func (r *TokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"id": schema.StringAttribute{
 				Description: "The globally unique ID for this token",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Description: "The name of the token",
@@ -76,10 +79,16 @@ func (r *TokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"created_at": schema.StringAttribute{
 				Description: "The timestamp when the token was created",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"creator": schema.StringAttribute{
 				Description: "The name of the user that created this token",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"updated_at": schema.StringAttribute{
 				Description: "The timestamp when the token was last updated",

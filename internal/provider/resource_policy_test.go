@@ -167,7 +167,14 @@ func TestAccAuthzedPolicy_noDrift(t *testing.T) {
 				// If there's drift in computed fields (id, created_at, creator, etag),
 				// this step will fail because Terraform will detect changes
 			},
-			// Update mutable fields and verify computed fields don't drift
+			// Plan an update and verify immutable fields don't show as changing
+			{
+				Config:             testAccPolicyConfig_update(testID, roleName, updatedDescription),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true, // We expect changes (description update)
+				Check:              resource.ComposeTestCheckFunc(),
+			},
+			// Apply the update and verify it worked
 			{
 				Config: testAccPolicyConfig_update(testID, roleName, updatedDescription),
 				Check: resource.ComposeTestCheckFunc(
@@ -180,10 +187,83 @@ func TestAccAuthzedPolicy_noDrift(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "etag"),
 				),
 			},
+			// Verify no further drift after the update is complete
 			{
-				Config:   testAccPolicyConfig_update(testID, roleName, updatedDescription),
-				PlanOnly: true,
-				// This verifies that after an update, computed fields don't show as changing
+				Config:             testAccPolicyConfig_update(testID, roleName, updatedDescription),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
+func TestAccAuthzedPolicy_immutableFields(t *testing.T) {
+	resourceName := "authzed_policy.test"
+	testID := helpers.GenerateTestID("test-policy-immutable")
+	roleName := fmt.Sprintf("%s-role", testID)
+
+	var initialID, initialCreatedAt, initialCreator string
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckPolicyDestroy,
+		Steps: []resource.TestStep{
+			// Create initial policy and capture immutable field values
+			{
+				Config: testAccPolicyConfig_basic(testID, roleName),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckPolicyExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "name", testID),
+					resource.TestCheckResourceAttr(resourceName, "description", "Test policy description"),
+					// Capture initial values of immutable fields
+					func(s *terraform.State) error {
+						rs, ok := s.RootModule().Resources[resourceName]
+						if !ok {
+							return fmt.Errorf("resource not found: %s", resourceName)
+						}
+						initialID = rs.Primary.Attributes["id"]
+						initialCreatedAt = rs.Primary.Attributes["created_at"]
+						initialCreator = rs.Primary.Attributes["creator"]
+						return nil
+					},
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttrSet(resourceName, "created_at"),
+					resource.TestCheckResourceAttrSet(resourceName, "creator"),
+					resource.TestCheckResourceAttrSet(resourceName, "updated_at"),
+					resource.TestCheckResourceAttrSet(resourceName, "updater"),
+					resource.TestCheckResourceAttrSet(resourceName, "etag"),
+				),
+			},
+			// Update description and verify immutable fields remain unchanged
+			{
+				Config: testAccPolicyConfig_update(testID, roleName, "Updated policy description for immutable field test"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckPolicyExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "name", testID),
+					resource.TestCheckResourceAttr(resourceName, "description", "Updated policy description for immutable field test"),
+					// Verify immutable fields haven't changed
+					func(s *terraform.State) error {
+						rs, ok := s.RootModule().Resources[resourceName]
+						if !ok {
+							return fmt.Errorf("resource not found: %s", resourceName)
+						}
+						if rs.Primary.Attributes["id"] != initialID {
+							return fmt.Errorf("id changed from %s to %s", initialID, rs.Primary.Attributes["id"])
+						}
+						if rs.Primary.Attributes["created_at"] != initialCreatedAt {
+							return fmt.Errorf("created_at changed from %s to %s", initialCreatedAt, rs.Primary.Attributes["created_at"])
+						}
+						if rs.Primary.Attributes["creator"] != initialCreator {
+							return fmt.Errorf("creator changed from %s to %s", initialCreator, rs.Primary.Attributes["creator"])
+						}
+						return nil
+					},
+					// Verify mutable fields are still set (they may have changed)
+					resource.TestCheckResourceAttrSet(resourceName, "updated_at"),
+					resource.TestCheckResourceAttrSet(resourceName, "updater"),
+					resource.TestCheckResourceAttrSet(resourceName, "etag"),
+				),
 			},
 		},
 	})

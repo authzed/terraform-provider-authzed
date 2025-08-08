@@ -76,6 +76,77 @@ func TestAccAuthzedServiceAccount_update(t *testing.T) {
 	})
 }
 
+func TestAccAuthzedServiceAccount_immutableFields(t *testing.T) {
+	resourceName := "authzed_service_account.test"
+	testID := helpers.GenerateTestID("test-sa-immutable")
+
+	var initialID, initialCreatedAt, initialCreator string
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckServiceAccountDestroy,
+		Steps: []resource.TestStep{
+			// Create initial service account and capture immutable field values
+			{
+				Config: testAccServiceAccountConfig_basic(testID),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckServiceAccountExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "name", testID),
+					resource.TestCheckResourceAttr(resourceName, "description", "Test service account description"),
+					// Capture initial values of immutable fields
+					func(s *terraform.State) error {
+						rs, ok := s.RootModule().Resources[resourceName]
+						if !ok {
+							return fmt.Errorf("resource not found: %s", resourceName)
+						}
+						initialID = rs.Primary.Attributes["id"]
+						initialCreatedAt = rs.Primary.Attributes["created_at"]
+						initialCreator = rs.Primary.Attributes["creator"]
+						return nil
+					},
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttrSet(resourceName, "created_at"),
+					resource.TestCheckResourceAttrSet(resourceName, "creator"),
+					resource.TestCheckResourceAttrSet(resourceName, "updated_at"),
+					resource.TestCheckResourceAttrSet(resourceName, "updater"),
+					resource.TestCheckResourceAttrSet(resourceName, "etag"),
+				),
+			},
+			// Update description and verify immutable fields remain unchanged
+			{
+				Config: testAccServiceAccountConfig_updated(testID),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckServiceAccountExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "name", testID),
+					resource.TestCheckResourceAttr(resourceName, "description", "Updated service account description"),
+					// Verify immutable fields haven't changed
+					func(s *terraform.State) error {
+						rs, ok := s.RootModule().Resources[resourceName]
+						if !ok {
+							return fmt.Errorf("resource not found: %s", resourceName)
+						}
+						if rs.Primary.Attributes["id"] != initialID {
+							return fmt.Errorf("id changed from %s to %s", initialID, rs.Primary.Attributes["id"])
+						}
+						if rs.Primary.Attributes["created_at"] != initialCreatedAt {
+							return fmt.Errorf("created_at changed from %s to %s", initialCreatedAt, rs.Primary.Attributes["created_at"])
+						}
+						if rs.Primary.Attributes["creator"] != initialCreator {
+							return fmt.Errorf("creator changed from %s to %s", initialCreator, rs.Primary.Attributes["creator"])
+						}
+						return nil
+					},
+					// Verify mutable fields are still set (they may have changed)
+					resource.TestCheckResourceAttrSet(resourceName, "updated_at"),
+					resource.TestCheckResourceAttrSet(resourceName, "updater"),
+					resource.TestCheckResourceAttrSet(resourceName, "etag"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccAuthzedServiceAccount_import(t *testing.T) {
 	resourceName := "authzed_service_account.test"
 	testID := helpers.GenerateTestID("test-sa-import")
