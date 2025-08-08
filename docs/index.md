@@ -28,8 +28,7 @@ provider "authzed" {
   # Uncomment to specify a different API version
   # api_version = "25r1"
   
-  # Uncomment to enable serialization for high-concurrency scenarios
-  # fgam_serialization = true
+
 }
 ```
 
@@ -49,7 +48,7 @@ To obtain a token, contact your AuthZed account team. They will provide you with
 * `endpoint` - (Required) The host address of the AuthZed Cloud API. Default is `https://api.admin.stage.aws.authzed.net`.
 * `token` - (Required) The bearer token for authentication with AuthZed.
 * `api_version` - (Optional) The version of the API to use. Default is "25r1".
-* `fgam_serialization` - (Optional) Enable serialization of operations to prevent conflicts. When enabled, resources within the same permission system will be created/updated sequentially instead of in parallel. Default is `false`.
+
 
 ## Important Notes
 
