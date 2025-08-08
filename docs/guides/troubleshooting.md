@@ -111,6 +111,24 @@ provider "authzed" {
 }
 ```
 
+## Resource Management Issues
+
+### "Provider produced inconsistent result after apply"
+
+If you encounter errors like:
+
+```
+Error: Provider produced inconsistent result after apply
+
+When applying changes to authzed_policy.example, provider 
+"registry.terraform.io/authzed/authzed" produced an unexpected new value: 
+.created_at: was "2025-01-08T10:00:00Z", but now cty.StringVal("").
+```
+
+**Root Cause:**
+This error was caused by incorrect plan modifier configuration for computed fields in provider versions prior to v0.5.0.
+
+
 ## Getting Help
 
 If you continue to experience issues:

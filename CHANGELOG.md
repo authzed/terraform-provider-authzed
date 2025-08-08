@@ -7,10 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.4.1] - 2025-01-08
+### Fixed
+- Resolved plan modifier inconsistencies introduced with FGAM field additions in v0.4.0
+- Fixed "Provider produced inconsistent result after apply" errors by correctly configuring UseStateForUnknown() plan modifiers for immutable vs mutable computed fields
+- Immutable fields (id, created_at, creator) now use UseStateForUnknown() to prevent "(known after apply)" noise
+- Mutable FGAM fields (updated_at, updater) correctly omit UseStateForUnknown() to display actual API values
+
+## [0.4.1] - 2025-01-08 [YANKED]
 
 ### Fixed
 - Ensures consistent behavior across all resources and eliminates plan inconsistencies for policy updates
+
+**Note:** This version has been yanked due to incomplete plan modifier configuration. Use v0.5.0+ instead.
 
 ## [0.4.0] - 2025-01-08
 
