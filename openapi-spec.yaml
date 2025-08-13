@@ -430,6 +430,69 @@ paths:
       tags:
       - organization
       - access management
+  /organizations/internal:
+    post:
+      description: create a new organization as an internal user
+      operationId: CreateOrganizationInternal
+      parameters:
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrganizationInternalRequest'
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateOrganizationInternalResponse'
+          description: Created
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - organization
+  /platform:
+    get:
+      description: get platform capabilities for the currently running instance
+      operationId: GetPlatform
+      parameters:
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetPlatformResponse'
+          description: OK
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - system
   /ps:
     get:
       description: list all permissions systems
@@ -2677,7 +2740,7 @@ components:
       - id
       - secret
       type: object
-    CreateOrganizationRequest:
+    CreateOrganizationInternalRequest:
       properties:
         description:
           description: The organization description
@@ -2702,13 +2765,46 @@ components:
       - sub
       - orbBillingId
       type: object
-    CreateOrganizationResponse:
+    CreateOrganizationInternalResponse:
       properties:
         capabilities:
           description: The capabilities available to the organization
           items:
             $ref: '#/components/schemas/OrganizationCapability'
           type: array
+        description:
+          description: The organization description
+          type: string
+        id:
+          description: The created organization ID
+          pattern: ^org-[a-zA-Z0-9-]+$
+          type: string
+        slug:
+          description: The organization slug
+          type: string
+        title:
+          description: The organization title
+          type: string
+      required:
+      - id
+      - title
+      type: object
+    CreateOrganizationRequest:
+      properties:
+        description:
+          description: The organization description
+          maxLength: 1000
+          type: string
+        title:
+          description: The organization title
+          maxLength: 255
+          minLength: 1
+          type: string
+      required:
+      - title
+      type: object
+    CreateOrganizationResponse:
+      properties:
         description:
           description: The organization description
           type: string
@@ -3586,6 +3682,16 @@ components:
       required:
       - id
       type: object
+    GetPlatformResponse:
+      properties:
+        capabilities:
+          description: List of platform capabilities
+          items:
+            $ref: '#/components/schemas/PlatformCapability'
+          type: array
+      required:
+      - capabilities
+      type: object
     GetPolicyResponse:
       properties:
         createdAt:
@@ -4254,6 +4360,10 @@ components:
       - name
       - prefix
       type: object
+    PlatformCapability:
+      enum:
+      - UserOrgCreation
+      type: string
     Policy:
       properties:
         createdAt:
