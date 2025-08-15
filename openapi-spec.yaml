@@ -111,6 +111,36 @@ paths:
       - auth: []
       tags:
       - system
+  /datastore-templates:
+    get:
+      description: list all datastore templates available for provisioning
+      operationId: ListDatastoreTemplates
+      parameters:
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListDatastoreTemplatesResponse'
+          description: OK
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - system
+      - datastore
   /datastores:
     get:
       description: list all datastore instances
@@ -129,6 +159,153 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ListDatastoresResponse'
+          description: OK
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - system
+      - datastore
+    post:
+      description: create a new datastore instance using a template
+      operationId: CreateDatastore
+      parameters:
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDatastoreRequest'
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateDatastoreResponse'
+          description: Created
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - system
+      - datastore
+  /datastores/{datastoreId}:
+    delete:
+      description: delete a datastore instance
+      operationId: DeleteDatastore
+      parameters:
+      - description: The ID of the datastore to delete
+        in: path
+        name: datastoreId
+        required: true
+        schema:
+          description: The ID of the datastore to delete
+          pattern: ^dbi-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "202":
+          description: Accepted
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - system
+      - datastore
+    get:
+      description: get a datastore instance by its ID
+      operationId: GetDatastore
+      parameters:
+      - description: The ID of the datastore to retrieve
+        in: path
+        name: datastoreId
+        required: true
+        schema:
+          description: The ID of the datastore to retrieve
+          pattern: ^dbi-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetDatastoreResponse'
+          description: OK
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - system
+      - datastore
+    put:
+      description: update a datastore instance
+      operationId: UpdateDatastore
+      parameters:
+      - description: The ID of the datastore to update
+        in: path
+        name: datastoreId
+        required: true
+        schema:
+          description: The ID of the datastore to update
+          pattern: ^dbi-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDatastoreRequest'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateDatastoreResponse'
           description: OK
         "400":
           description: Input parameters are incorrect
@@ -309,6 +486,44 @@ paths:
       - auth: []
       tags:
       - organization
+  /organizations/{organizationID}/payments:
+    put:
+      description: supply payment details for an organization
+      operationId: AddOrganizationPaymentDetails
+      parameters:
+      - description: The ID of the Organization
+        in: path
+        name: organizationID
+        required: true
+        schema:
+          description: The ID of the Organization
+          example: org-example
+          pattern: ^org-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddOrganizationPaymentDetailsResponse'
+          description: OK
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - organization
   /organizations/{organizationID}/roles:
     get:
       description: list all roles on an organization
@@ -408,6 +623,7 @@ paths:
         schema:
           description: The ID of the subject whose role is to be deleted
           example: user-12345
+          pattern: ^user-[\$a-zA-Z0-9-]+$
           type: string
       - description: The version of the API to use. Must be specified.
         in: header
@@ -2533,6 +2749,75 @@ paths:
       - auth: []
       tags:
       - permissions system
+  /user/accept-invitation:
+    post:
+      description: accept a role invitation using an invitation code
+      operationId: AcceptRoleInvitation
+      parameters:
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcceptRoleInvitationRequest'
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptRoleInvitationResponse'
+          description: Created
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - organization
+      - permissions system
+      - access management
+  /user/invite:
+    post:
+      description: send a role invitation via email for an organization or permissions
+        system
+      operationId: SendRoleInvitation
+      parameters:
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendRoleInvitationRequest'
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - organization
+      - permissions system
+      - access management
   /user/metadata:
     put:
       description: update the current authenticated user's metadata
@@ -2616,6 +2901,38 @@ components:
           description: The ID of the API shape
           type: string
       type: object
+    AcceptRoleInvitationRequest:
+      properties:
+        email:
+          description: The email address of the person accepting the invitation
+          example: accepter@example.com
+          type: string
+        invitationCode:
+          description: The invitation code (JWT) to accept
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+          type: string
+      required:
+      - invitationCode
+      - email
+      type: object
+    AcceptRoleInvitationResponse:
+      properties:
+        roleName:
+          $ref: '#/components/schemas/InvitationRoleName'
+        targetResourceId:
+          description: The ID of the resource where the role was granted
+          example: org-example
+          type: string
+      type: object
+    AddOrganizationPaymentDetailsResponse:
+      properties:
+        url:
+          description: The Stripe checkout session URL
+          example: https://checkout.stripe.com/pay/cs_test_...
+          type: string
+      required:
+      - url
+      type: object
     AuditLogFeatureConfig:
       properties:
         disabledOnMethods:
@@ -2695,6 +3012,27 @@ components:
       - insecure
       - unknown
       type: string
+    CreateDatastoreRequest:
+      properties:
+        cockroachdb:
+          description: CockroachDB-specific configuration overrides
+        name:
+          description: The name of the datastore instance
+          maxLength: 55
+          minLength: 1
+          type: string
+        template:
+          description: The template name to use for provisioning
+          type: string
+      required:
+      - name
+      - template
+      type: object
+    CreateDatastoreResponse:
+      properties:
+        datastore:
+          $ref: '#/components/schemas/Datastore'
+      type: object
     CreateDeploymentRequest:
       properties:
         deploymentTemplateID:
@@ -3214,6 +3552,45 @@ components:
       - name
       - type
       type: object
+    DatastoreTemplate:
+      properties:
+        allowOverrides:
+          description: Configuration fields users are allowed to override
+        defaults:
+          description: Default configuration values
+        description:
+          description: Template description
+          type: string
+        displayName:
+          description: Human-readable display name
+          type: string
+        name:
+          description: The name of the template
+          type: string
+        provider:
+          description: Database provider (e.g., cockroachdb)
+          type: string
+        validations:
+          description: CEL validation expressions
+          items:
+            $ref: '#/components/schemas/DatastoreTemplateValidation'
+          type: array
+      required:
+      - name
+      - provider
+      - defaults
+      type: object
+    DatastoreTemplateValidation:
+      properties:
+        expression:
+          description: CEL expression for validation
+          type: string
+        reason:
+          description: Human-readable reason for validation failure
+          type: string
+      required:
+      - expression
+      type: object
     DatastoreType:
       enum:
       - spanner
@@ -3474,6 +3851,11 @@ components:
           type: boolean
         id:
           $ref: '#/components/schemas/PermissionsSystemFeature'
+      type: object
+    GetDatastoreResponse:
+      properties:
+        datastore:
+          $ref: '#/components/schemas/Datastore'
       type: object
     GetDeploymentTemplateResponse:
       properties:
@@ -3903,6 +4285,12 @@ components:
       - development
       - production
       type: string
+    InvitationRoleName:
+      enum:
+      - org_admin
+      - ps_admin
+      - ps_viewer
+      type: string
     ListChannelsAndVersionsResponse:
       properties:
         channels:
@@ -3913,6 +4301,15 @@ components:
           type: array
       required:
       - channels
+      type: object
+    ListDatastoreTemplatesResponse:
+      properties:
+        templates:
+          description: Available datastore templates
+          items:
+            $ref: '#/components/schemas/DatastoreTemplate'
+          nullable: true
+          type: array
       type: object
     ListDatastoresResponse:
       items:
@@ -3972,6 +4369,9 @@ components:
       type: object
     ListOrganizationRolesResponse:
       properties:
+        canGrantRoles:
+          description: Whether the current user can grant roles on this organization
+          type: boolean
         roles:
           description: List of roles for the Organization. Each role includes its
             kind and the subject ID it applies to.
@@ -3980,6 +4380,7 @@ components:
           type: array
       required:
       - roles
+      - canGrantRoles
       type: object
     ListOrganizationsResponse:
       properties:
@@ -3993,6 +4394,10 @@ components:
       type: object
     ListPermissionsSystemRolesResponse:
       properties:
+        canGrantRoles:
+          description: Whether the current user can grant roles on this permissions
+            system
+          type: boolean
         roles:
           description: List of roles for the Permissions System. Each role includes
             its kind and the subject ID it applies to.
@@ -4001,6 +4406,7 @@ components:
           type: array
       required:
       - roles
+      - canGrantRoles
       type: object
     ListPermissionsSystemTokensResponse:
       items:
@@ -4151,6 +4557,9 @@ components:
           description: The organization description
           example: An example organization
           type: string
+        hasPaymentInfo:
+          description: Whether payment information has been provided for this organization
+          type: boolean
         id:
           description: The organization ID
           example: org-example
@@ -4163,6 +4572,7 @@ components:
       required:
       - id
       - title
+      - hasPaymentInfo
       type: object
     OrganizationCapability:
       enum:
@@ -4507,6 +4917,28 @@ components:
       required:
       - secret
       type: object
+    SendRoleInvitationRequest:
+      properties:
+        inviteeEmail:
+          description: The email address of the invitee
+          example: invitee@example.com
+          type: string
+        message:
+          description: Custom message to include in the invitation email
+          example: Welcome!
+          type: string
+        roleName:
+          $ref: '#/components/schemas/InvitationRoleName'
+        targetResourceId:
+          description: The ID of the target resource (org-* for organizations, ps-*
+            for permissions systems)
+          example: org-example
+          type: string
+      required:
+      - targetResourceId
+      - roleName
+      - inviteeEmail
+      type: object
     ServiceAccount:
       properties:
         createdAt:
@@ -4615,6 +5047,7 @@ components:
         subjectId:
           description: The ID of the subject to assign the role to
           example: user-12345
+          pattern: ^user-[\$a-zA-Z0-9-]+$
           type: string
       required:
       - kind
@@ -4774,6 +5207,21 @@ components:
       required:
       - name
       - id
+      type: object
+    UpdateDatastoreRequest:
+      properties:
+        cockroachdb:
+          description: CockroachDB-specific configuration updates
+        name:
+          description: The new name of the datastore instance
+          maxLength: 55
+          minLength: 1
+          type: string
+      type: object
+    UpdateDatastoreResponse:
+      properties:
+        datastore:
+          $ref: '#/components/schemas/Datastore'
       type: object
     UpdateDeploymentIPAllowFilterPolicy:
       properties:
