@@ -33,7 +33,7 @@ func (p *PolicyWithETag) SetETag(etag string) {
 }
 
 // GetResource returns the underlying policy
-func (p *PolicyWithETag) GetResource() interface{} {
+func (p *PolicyWithETag) GetResource() any {
 	return p.Policy
 }
 

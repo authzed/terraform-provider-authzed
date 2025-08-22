@@ -3,11 +3,11 @@ package provider
 import (
 	"testing"
 
-	"terraform-provider-authzed/internal/test/helpers"
-
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+
+	"terraform-provider-authzed/internal/test/helpers"
 )
 
 // testAccProtoV6ProviderFactories are used to instantiate a provider during

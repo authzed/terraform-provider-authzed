@@ -6,9 +6,9 @@ import (
 	"log"
 	"os"
 
-	"terraform-provider-authzed/internal/provider"
-
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+
+	"terraform-provider-authzed/internal/provider"
 )
 
 var version = "dev"
