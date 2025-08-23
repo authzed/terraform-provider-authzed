@@ -449,6 +449,40 @@ paths:
       tags:
       - organization
   /organizations/{organizationID}:
+    delete:
+      description: delete an organization by its ID. The organization must have no
+        permission systems.
+      operationId: DeleteOrganization
+      parameters:
+      - description: The ID of the Organization
+        in: path
+        name: organizationID
+        required: true
+        schema:
+          description: The ID of the Organization
+          example: org-example
+          pattern: ^org-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "202":
+          description: Accepted
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - organization
     get:
       description: get an organization by its ID
       operationId: GetOrganization
@@ -2906,10 +2940,13 @@ components:
         email:
           description: The email address of the person accepting the invitation
           example: accepter@example.com
+          maxLength: 255
+          minLength: 1
           type: string
         invitationCode:
           description: The invitation code (JWT) to accept
           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+          minLength: 1
           type: string
       required:
       - invitationCode
@@ -2922,6 +2959,8 @@ components:
         targetResourceId:
           description: The ID of the resource where the role was granted
           example: org-example
+          maxLength: 255
+          minLength: 1
           type: string
       type: object
     AddOrganizationPaymentDetailsResponse:
@@ -2984,6 +3023,7 @@ components:
       - materialize
       - external_metrics_forwarding
       - role_management
+      - administer_permissions_system
       type: string
     CloudKind:
       enum:
@@ -3133,6 +3173,11 @@ components:
           description: The organization description
           maxLength: 1000
           type: string
+        email:
+          description: The primary email associated with the organization
+          maxLength: 255
+          minLength: 1
+          type: string
         title:
           description: The organization title
           maxLength: 255
@@ -3140,6 +3185,7 @@ components:
           type: string
       required:
       - title
+      - email
       type: object
     CreateOrganizationResponse:
       properties:
@@ -4063,6 +4109,7 @@ components:
           $ref: '#/components/schemas/SystemVersion'
       required:
       - id
+      - systemType
       type: object
     GetPlatformResponse:
       properties:
@@ -4565,6 +4612,9 @@ components:
           example: org-example
           pattern: ^org-[a-zA-Z0-9-]+$
           type: string
+        paymentPortalUrl:
+          description: The URL for the user payment portal
+          type: string
         title:
           description: The organization title
           example: Example Organization
@@ -4577,6 +4627,8 @@ components:
     OrganizationCapability:
       enum:
       - role_management
+      - create_ps
+      - delete
       type: string
     OrganizationRole:
       properties:
@@ -4714,6 +4766,7 @@ components:
           $ref: '#/components/schemas/SystemVersion'
       required:
       - id
+      - systemType
       type: object
     PermissionsSystemDatastore:
       properties:
@@ -4922,10 +4975,13 @@ components:
         inviteeEmail:
           description: The email address of the invitee
           example: invitee@example.com
+          maxLength: 255
+          minLength: 1
           type: string
         message:
           description: Custom message to include in the invitation email
           example: Welcome!
+          maxLength: 1000
           type: string
         roleName:
           $ref: '#/components/schemas/InvitationRoleName'
@@ -5040,10 +5096,14 @@ components:
         id:
           $ref: '#/components/schemas/PermissionsSystemFeature'
       type: object
+    SetOrgRoleKind:
+      enum:
+      - admin
+      type: string
     SetOrganizationRoleRequest:
       properties:
         kind:
-          $ref: '#/components/schemas/OrgRoleKind'
+          $ref: '#/components/schemas/SetOrgRoleKind'
         subjectId:
           description: The ID of the subject to assign the role to
           example: user-12345
@@ -5333,6 +5393,7 @@ components:
           $ref: '#/components/schemas/SystemVersion'
       required:
       - id
+      - systemType
       type: object
     UpdatePolicyRequest:
       properties:
