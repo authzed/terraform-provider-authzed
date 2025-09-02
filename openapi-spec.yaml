@@ -449,6 +449,40 @@ paths:
       tags:
       - organization
   /organizations/{organizationID}:
+    delete:
+      description: delete an organization by its ID. The organization must have no
+        permission systems.
+      operationId: DeleteOrganization
+      parameters:
+      - description: The ID of the Organization
+        in: path
+        name: organizationID
+        required: true
+        schema:
+          description: The ID of the Organization
+          example: org-example
+          pattern: ^org-[a-zA-Z0-9-]+$
+          type: string
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      responses:
+        "202":
+          description: Accepted
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - organization
     get:
       description: get an organization by its ID
       operationId: GetOrganization
@@ -2906,10 +2940,13 @@ components:
         email:
           description: The email address of the person accepting the invitation
           example: accepter@example.com
+          maxLength: 255
+          minLength: 1
           type: string
         invitationCode:
           description: The invitation code (JWT) to accept
           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+          minLength: 1
           type: string
       required:
       - invitationCode
@@ -2922,6 +2959,8 @@ components:
         targetResourceId:
           description: The ID of the resource where the role was granted
           example: org-example
+          maxLength: 255
+          minLength: 1
           type: string
       type: object
     AddOrganizationPaymentDetailsResponse:
@@ -2970,7 +3009,7 @@ components:
         kind:
           $ref: '#/components/schemas/RoleKind'
         metadata:
-          $ref: '#/components/schemas/UserMetadata'
+          $ref: '#/components/schemas/SubjectMetadata'
         subjectId:
           description: The ID of the subject this role applies to, e.g., 'user-12345'
           type: string
@@ -2984,6 +3023,7 @@ components:
       - materialize
       - external_metrics_forwarding
       - role_management
+      - administer_permissions_system
       type: string
     CloudKind:
       enum:
@@ -3133,6 +3173,11 @@ components:
           description: The organization description
           maxLength: 1000
           type: string
+        email:
+          description: The primary email associated with the organization
+          maxLength: 255
+          minLength: 1
+          type: string
         title:
           description: The organization title
           maxLength: 255
@@ -3140,6 +3185,7 @@ components:
           type: string
       required:
       - title
+      - email
       type: object
     CreateOrganizationResponse:
       properties:
@@ -3256,9 +3302,11 @@ components:
           nullable: true
           type: string
         creator:
-          description: The name of the user that created this Policy. May be empty.
+          description: The ID of the subject that created this Policy. May be empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        creatorMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
         description:
           description: The human-supplied description of the Policy. May be empty.
           maxLength: 200
@@ -3294,10 +3342,12 @@ components:
           nullable: true
           type: string
         updater:
-          description: The name of the user that last updated this Policy. May be
+          description: The ID of the subject that last updated this Policy. May be
             empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        updaterMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
       required:
       - name
       - principalID
@@ -3334,9 +3384,11 @@ components:
           nullable: true
           type: string
         creator:
-          description: The name of the user that created this Role. May be empty.
+          description: The ID of the subject that created this Role. May be empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        creatorMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
         description:
           description: The human-supplied description of the Role. May be empty.
           maxLength: 200
@@ -3363,9 +3415,11 @@ components:
           nullable: true
           type: string
         updater:
-          description: The name of the user that last updated this Role. May be empty.
+          description: The ID of the subject that last updated this Role. May be empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        updaterMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
       required:
       - name
       - permissions
@@ -3399,10 +3453,12 @@ components:
           nullable: true
           type: string
         creator:
-          description: The name of the user that created this Service Account. May
+          description: The ID of the subject that created this Service Account. May
             be empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        creatorMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
         description:
           description: The human-supplied description of the Service Account. May
             be empty.
@@ -3433,10 +3489,12 @@ components:
           nullable: true
           type: string
         updater:
-          description: The name of the user that last updated this Service Account.
+          description: The ID of the subject that last updated this Service Account.
             May be empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        updaterMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
       required:
       - name
       - id
@@ -3472,9 +3530,11 @@ components:
           nullable: true
           type: string
         creator:
-          description: The name of the user that created this Token. May be empty.
+          description: The ID of the subject that created this Token. May be empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        creatorMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
         description:
           description: The human-supplied description of the Token. May be empty.
           maxLength: 200
@@ -3511,9 +3571,12 @@ components:
           nullable: true
           type: string
         updater:
-          description: The name of the user that last updated this Token. May be empty.
+          description: The ID of the subject that last updated this Token. May be
+            empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        updaterMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
       required:
       - name
       - id
@@ -4063,6 +4126,7 @@ components:
           $ref: '#/components/schemas/SystemVersion'
       required:
       - id
+      - systemType
       type: object
     GetPlatformResponse:
       properties:
@@ -4071,8 +4135,12 @@ components:
           items:
             $ref: '#/components/schemas/PlatformCapability'
           type: array
+        cloudApiDocumentationEndpoint:
+          description: The endpoint for the Cloud API documentation
+          type: string
       required:
       - capabilities
+      - cloudApiDocumentationEndpoint
       type: object
     GetPolicyResponse:
       properties:
@@ -4083,9 +4151,11 @@ components:
           nullable: true
           type: string
         creator:
-          description: The name of the user that created this Policy. May be empty.
+          description: The ID of the subject that created this Policy. May be empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        creatorMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
         description:
           description: The human-supplied description of the Policy. May be empty.
           maxLength: 200
@@ -4121,10 +4191,12 @@ components:
           nullable: true
           type: string
         updater:
-          description: The name of the user that last updated this Policy. May be
+          description: The ID of the subject that last updated this Policy. May be
             empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        updaterMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
       required:
       - name
       - principalID
@@ -4140,9 +4212,11 @@ components:
           nullable: true
           type: string
         creator:
-          description: The name of the user that created this Role. May be empty.
+          description: The ID of the subject that created this Role. May be empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        creatorMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
         description:
           description: The human-supplied description of the Role. May be empty.
           maxLength: 200
@@ -4169,9 +4243,11 @@ components:
           nullable: true
           type: string
         updater:
-          description: The name of the user that last updated this Role. May be empty.
+          description: The ID of the subject that last updated this Role. May be empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        updaterMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
       required:
       - name
       - permissions
@@ -4186,10 +4262,12 @@ components:
           nullable: true
           type: string
         creator:
-          description: The name of the user that created this Service Account. May
+          description: The ID of the subject that created this Service Account. May
             be empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        creatorMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
         description:
           description: The human-supplied description of the Service Account. May
             be empty.
@@ -4220,10 +4298,12 @@ components:
           nullable: true
           type: string
         updater:
-          description: The name of the user that last updated this Service Account.
+          description: The ID of the subject that last updated this Service Account.
             May be empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        updaterMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
       required:
       - name
       - id
@@ -4237,9 +4317,11 @@ components:
           nullable: true
           type: string
         creator:
-          description: The name of the user that created this Token. May be empty.
+          description: The ID of the subject that created this Token. May be empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        creatorMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
         description:
           description: The human-supplied description of the Token. May be empty.
           maxLength: 200
@@ -4273,9 +4355,12 @@ components:
           nullable: true
           type: string
         updater:
-          description: The name of the user that last updated this Token. May be empty.
+          description: The ID of the subject that last updated this Token. May be
+            empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        updaterMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
       required:
       - name
       - id
@@ -4565,6 +4650,9 @@ components:
           example: org-example
           pattern: ^org-[a-zA-Z0-9-]+$
           type: string
+        paymentPortalUrl:
+          description: The URL for the user payment portal
+          type: string
         title:
           description: The organization title
           example: Example Organization
@@ -4577,13 +4665,16 @@ components:
     OrganizationCapability:
       enum:
       - role_management
+      - create_ps
+      - delete
+      - manage_payments
       type: string
     OrganizationRole:
       properties:
         kind:
           $ref: '#/components/schemas/OrgRoleKind'
         metadata:
-          $ref: '#/components/schemas/UserMetadata'
+          $ref: '#/components/schemas/SubjectMetadata'
         subjectId:
           description: The ID of the subject this role applies to, e.g., 'user-12345'
           type: string
@@ -4714,6 +4805,7 @@ components:
           $ref: '#/components/schemas/SystemVersion'
       required:
       - id
+      - systemType
       type: object
     PermissionsSystemDatastore:
       properties:
@@ -4783,9 +4875,11 @@ components:
           nullable: true
           type: string
         creator:
-          description: The name of the user that created this Policy. May be empty.
+          description: The ID of the subject that created this Policy. May be empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        creatorMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
         description:
           description: The human-supplied description of the Policy. May be empty.
           maxLength: 200
@@ -4821,10 +4915,12 @@ components:
           nullable: true
           type: string
         updater:
-          description: The name of the user that last updated this Policy. May be
+          description: The ID of the subject that last updated this Policy. May be
             empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        updaterMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
       required:
       - name
       - principalID
@@ -4867,9 +4963,11 @@ components:
           nullable: true
           type: string
         creator:
-          description: The name of the user that created this Role. May be empty.
+          description: The ID of the subject that created this Role. May be empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        creatorMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
         description:
           description: The human-supplied description of the Role. May be empty.
           maxLength: 200
@@ -4896,9 +4994,11 @@ components:
           nullable: true
           type: string
         updater:
-          description: The name of the user that last updated this Role. May be empty.
+          description: The ID of the subject that last updated this Role. May be empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        updaterMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
       required:
       - name
       - permissions
@@ -4922,10 +5022,13 @@ components:
         inviteeEmail:
           description: The email address of the invitee
           example: invitee@example.com
+          maxLength: 255
+          minLength: 1
           type: string
         message:
           description: Custom message to include in the invitation email
           example: Welcome!
+          maxLength: 1000
           type: string
         roleName:
           $ref: '#/components/schemas/InvitationRoleName'
@@ -4948,10 +5051,12 @@ components:
           nullable: true
           type: string
         creator:
-          description: The name of the user that created this Service Account. May
+          description: The ID of the subject that created this Service Account. May
             be empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        creatorMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
         description:
           description: The human-supplied description of the Service Account. May
             be empty.
@@ -4982,10 +5087,12 @@ components:
           nullable: true
           type: string
         updater:
-          description: The name of the user that last updated this Service Account.
+          description: The ID of the subject that last updated this Service Account.
             May be empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        updaterMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
       required:
       - name
       - id
@@ -5040,10 +5147,14 @@ components:
         id:
           $ref: '#/components/schemas/PermissionsSystemFeature'
       type: object
+    SetOrgRoleKind:
+      enum:
+      - admin
+      type: string
     SetOrganizationRoleRequest:
       properties:
         kind:
-          $ref: '#/components/schemas/OrgRoleKind'
+          $ref: '#/components/schemas/SetOrgRoleKind'
         subjectId:
           description: The ID of the subject to assign the role to
           example: user-12345
@@ -5116,6 +5227,11 @@ components:
           maxLength: 100
           minLength: 1
           type: string
+        supportedAPIs:
+          description: The SpiceDB APIs supported by this version
+          items:
+            type: string
+          type: array
         supportedFeatureNames:
           description: The features supported by the version
           items:
@@ -5129,6 +5245,30 @@ components:
       required:
       - displayName
       - version
+      type: object
+    SubjectKind:
+      enum:
+      - user
+      type: string
+    SubjectMetadata:
+      properties:
+        email:
+          description: The subject's email address; may be redacted for privacy
+          example: j*****e@example.com
+          nullable: true
+          type: string
+        name:
+          description: The subject's display name
+          example: John Doe
+          nullable: true
+          type: string
+        pictureUrl:
+          description: The subject's profile picture URL
+          example: https://example.com/avatar.jpg
+          nullable: true
+          type: string
+        subjectKind:
+          $ref: '#/components/schemas/SubjectKind'
       type: object
     SystemType:
       enum:
@@ -5165,9 +5305,11 @@ components:
           nullable: true
           type: string
         creator:
-          description: The name of the user that created this Token. May be empty.
+          description: The ID of the subject that created this Token. May be empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        creatorMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
         description:
           description: The human-supplied description of the Token. May be empty.
           maxLength: 200
@@ -5201,9 +5343,12 @@ components:
           nullable: true
           type: string
         updater:
-          description: The name of the user that last updated this Token. May be empty.
+          description: The ID of the subject that last updated this Token. May be
+            empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        updaterMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
       required:
       - name
       - id
@@ -5333,6 +5478,7 @@ components:
           $ref: '#/components/schemas/SystemVersion'
       required:
       - id
+      - systemType
       type: object
     UpdatePolicyRequest:
       properties:
@@ -5369,9 +5515,11 @@ components:
           nullable: true
           type: string
         creator:
-          description: The name of the user that created this Policy. May be empty.
+          description: The ID of the subject that created this Policy. May be empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        creatorMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
         description:
           description: The human-supplied description of the Policy. May be empty.
           maxLength: 200
@@ -5407,10 +5555,12 @@ components:
           nullable: true
           type: string
         updater:
-          description: The name of the user that last updated this Policy. May be
+          description: The ID of the subject that last updated this Policy. May be
             empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        updaterMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
       required:
       - name
       - principalID
@@ -5442,9 +5592,11 @@ components:
           nullable: true
           type: string
         creator:
-          description: The name of the user that created this Role. May be empty.
+          description: The ID of the subject that created this Role. May be empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        creatorMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
         description:
           description: The human-supplied description of the Role. May be empty.
           maxLength: 200
@@ -5471,9 +5623,11 @@ components:
           nullable: true
           type: string
         updater:
-          description: The name of the user that last updated this Role. May be empty.
+          description: The ID of the subject that last updated this Role. May be empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        updaterMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
       required:
       - name
       - permissions
@@ -5511,10 +5665,12 @@ components:
           nullable: true
           type: string
         creator:
-          description: The name of the user that created this Service Account. May
+          description: The ID of the subject that created this Service Account. May
             be empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        creatorMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
         description:
           description: The human-supplied description of the Service Account. May
             be empty.
@@ -5545,10 +5701,12 @@ components:
           nullable: true
           type: string
         updater:
-          description: The name of the user that last updated this Service Account.
+          description: The ID of the subject that last updated this Service Account.
             May be empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        updaterMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
       required:
       - name
       - id
@@ -5576,9 +5734,11 @@ components:
           nullable: true
           type: string
         creator:
-          description: The name of the user that created this Token. May be empty.
+          description: The ID of the subject that created this Token. May be empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        creatorMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
         description:
           description: The human-supplied description of the Token. May be empty.
           maxLength: 200
@@ -5612,9 +5772,12 @@ components:
           nullable: true
           type: string
         updater:
-          description: The name of the user that last updated this Token. May be empty.
+          description: The ID of the subject that last updated this Token. May be
+            empty.
           pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
+        updaterMetadata:
+          $ref: '#/components/schemas/SubjectMetadata'
       required:
       - name
       - id
@@ -5626,24 +5789,6 @@ components:
           type: string
       required:
       - configYAML
-      type: object
-    UserMetadata:
-      properties:
-        email:
-          description: The user's email address; may be redacted for privacy
-          example: j*****e@example.com
-          nullable: true
-          type: string
-        name:
-          description: The user's display name
-          example: John Doe
-          nullable: true
-          type: string
-        pictureUrl:
-          description: The user's profile picture URL
-          example: https://example.com/avatar.jpg
-          nullable: true
-          type: string
       type: object
   securitySchemes:
     auth:
