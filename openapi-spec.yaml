@@ -2754,6 +2754,40 @@ paths:
       tags:
       - permissions system
       - access management
+  /ps/estimated-cost:
+    post:
+      description: get estimated costs for a permissions system configuration
+      operationId: PermissionsSystemEstimatedCost
+      parameters:
+      - description: The version of the API to use. Must be specified.
+        in: header
+        name: X-API-Version
+        schema:
+          default: internal
+          description: The version of the API to use. Must be specified.
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PermissionsSystemEstimatedCostRequest'
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionsSystemEstimatedCostResponse'
+          description: Created
+        "400":
+          description: Input parameters are incorrect
+        "401":
+          description: The credentials provided are invalid
+        "403":
+          description: Missing permission(s) to perform this operation
+      security:
+      - auth: []
+      tags:
+      - permissions system
   /regions:
     get:
       description: list all regions available for SpiceDB clusters
@@ -3024,6 +3058,7 @@ components:
       - external_metrics_forwarding
       - role_management
       - administer_permissions_system
+      - datastore_scaling
       type: string
     CloudKind:
       enum:
@@ -3044,6 +3079,54 @@ components:
             be empty if not applicable.
           type: string
       type: object
+    CloudWatchMetricExport:
+      properties:
+        enabled:
+          type: boolean
+        externalId:
+          type: string
+        logGroupName:
+          type: string
+        roleArn:
+          type: string
+        targetRegion:
+          type: string
+      type: object
+    ClusterConfiguration:
+      properties:
+        dedicated:
+          $ref: '#/components/schemas/DedicatedSpecification'
+        deleteProtection:
+          nullable: true
+          type: string
+        serverless:
+          $ref: '#/components/schemas/ServerlessSpecification'
+      type: object
+    ClusterSpec:
+      properties:
+        cloudProvider:
+          type: string
+        clusterName:
+          type: string
+        configuration:
+          $ref: '#/components/schemas/ClusterConfiguration'
+        driftInterval:
+          $ref: '#/components/schemas/Duration'
+        labels:
+          additionalProperties:
+            type: string
+          type: object
+        metricExport:
+          $ref: '#/components/schemas/MetricExportConfiguration'
+        parentId:
+          type: string
+        plan:
+          type: string
+        regionName:
+          type: string
+        secretName:
+          type: string
+      type: object
     CockroachDBOverlapStrategy:
       enum:
       - request
@@ -3055,7 +3138,7 @@ components:
     CreateDatastoreRequest:
       properties:
         cockroachdb:
-          description: CockroachDB-specific configuration overrides
+          $ref: '#/components/schemas/ClusterSpec'
         name:
           description: The name of the datastore instance
           maxLength: 55
@@ -3303,7 +3386,6 @@ components:
           type: string
         creator:
           description: The ID of the subject that created this Policy. May be empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         creatorMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -3344,7 +3426,6 @@ components:
         updater:
           description: The ID of the subject that last updated this Policy. May be
             empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         updaterMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -3385,7 +3466,6 @@ components:
           type: string
         creator:
           description: The ID of the subject that created this Role. May be empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         creatorMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -3416,7 +3496,6 @@ components:
           type: string
         updater:
           description: The ID of the subject that last updated this Role. May be empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         updaterMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -3455,7 +3534,6 @@ components:
         creator:
           description: The ID of the subject that created this Service Account. May
             be empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         creatorMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -3491,7 +3569,6 @@ components:
         updater:
           description: The ID of the subject that last updated this Service Account.
             May be empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         updaterMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -3531,7 +3608,6 @@ components:
           type: string
         creator:
           description: The ID of the subject that created this Token. May be empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         creatorMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -3573,7 +3649,6 @@ components:
         updater:
           description: The ID of the subject that last updated this Token. May be
             empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         updaterMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -3591,8 +3666,19 @@ components:
       required:
       - site
       type: object
+    DatadogMetricExport:
+      properties:
+        apiKey:
+          type: string
+        enabled:
+          type: boolean
+        site:
+          type: string
+      type: object
     Datastore:
       properties:
+        compute:
+          $ref: '#/components/schemas/DatastoreCompute'
         id:
           description: The ID for this Datastore instance.
           pattern: ^dbi-[a-zA-Z0-9-]+$
@@ -3607,6 +3693,9 @@ components:
           maxLength: 55
           minLength: 1
           type: string
+        templateName:
+          description: The name of the DatastoreTemplate used during creation.
+          type: string
         type:
           $ref: '#/components/schemas/DatastoreType'
       required:
@@ -3614,6 +3703,34 @@ components:
       - internalReference
       - name
       - type
+      type: object
+    DatastoreCompute:
+      properties:
+        virtualCPUs:
+          description: The number of virtual CPUs allocated to this Datastore.
+          type: integer
+      type: object
+    DatastoreRegionConfig:
+      properties:
+        regionID:
+          description: The region ID for the datastore node
+          type: string
+        replicaCount:
+          description: The number of replicas for the datastore
+          minimum: 0
+          type: integer
+        storageGiBPerNode:
+          description: The storage per node for the datastore in GiB
+          type: number
+        vCPUPerNode:
+          description: The number of vCPUs per replica
+          minimum: 0
+          type: integer
+      required:
+      - regionID
+      - replicaCount
+      - vCPUPerNode
+      - storageGiBPerNode
       type: object
     DatastoreTemplate:
       properties:
@@ -3660,6 +3777,17 @@ components:
       - postgres
       - cockroachdb
       type: string
+    DedicatedSpecification:
+      properties:
+        numVirtualCpus:
+          type: integer
+        regionNodes:
+          additionalProperties:
+            type: integer
+          type: object
+        storageGib:
+          type: integer
+      type: object
     Deployment:
       properties:
         cloudProviderDetails:
@@ -3903,6 +4031,64 @@ components:
           type: string
       required:
       - configYAML
+      type: object
+    Duration:
+      type: object
+    EstimatedLineItem:
+      properties:
+        estimatedCost:
+          $ref: '#/components/schemas/EstimatedPricesByTime'
+        quantity:
+          description: The quantity for the line item
+          example: 4
+          type: number
+        quantityUnit:
+          description: The unit of measurement for the quantity
+          example: vCPU
+          type: string
+        regionName:
+          description: The region name for the line item
+          example: us-central1
+          type: string
+        title:
+          description: The title of the line item
+          example: SpiceDB Compute
+          type: string
+      required:
+      - title
+      - regionName
+      - estimatedCost
+      - quantity
+      - quantityUnit
+      type: object
+    EstimatedPrice:
+      properties:
+        currencyISOCode:
+          description: The ISO code of the currency
+          example: USD
+          type: string
+        formattedCost:
+          description: The formatted cost with currency symbol
+          example: $2.50
+          type: string
+        numericCost:
+          description: The numeric cost value
+          example: 2.5
+          type: number
+      required:
+      - formattedCost
+      - numericCost
+      - currencyISOCode
+      type: object
+    EstimatedPricesByTime:
+      properties:
+        hourly:
+          $ref: '#/components/schemas/EstimatedPrice'
+        monthly:
+          $ref: '#/components/schemas/EstimatedPrice'
+      required:
+      - hourly
+      - monthly
       type: object
     Feature:
       properties:
@@ -4152,7 +4338,6 @@ components:
           type: string
         creator:
           description: The ID of the subject that created this Policy. May be empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         creatorMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -4193,7 +4378,6 @@ components:
         updater:
           description: The ID of the subject that last updated this Policy. May be
             empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         updaterMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -4213,7 +4397,6 @@ components:
           type: string
         creator:
           description: The ID of the subject that created this Role. May be empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         creatorMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -4244,7 +4427,6 @@ components:
           type: string
         updater:
           description: The ID of the subject that last updated this Role. May be empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         updaterMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -4264,7 +4446,6 @@ components:
         creator:
           description: The ID of the subject that created this Service Account. May
             be empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         creatorMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -4300,7 +4481,6 @@ components:
         updater:
           description: The ID of the subject that last updated this Service Account.
             May be empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         updaterMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -4318,7 +4498,6 @@ components:
           type: string
         creator:
           description: The ID of the subject that created this Token. May be empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         creatorMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -4357,7 +4536,6 @@ components:
         updater:
           description: The ID of the subject that last updated this Token. May be
             empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         updaterMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -4626,6 +4804,15 @@ components:
       - lastTransitionTime
       - reason
       type: object
+    MetricExportConfiguration:
+      properties:
+        cloudWatch:
+          $ref: '#/components/schemas/CloudWatchMetricExport'
+        datadog:
+          $ref: '#/components/schemas/DatadogMetricExport'
+        prometheus:
+          $ref: '#/components/schemas/PrometheusMetricExport'
+      type: object
     OrgRoleKind:
       enum:
       - admin
@@ -4668,6 +4855,7 @@ components:
       - create_ps
       - delete
       - manage_payments
+      - create_datastore
       type: string
     OrganizationRole:
       properties:
@@ -4809,6 +4997,10 @@ components:
       type: object
     PermissionsSystemDatastore:
       properties:
+        id:
+          description: The ID for the Datastore used by this Permissions System.
+          pattern: ^dbi-[a-zA-Z0-9-]+$
+          type: string
         identifier:
           description: The identifier for the Datastore used by this Permissions System.
           type: string
@@ -4818,7 +5010,44 @@ components:
         type:
           $ref: '#/components/schemas/DatastoreType'
       required:
+      - id
       - type
+      type: object
+    PermissionsSystemEstimatedCostRequest:
+      properties:
+        datastoreRegionConfig:
+          description: The datastore region configuration for the Permissions System
+          items:
+            $ref: '#/components/schemas/DatastoreRegionConfig'
+          nullable: true
+          type: array
+        deployments:
+          description: The deployment configurations for the Permissions System
+          items:
+            $ref: '#/components/schemas/DeploymentConfig'
+          minItems: 1
+          nullable: true
+          type: array
+        systemType:
+          $ref: '#/components/schemas/InternalSystemType'
+      required:
+      - systemType
+      - deployments
+      - datastoreRegionConfig
+      type: object
+    PermissionsSystemEstimatedCostResponse:
+      properties:
+        estimatedTotalCost:
+          $ref: '#/components/schemas/EstimatedPricesByTime'
+        lineItems:
+          description: List of estimated cost line items
+          items:
+            $ref: '#/components/schemas/EstimatedLineItem'
+          nullable: true
+          type: array
+      required:
+      - lineItems
+      - estimatedTotalCost
       type: object
     PermissionsSystemFeature:
       enum:
@@ -4844,7 +5073,9 @@ components:
       - MODIFYING
       - PAUSED
       - PROVISIONING
+      - DATASTORE_PROVISIONING
       - PROVISION_ERROR
+      - INITIAL_MIGRATION
       - RUNNING
       - UNKNOWN
       - UPGRADE_ERROR
@@ -4876,7 +5107,6 @@ components:
           type: string
         creator:
           description: The ID of the subject that created this Policy. May be empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         creatorMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -4917,7 +5147,6 @@ components:
         updater:
           description: The ID of the subject that last updated this Policy. May be
             empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         updaterMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -4926,6 +5155,11 @@ components:
       - principalID
       - roleIDs
       - id
+      type: object
+    PrometheusMetricExport:
+      properties:
+        enabled:
+          type: boolean
       type: object
     Region:
       properties:
@@ -4964,7 +5198,6 @@ components:
           type: string
         creator:
           description: The ID of the subject that created this Role. May be empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         creatorMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -4995,7 +5228,6 @@ components:
           type: string
         updater:
           description: The ID of the subject that last updated this Role. May be empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         updaterMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -5042,6 +5274,19 @@ components:
       - roleName
       - inviteeEmail
       type: object
+    ServerlessSpecification:
+      properties:
+        primaryRegion:
+          type: string
+        regions:
+          items:
+            type: string
+          type: array
+        upgradeType:
+          type: string
+        usageLimits:
+          $ref: '#/components/schemas/UsageLimits'
+      type: object
     ServiceAccount:
       properties:
         createdAt:
@@ -5053,7 +5298,6 @@ components:
         creator:
           description: The ID of the subject that created this Service Account. May
             be empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         creatorMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -5089,7 +5333,6 @@ components:
         updater:
           description: The ID of the subject that last updated this Service Account.
             May be empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         updaterMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -5306,7 +5549,6 @@ components:
           type: string
         creator:
           description: The ID of the subject that created this Token. May be empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         creatorMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -5345,7 +5587,6 @@ components:
         updater:
           description: The ID of the subject that last updated this Token. May be
             empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         updaterMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -5356,7 +5597,7 @@ components:
     UpdateDatastoreRequest:
       properties:
         cockroachdb:
-          description: CockroachDB-specific configuration updates
+          $ref: '#/components/schemas/ClusterSpec'
         name:
           description: The new name of the datastore instance
           maxLength: 55
@@ -5516,7 +5757,6 @@ components:
           type: string
         creator:
           description: The ID of the subject that created this Policy. May be empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         creatorMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -5557,7 +5797,6 @@ components:
         updater:
           description: The ID of the subject that last updated this Policy. May be
             empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         updaterMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -5593,7 +5832,6 @@ components:
           type: string
         creator:
           description: The ID of the subject that created this Role. May be empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         creatorMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -5624,7 +5862,6 @@ components:
           type: string
         updater:
           description: The ID of the subject that last updated this Role. May be empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         updaterMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -5667,7 +5904,6 @@ components:
         creator:
           description: The ID of the subject that created this Service Account. May
             be empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         creatorMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -5703,7 +5939,6 @@ components:
         updater:
           description: The ID of the subject that last updated this Service Account.
             May be empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         updaterMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -5735,7 +5970,6 @@ components:
           type: string
         creator:
           description: The ID of the subject that created this Token. May be empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         creatorMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -5774,7 +6008,6 @@ components:
         updater:
           description: The ID of the subject that last updated this Token. May be
             empty.
-          pattern: ^[a-zA-Z0-9-_$]{2,50}$
           type: string
         updaterMetadata:
           $ref: '#/components/schemas/SubjectMetadata'
@@ -5789,6 +6022,15 @@ components:
           type: string
       required:
       - configYAML
+      type: object
+    UsageLimits:
+      properties:
+        provisionedVirtualCPUs:
+          type: integer
+        requestUnitLimit:
+          type: integer
+        storageMibLimit:
+          type: integer
       type: object
   securitySchemes:
     auth:
