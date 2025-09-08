@@ -85,7 +85,7 @@ jobs:
       # Also add a comment to the PR about the update
       - name: Comment on PR
         if: steps.update-spec.outputs.changes == 'true' && github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             github.rest.issues.createComment({
