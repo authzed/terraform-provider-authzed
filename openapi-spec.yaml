@@ -1019,8 +1019,8 @@ paths:
           description: The version of the API to use. Must be specified.
           type: string
       responses:
-        "202":
-          description: Accepted
+        "204":
+          description: Deleted
         "400":
           description: Input parameters are incorrect
         "401":
@@ -1246,8 +1246,8 @@ paths:
           description: The version of the API to use. Must be specified.
           type: string
       responses:
-        "202":
-          description: Accepted
+        "204":
+          description: Deleted
         "400":
           description: Input parameters are incorrect
         "401":
@@ -1474,8 +1474,8 @@ paths:
           description: The version of the API to use. Must be specified.
           type: string
       responses:
-        "202":
-          description: Accepted
+        "204":
+          description: Deleted
         "400":
           description: Input parameters are incorrect
         "401":
@@ -1729,8 +1729,8 @@ paths:
           description: The version of the API to use. Must be specified.
           type: string
       responses:
-        "202":
-          description: Accepted
+        "204":
+          description: Deleted
         "400":
           description: Input parameters are incorrect
         "401":
