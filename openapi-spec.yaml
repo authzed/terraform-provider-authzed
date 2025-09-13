@@ -3294,6 +3294,7 @@ components:
         channel:
           description: The SpiceDB channel to use
           example: rapid
+          minLength: 1
           type: string
         datastoreId:
           description: The ID of the datastore instance to use (from ListDatastores).
@@ -3326,11 +3327,13 @@ components:
       properties:
         databaseID:
           description: The ID of the created database
+          minLength: 1
           type: string
         permissionsSystem:
           $ref: '#/components/schemas/PermissionsSystem'
         secretName:
           description: The name of the created secret
+          minLength: 1
           type: string
       required:
       - permissionsSystem
