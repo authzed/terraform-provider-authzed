@@ -121,7 +121,7 @@ func ValidateTokenExists(permissionSystemID, serviceAccountID, tokenID string) e
 	testClient := CreateTestTokenClient()
 	_, err := testClient.GetToken(permissionSystemID, serviceAccountID, tokenID)
 	if err != nil {
-		return fmt.Errorf("token does not exist: %v", err)
+		return fmt.Errorf("token does not exist: %w", err)
 	}
 	return nil
 }
@@ -134,15 +134,15 @@ func ValidateTokenDestroyed(permissionSystemID, serviceAccountID, tokenID string
 		return fmt.Errorf("token still exists")
 	}
 	if !IsNotFoundError(err) {
-		return fmt.Errorf("unexpected error checking token destruction: %v", err)
+		return fmt.Errorf("unexpected error checking token destruction: %w", err)
 	}
 	return nil
 }
 
 // GenerateTokenTestData generates test data for token testing
-func GenerateTokenTestData(baseName string) map[string]interface{} {
+func GenerateTokenTestData(baseName string) map[string]any {
 	testID := GenerateTestID(baseName)
-	return map[string]interface{}{
+	return map[string]any{
 		"name":                 testID,
 		"description":          fmt.Sprintf("Test token %s", testID),
 		"permission_system_id": GetTestPermissionSystemID(),
@@ -169,7 +169,7 @@ func CreateTestToken(name, serviceAccountID string) (*models.TokenRequest, error
 
 	created, err := testClient.CreateToken(context.Background(), token)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create test token: %v", err)
+		return nil, fmt.Errorf("failed to create test token: %w", err)
 	}
 
 	return created.Token, nil
