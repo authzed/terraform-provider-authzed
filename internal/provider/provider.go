@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"terraform-provider-authzed/internal/client"
+	"terraform-provider-authzed/internal/provider/deletelanes"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -17,14 +18,27 @@ type CloudProvider struct {
 }
 
 type CloudProviderModel struct {
-	Endpoint   types.String `tfsdk:"endpoint"`
-	Token      types.String `tfsdk:"token"`
-	APIVersion types.String `tfsdk:"api_version"`
+	Endpoint                     types.String `tfsdk:"endpoint"`
+	Token                        types.String `tfsdk:"token"`
+	APIVersion                   types.String `tfsdk:"api_version"`
+	DeleteTimeout                types.String `tfsdk:"delete_timeout"`
+	AutoParallelism              types.Bool   `tfsdk:"auto_parallelism"`
+	MaxConcurrentServiceAccounts types.Int64  `tfsdk:"max_concurrent_service_accounts"`
+	MaxConcurrentTokens          types.Int64  `tfsdk:"max_concurrent_tokens"`
+	MaxConcurrentPolicies        types.Int64  `tfsdk:"max_concurrent_policies"`
+	MaxConcurrentRoles           types.Int64  `tfsdk:"max_concurrent_roles"`
+	// Access management configuration
+	AccessBackoffInitial    types.String `tfsdk:"access_backoff_initial"`
+	AccessBackoffMax        types.String `tfsdk:"access_backoff_max"`
+	AccessCreateLane        types.Int64  `tfsdk:"access_create_lane"`
+	AccessDeleteLane        types.Int64  `tfsdk:"access_delete_lane"`
+	EnableVisibilityWaiters types.Bool   `tfsdk:"enable_visibility_waiters"`
 }
 
-// CloudProviderData contains the configured client and coordinator
+// CloudProviderData contains the configured client and essential components
 type CloudProviderData struct {
-	Client *client.CloudClient
+	Client      *client.CloudClient
+	DeleteLanes *deletelanes.DeleteLanes
 }
 
 var _ provider.Provider = &CloudProvider{}
@@ -58,6 +72,50 @@ func (p *CloudProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp
 				Optional:    true,
 				Description: "The version of the API to use (defaults to 25r1)",
 			},
+			"delete_timeout": schema.StringAttribute{
+				Optional:    true,
+				Description: "Maximum time to wait for asynchronous deletes to complete (e.g., 5m, 15m).",
+			},
+			"auto_parallelism": schema.BoolAttribute{
+				Optional:    true,
+				Description: "Enable automatic parallelism recommendations based on resource count. Can also be set via AUTHZED_AUTO_PARALLELISM.",
+			},
+			"max_concurrent_service_accounts": schema.Int64Attribute{
+				Optional:    true,
+				Description: "Maximum number of concurrent service account operations (default: 6). Can also be set via AUTHZED_MAX_CONCURRENT_SERVICE_ACCOUNTS.",
+			},
+			"max_concurrent_tokens": schema.Int64Attribute{
+				Optional:    true,
+				Description: "Maximum number of concurrent token operations (default: 8). Can also be set via AUTHZED_MAX_CONCURRENT_TOKENS.",
+			},
+			"max_concurrent_policies": schema.Int64Attribute{
+				Optional:    true,
+				Description: "Maximum number of concurrent policy operations (default: 3). Can also be set via AUTHZED_MAX_CONCURRENT_POLICIES.",
+			},
+			"max_concurrent_roles": schema.Int64Attribute{
+				Optional:    true,
+				Description: "Maximum number of concurrent role operations (default: 3). Can also be set via AUTHZED_MAX_CONCURRENT_ROLES.",
+			},
+			"access_backoff_initial": schema.StringAttribute{
+				Optional:    true,
+				Description: "Initial backoff delay for access management operation retries (default: 500ms).",
+			},
+			"access_backoff_max": schema.StringAttribute{
+				Optional:    true,
+				Description: "Maximum backoff delay for access management operation retries (default: 5s).",
+			},
+			"access_create_lane": schema.Int64Attribute{
+				Optional:    true,
+				Description: "Concurrency limit for CREATE/UPDATE operations per Permission System (default: 1).",
+			},
+			"access_delete_lane": schema.Int64Attribute{
+				Optional:    true,
+				Description: "Concurrency limit for DELETE operations per Permission System (default: 1).",
+			},
+			"enable_visibility_waiters": schema.BoolAttribute{
+				Optional:    true,
+				Description: "Enable visibility waiters for create operations (default: false, experimental only).",
+			},
 		},
 	}
 }
@@ -77,8 +135,12 @@ func (p *CloudProvider) Configure(ctx context.Context, req provider.ConfigureReq
 
 	cloudClient := client.NewCloudClient(clientConfig)
 
+	// Initialize delete lanes for handling real delete conflicts
+	deleteLanes := deletelanes.NewDeleteLanes()
+
 	providerData := &CloudProviderData{
-		Client: cloudClient,
+		Client:      cloudClient,
+		DeleteLanes: deleteLanes,
 	}
 
 	resp.DataSourceData = providerData

@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"terraform-provider-authzed/internal/client"
 	"terraform-provider-authzed/internal/models"
+	"terraform-provider-authzed/internal/provider/deletelanes"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -26,28 +29,30 @@ func NewPolicyResource() resource.Resource {
 }
 
 type policyResource struct {
-	client *client.CloudClient
+	client      *client.CloudClient
+	deleteLanes *deletelanes.DeleteLanes
 }
 
 type policyResourceModel struct {
-	ID                  types.String `tfsdk:"id"`
-	Name                types.String `tfsdk:"name"`
-	Description         types.String `tfsdk:"description"`
-	PermissionsSystemID types.String `tfsdk:"permission_system_id"`
-	PrincipalID         types.String `tfsdk:"principal_id"`
-	RoleIDs             types.List   `tfsdk:"role_ids"`
-	CreatedAt           types.String `tfsdk:"created_at"`
-	Creator             types.String `tfsdk:"creator"`
-	UpdatedAt           types.String `tfsdk:"updated_at"`
-	Updater             types.String `tfsdk:"updater"`
-	ETag                types.String `tfsdk:"etag"`
+	ID                  types.String   `tfsdk:"id"`
+	Name                types.String   `tfsdk:"name"`
+	Description         types.String   `tfsdk:"description"`
+	PermissionsSystemID types.String   `tfsdk:"permission_system_id"`
+	PrincipalID         types.String   `tfsdk:"principal_id"`
+	RoleIDs             types.List     `tfsdk:"role_ids"`
+	CreatedAt           types.String   `tfsdk:"created_at"`
+	Creator             types.String   `tfsdk:"creator"`
+	UpdatedAt           types.String   `tfsdk:"updated_at"`
+	Updater             types.String   `tfsdk:"updater"`
+	ETag                types.String   `tfsdk:"etag"`
+	Timeouts            timeouts.Value `tfsdk:"timeouts"`
 }
 
 func (r *policyResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_policy"
 }
 
-func (r *policyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *policyResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Manages a policy",
 		Attributes: map[string]schema.Attribute{
@@ -106,6 +111,12 @@ func (r *policyResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Description: "Version identifier used to prevent conflicts from concurrent updates, ensuring safe resource modifications",
 			},
 		},
+		Blocks: map[string]schema.Block{
+			"timeouts": timeouts.Block(ctx, timeouts.Opts{
+				Create: true,
+				Delete: true,
+			}),
+		},
 	}
 }
 
@@ -124,20 +135,60 @@ func (r *policyResource) Configure(_ context.Context, req resource.ConfigureRequ
 	}
 
 	r.client = providerData.Client
+	r.deleteLanes = providerData.DeleteLanes
 }
 
 func (r *policyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	// Retrieve values from plan
 	var data policyResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
+	// Get context with create timeout (default 5 minutes for policies)
+	createTimeout, diags := data.Timeouts.Create(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	createCtx, cancel := context.WithTimeout(ctx, createTimeout)
+	defer cancel()
+
 	// Extract role IDs from types.List
 	var roleIDs []string
 	resp.Diagnostics.Append(data.RoleIDs.ElementsAs(ctx, &roleIDs, false)...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	// Existence gates: ensure PS and referenced role(s) exist before creating policy
+	psID := data.PermissionsSystemID.ValueString()
+
+	// Wait for Permission System (uses createCtx timeout)
+	if err := waitForPermissionSystemExists(createCtx, r.client, psID); err != nil {
+		resp.Diagnostics.AddError("Permission System Not Ready",
+			fmt.Sprintf("Permission System %s is not yet globally visible: %v", psID, err))
+		return
+	}
+
+	// Wait for Service Account (principal) (uses createCtx timeout)
+	if principalID := data.PrincipalID.ValueString(); principalID != "" {
+		if err := waitForServiceAccountExists(createCtx, r.client, psID, principalID); err != nil {
+			resp.Diagnostics.AddError("Service Account Not Ready",
+				fmt.Sprintf("Service Account %s is not yet globally visible: %v", principalID, err))
+			return
+		}
+	}
+
+	// Wait for all referenced roles (uses createCtx timeout)
+	for _, roleID := range roleIDs {
+		if err := waitForRoleExists(createCtx, r.client, psID, roleID); err != nil {
+			resp.Diagnostics.AddError("Role Not Ready",
+				fmt.Sprintf("Role %s is not yet globally visible: %v", roleID, err))
+			return
+		}
 	}
 
 	// Create policy
@@ -149,7 +200,7 @@ func (r *policyResource) Create(ctx context.Context, req resource.CreateRequest,
 		RoleIDs:             roleIDs,
 	}
 
-	createdPolicyWithETag, err := r.client.CreatePolicy(ctx, policy)
+	createdPolicyWithETag, err := r.client.CreatePolicy(createCtx, policy)
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating Policy", err.Error())
 		return
@@ -183,6 +234,28 @@ func (r *policyResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 	data.RoleIDs = roleIDList
+
+	// Post-create GET to stabilize metadata and ETag
+	fresh, gerr := r.client.GetPolicy(data.PermissionsSystemID.ValueString(), data.ID.ValueString())
+	if gerr == nil {
+		data.CreatedAt = types.StringValue(fresh.Policy.CreatedAt)
+		if fresh.Policy.Creator == "" {
+			data.Creator = types.StringNull()
+		} else {
+			data.Creator = types.StringValue(fresh.Policy.Creator)
+		}
+		if fresh.Policy.UpdatedAt == "" {
+			data.UpdatedAt = types.StringNull()
+		} else {
+			data.UpdatedAt = types.StringValue(fresh.Policy.UpdatedAt)
+		}
+		if fresh.Policy.Updater == "" {
+			data.Updater = types.StringNull()
+		} else {
+			data.Updater = types.StringValue(fresh.Policy.Updater)
+		}
+		data.ETag = types.StringValue(fresh.ETag)
+	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -318,20 +391,55 @@ func (r *policyResource) Update(ctx context.Context, req resource.UpdateRequest,
 }
 
 func (r *policyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	// Get current state
 	var data policyResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
+	// Get context with delete timeout (default 10 minutes for deletes)
+	deleteTimeout, diags := data.Timeouts.Delete(ctx, 10*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	deleteCtx, cancel := context.WithTimeout(ctx, deleteTimeout)
+	defer cancel()
+
 	permissionSystemID := data.PermissionsSystemID.ValueString()
-	err := r.client.DeletePolicy(permissionSystemID, data.ID.ValueString())
+
+	// Serialize delete per Permission System with 409 retry
+	err := r.deleteLanes.WithDelete(deleteCtx, permissionSystemID, func(ctx context.Context) error {
+		return deletelanes.Retry409Delete(ctx, func(ctx context.Context) error {
+			return r.client.DeletePolicy(permissionSystemID, data.ID.ValueString())
+		})
+	})
+
 	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete policy, got error: %s", err))
+		resp.Diagnostics.AddError("Error deleting policy", fmt.Sprintf("Unable to delete policy: %v", err))
 		return
 	}
 }
 
 func (r *policyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	// Import ID format: permission_system_id:policy_id
+	idParts := strings.Split(req.ID, ":")
+	if len(idParts) != 2 {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID",
+			fmt.Sprintf("Expected import id in format 'permission_system_id:policy_id', got: %s", req.ID),
+		)
+		return
+	}
+
+	permissionSystemID := idParts[0]
+	policyID := idParts[1]
+
+	// Set the main identifiers
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("permission_system_id"), permissionSystemID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), policyID)...)
+
+	// Terraform automatically calls Read to fetch the rest of the attributes
 }

@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"terraform-provider-authzed/internal/client"
 	"terraform-provider-authzed/internal/models"
+	"terraform-provider-authzed/internal/provider/deletelanes"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -26,27 +29,29 @@ func NewRoleResource() resource.Resource {
 }
 
 type roleResource struct {
-	client *client.CloudClient
+	client      *client.CloudClient
+	deleteLanes *deletelanes.DeleteLanes
 }
 
 type roleResourceModel struct {
-	ID                  types.String `tfsdk:"id"`
-	Name                types.String `tfsdk:"name"`
-	Description         types.String `tfsdk:"description"`
-	PermissionsSystemID types.String `tfsdk:"permission_system_id"`
-	Permissions         types.Map    `tfsdk:"permissions"`
-	CreatedAt           types.String `tfsdk:"created_at"`
-	Creator             types.String `tfsdk:"creator"`
-	UpdatedAt           types.String `tfsdk:"updated_at"`
-	Updater             types.String `tfsdk:"updater"`
-	ETag                types.String `tfsdk:"etag"`
+	ID                  types.String   `tfsdk:"id"`
+	Name                types.String   `tfsdk:"name"`
+	Description         types.String   `tfsdk:"description"`
+	PermissionsSystemID types.String   `tfsdk:"permission_system_id"`
+	Permissions         types.Map      `tfsdk:"permissions"`
+	CreatedAt           types.String   `tfsdk:"created_at"`
+	Creator             types.String   `tfsdk:"creator"`
+	UpdatedAt           types.String   `tfsdk:"updated_at"`
+	Updater             types.String   `tfsdk:"updater"`
+	ETag                types.String   `tfsdk:"etag"`
+	Timeouts            timeouts.Value `tfsdk:"timeouts"`
 }
 
 func (r *roleResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_role"
 }
 
-func (r *roleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *roleResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Manages a role",
 		Attributes: map[string]schema.Attribute{
@@ -101,6 +106,12 @@ func (r *roleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				Description: "Version identifier used to prevent conflicts from concurrent updates, ensuring safe resource modifications",
 			},
 		},
+		Blocks: map[string]schema.Block{
+			"timeouts": timeouts.Block(ctx, timeouts.Opts{
+				Create: true,
+				Delete: true,
+			}),
+		},
 	}
 }
 
@@ -119,13 +130,36 @@ func (r *roleResource) Configure(_ context.Context, req resource.ConfigureReques
 	}
 
 	r.client = providerData.Client
+	r.deleteLanes = providerData.DeleteLanes
 }
 
 func (r *roleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	// Retrieve values from plan
 	var data roleResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	// Get context with create timeout (default 10 minutes for roles)
+	createTimeout, diags := data.Timeouts.Create(ctx, 10*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	createCtx, cancel := context.WithTimeout(ctx, createTimeout)
+	defer cancel()
+
+	// Existence gate: ensure Permission System exists before role create (use createCtx)
+	if psID := data.PermissionsSystemID.ValueString(); psID != "" {
+		_ = waitForExists(createCtx, func(c context.Context) (bool, error) {
+			_, err := r.client.GetPermissionsSystem(c, psID)
+			if err != nil {
+				return false, err
+			}
+			return true, nil
+		})
 	}
 
 	// Extract permissions map from types.Map
@@ -140,7 +174,7 @@ func (r *roleResource) Create(ctx context.Context, req resource.CreateRequest, r
 		Permissions:         permissionsMap,
 	}
 
-	createdRoleWithETag, err := r.client.CreateRole(ctx, role)
+	createdRoleWithETag, err := r.client.CreateRole(createCtx, role)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create role, got error: %s", err))
 		return
@@ -172,7 +206,7 @@ func (r *roleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 
-	roleWithETag, err := r.client.GetRole(data.PermissionsSystemID.ValueString(), data.ID.ValueString())
+	roleWithETag, err := r.client.GetRole(ctx, data.PermissionsSystemID.ValueString(), data.ID.ValueString())
 	if err != nil {
 		// Check if the resource was not found (404 error)
 		if strings.Contains(err.Error(), "status 404") || strings.Contains(err.Error(), "not found") {
@@ -276,16 +310,34 @@ func (r *roleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 }
 
 func (r *roleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	// Get current state
 	var data roleResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
+	// Get context with delete timeout (default 10 minutes for deletes)
+	deleteTimeout, diags := data.Timeouts.Delete(ctx, 10*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	deleteCtx, cancel := context.WithTimeout(ctx, deleteTimeout)
+	defer cancel()
+
 	permissionSystemID := data.PermissionsSystemID.ValueString()
-	err := r.client.DeleteRole(permissionSystemID, data.ID.ValueString())
+
+	// Serialize delete per Permission System with 409 retry
+	err := r.deleteLanes.WithDelete(deleteCtx, permissionSystemID, func(ctx context.Context) error {
+		return deletelanes.Retry409Delete(ctx, func(ctx context.Context) error {
+			return r.client.DeleteRole(permissionSystemID, data.ID.ValueString())
+		})
+	})
+
 	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete role, got error: %s", err))
+		resp.Diagnostics.AddError("Error deleting role", fmt.Sprintf("Unable to delete role: %v", err))
 		return
 	}
 }
