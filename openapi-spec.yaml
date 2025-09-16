@@ -3168,9 +3168,9 @@ components:
           maxLength: 64
           minLength: 1
           type: string
-        region:
+        regionId:
           description: The region where the Deployment will be created
-          example: us-west-2
+          example: rg-us-west-2
           minLength: 1
           type: string
         replicas:
@@ -3182,7 +3182,7 @@ components:
       - name
       - deploymentTemplateID
       - replicas
-      - region
+      - regionId
       type: object
     CreateExternalMetricsTokenResponse:
       properties:
@@ -5190,6 +5190,7 @@ components:
           description: The display name of the region
           type: string
       required:
+      - id
       - internalReference
       - cloudKind
       - cloudAccountId
