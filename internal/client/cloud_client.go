@@ -139,6 +139,30 @@ type ResponseWithETag struct {
 // RequestOption allows setting optional parameters for requests
 type RequestOption func(*http.Request)
 
+// IdempotentRecoveryConfig configures idempotent recovery for create operations
+type IdempotentRecoveryConfig struct {
+	ResourceType string
+	LookupByName func(name string) (Resource, error)
+}
+
+// RecoverFromAmbiguousCreate attempts to recover from ambiguous create errors
+func (r *IdempotentRecoveryConfig) RecoverFromAmbiguousCreate(ctx context.Context, name string, originalErr error) (Resource, error) {
+	if r.LookupByName == nil {
+		return nil, originalErr
+	}
+
+	resource, err := r.LookupByName(name)
+	if err != nil {
+		return nil, originalErr
+	}
+
+	if resource != nil {
+		return resource, nil
+	}
+
+	return nil, originalErr
+}
+
 // Do sends an HTTP request and returns an HTTP response with the ETag if present
 func (c *CloudClient) Do(req *http.Request) (*ResponseWithETag, error) {
 	resp, err := c.HTTPClient.Do(req)
@@ -546,23 +570,9 @@ func (c *CloudClient) CreateResourceWithFactoryAndRecovery(ctx context.Context, 
 		return resource, nil
 	}
 
-	// Only run stabilization for resources that need it (missing ETag)
-	stabilizationConfig := DefaultStabilizationConfig()
-	getResourceForStabilization := func() (Resource, error) {
-		return c.GetResourceWithFactory(endpoint, dest, factory)
-	}
-
-	stabilizedResource, stabilizationErr := stabilizationConfig.WaitForResourceReadiness(
-		ctx,
-		getResourceForStabilization,
-		"created resource",
-	)
-	if stabilizationErr != nil {
-		// Return original resource if stabilization fails but creation succeeded
-		return resource, nil
-	}
-
-	return stabilizedResource, nil
+	// Missing ETag after successful creation violates OpenAPI spec
+	// This indicates either an API issue or incomplete resource creation
+	return nil, fmt.Errorf("created resource missing required ETag header - this may indicate HTTP compression is enabled (check AUTHZED_DISABLE_GZIP setting) or an API issue")
 }
 
 // isAmbiguousError checks if an error represents an ambiguous outcome

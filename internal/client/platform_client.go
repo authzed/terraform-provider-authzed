@@ -25,12 +25,6 @@ type PlatformClientConfig struct {
 	Timeout    time.Duration
 }
 
-// ResponseWithETag wraps an HTTP response and its ETag
-type ResponseWithETag struct {
-	Response *http.Response
-	ETag     string
-}
-
 // NewPlatformClient creates a new api client
 func NewPlatformClient(cfg *PlatformClientConfig) *PlatformClient {
 	timeout := cfg.Timeout
@@ -83,9 +77,6 @@ func (c *PlatformClient) NewRequest(method, path string, body any, options ...Re
 
 	return req, nil
 }
-
-// RequestOption allows setting optional parameters for requests
-type RequestOption func(*http.Request)
 
 // WithETag adds an If-Match header with the provided ETag
 func WithETag(etag string) RequestOption {

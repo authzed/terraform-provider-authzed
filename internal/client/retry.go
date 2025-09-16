@@ -42,7 +42,9 @@ func DefaultRetryConfig() *RetryConfig {
 func shouldRetryForConflict(statusCode int) bool {
 	return statusCode == http.StatusConflict ||
 		statusCode == http.StatusPreconditionFailed ||
-		statusCode == http.StatusTooManyRequests
+		statusCode == http.StatusTooManyRequests ||
+		statusCode == http.StatusNotFound || // For service account visibility delays
+		(statusCode >= 500 && statusCode <= 599)
 }
 
 // calculateDelay calculates the delay for a given retry attempt with exponential backoff and jitter
@@ -107,14 +109,27 @@ func (rc *RetryConfig) RetryWithExponentialBackoff(
 			resp, lastErr = updateWithETag(latestETag)
 		}
 
+		// If there's an error, check if it's retryable
 		if lastErr != nil {
+			// Check if this is a retryable error (APIError with retryable status code)
+			if apiErr, ok := lastErr.(*APIError); ok && rc.ShouldRetry(apiErr.StatusCode) {
+				// This is a retryable error, continue the retry loop
+				tflog.Debug(ctx, "retryable error encountered, continuing retry loop", map[string]interface{}{
+					"operation":   operationName,
+					"status_code": apiErr.StatusCode,
+					"attempt":     attempt + 1,
+					"error":       lastErr.Error(),
+				})
+				continue
+			}
+			// Non-retryable error, exit immediately
 			return &RetryResult{
 				Response:    nil,
 				Diagnostics: diagnostics,
 			}
 		}
 
-		// Check if we should retry based on status code
+		// Check if we should retry based on status code (for successful responses)
 		if !rc.ShouldRetry(resp.Response.StatusCode) {
 			if attempt > 0 {
 				diagnostics.AddWarning(
@@ -195,11 +210,24 @@ func (rc *RetryConfig) RetryWithExponentialBackoffLegacy(
 			resp, lastErr = updateWithETag(latestETag)
 		}
 
+		// If there's an error, check if it's retryable
 		if lastErr != nil {
+			// Check if this is a retryable error (APIError with retryable status code)
+			if apiErr, ok := lastErr.(*APIError); ok && rc.ShouldRetry(apiErr.StatusCode) {
+				// This is a retryable error, continue the retry loop
+				tflog.Debug(ctx, "retryable error encountered, continuing retry loop", map[string]interface{}{
+					"operation":   operationName,
+					"status_code": apiErr.StatusCode,
+					"attempt":     attempt + 1,
+					"error":       lastErr.Error(),
+				})
+				continue
+			}
+			// Non-retryable error, exit immediately
 			return nil, lastErr
 		}
 
-		// Check if we should retry based on status code
+		// Check if we should retry based on status code (for successful responses)
 		if !rc.ShouldRetry(resp.Response.StatusCode) {
 			if attempt > 0 {
 				// Log successful retry

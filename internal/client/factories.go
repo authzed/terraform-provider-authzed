@@ -11,11 +11,6 @@ func NewServiceAccountResource(decoded any, etag string) Resource {
 		panic("Invalid type for ServiceAccount")
 	}
 
-	// If etag is empty and the service account has a ConfigETag, use that
-	if etag == "" && serviceAccount.ConfigETag != "" {
-		etag = serviceAccount.ConfigETag
-	}
-
 	return &ServiceAccountWithETag{
 		ServiceAccount: serviceAccount,
 		ETag:           etag,
@@ -27,11 +22,6 @@ func NewRoleResource(decoded any, etag string) Resource {
 	role, ok := decoded.(*models.Role)
 	if !ok {
 		panic("Invalid type for Role")
-	}
-
-	// If etag is empty and the role has a ConfigETag, use that
-	if etag == "" && role.ConfigETag != "" {
-		etag = role.ConfigETag
 	}
 
 	return &RoleWithETag{
@@ -47,11 +37,6 @@ func NewPolicyResource(decoded any, etag string) Resource {
 		panic("Invalid type for Policy")
 	}
 
-	// If etag is empty and the policy has a ConfigETag, use that
-	if etag == "" && policy.ConfigETag != "" {
-		etag = policy.ConfigETag
-	}
-
 	return &PolicyWithETag{
 		Policy: policy,
 		ETag:   etag,
@@ -64,6 +49,7 @@ func NewTokenResource(decoded any, etag string) Resource {
 	if !ok {
 		panic("Invalid type for Token")
 	}
+
 	return &TokenWithETag{
 		Token: token,
 		ETag:  etag,

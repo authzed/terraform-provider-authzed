@@ -81,11 +81,11 @@ func (c *CloudClient) ListServiceAccounts(permissionsSystemID string) ([]models.
 }
 
 // GetServiceAccount retrieves a service account by ID
-func (c *CloudClient) GetServiceAccount(permissionsSystemID, serviceAccountID string) (*ServiceAccountWithETag, error) {
+func (c *CloudClient) GetServiceAccount(ctx context.Context, permissionsSystemID, serviceAccountID string) (*ServiceAccountWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s", permissionsSystemID, serviceAccountID)
 
 	var serviceAccount models.ServiceAccount
-	resource, err := c.GetResourceWithFactory(path, &serviceAccount, NewServiceAccountResource)
+	resource, err := c.GetResourceWithFactoryWithContext(ctx, path, &serviceAccount, NewServiceAccountResource)
 	if err != nil {
 		return nil, err
 	}
@@ -98,8 +98,26 @@ func (c *CloudClient) GetServiceAccount(permissionsSystemID, serviceAccountID st
 func (c *CloudClient) CreateServiceAccount(ctx context.Context, serviceAccount *models.ServiceAccount) (*ServiceAccountWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/service-accounts", serviceAccount.PermissionsSystemID)
 
+	// Setup idempotent recovery
+	recovery := &IdempotentRecoveryConfig{
+		ResourceType: "service account",
+		LookupByName: func(name string) (Resource, error) {
+			accounts, err := c.ListServiceAccounts(serviceAccount.PermissionsSystemID)
+			if err != nil {
+				return nil, err
+			}
+			for _, account := range accounts {
+				if account.Name == name {
+					// Get the full resource with ETag
+					return c.GetServiceAccount(ctx, serviceAccount.PermissionsSystemID, account.ID)
+				}
+			}
+			return nil, nil
+		},
+	}
+
 	var createdServiceAccount models.ServiceAccount
-	resource, err := c.CreateResourceWithFactory(ctx, path, serviceAccount, &createdServiceAccount, NewServiceAccountResource)
+	resource, err := c.CreateResourceWithFactoryAndRecovery(ctx, path, serviceAccount, &createdServiceAccount, NewServiceAccountResource, recovery)
 	if err != nil {
 		return nil, err
 	}

@@ -60,22 +60,34 @@ func (c *CloudClient) ListRoles(permissionsSystemID string) ([]models.Role, erro
 		return nil, NewAPIError(respWithETag)
 	}
 
-	var listResp struct {
-		Items []models.Role `json:"items"`
-	}
-	if err := json.NewDecoder(respWithETag.Response.Body).Decode(&listResp); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+	// Read the entire body
+	bodyBytes, err := io.ReadAll(respWithETag.Response.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	return listResp.Items, nil
+	// Try to decode as a direct array first
+	var roles []models.Role
+	if err := json.Unmarshal(bodyBytes, &roles); err != nil {
+		// If direct decode fails, try with the wrapped items format
+		var listResp struct {
+			Items []models.Role `json:"items"`
+		}
+		if err := json.Unmarshal(bodyBytes, &listResp); err != nil {
+			return nil, fmt.Errorf("failed to decode response: %w", err)
+		}
+		return listResp.Items, nil
+	}
+
+	return roles, nil
 }
 
 // GetRole retrieves a role by ID
-func (c *CloudClient) GetRole(permissionsSystemID, roleID string) (*RoleWithETag, error) {
+func (c *CloudClient) GetRole(ctx context.Context, permissionsSystemID, roleID string) (*RoleWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/roles/%s", permissionsSystemID, roleID)
 
 	var role models.Role
-	resource, err := c.GetResourceWithFactory(path, &role, NewRoleResource)
+	resource, err := c.GetResourceWithFactoryWithContext(ctx, path, &role, NewRoleResource)
 	if err != nil {
 		return nil, err
 	}
@@ -87,8 +99,26 @@ func (c *CloudClient) GetRole(permissionsSystemID, roleID string) (*RoleWithETag
 func (c *CloudClient) CreateRole(ctx context.Context, role *models.Role) (*RoleWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/roles", role.PermissionsSystemID)
 
+	// Setup idempotent recovery
+	recovery := &IdempotentRecoveryConfig{
+		ResourceType: "role",
+		LookupByName: func(name string) (Resource, error) {
+			roles, err := c.ListRoles(role.PermissionsSystemID)
+			if err != nil {
+				return nil, err
+			}
+			for _, r := range roles {
+				if r.Name == name {
+					// Get the full resource with ETag
+					return c.GetRole(ctx, role.PermissionsSystemID, r.ID)
+				}
+			}
+			return nil, nil
+		},
+	}
+
 	var createdRole models.Role
-	resource, err := c.CreateResourceWithFactory(ctx, path, role, &createdRole, NewRoleResource)
+	resource, err := c.CreateResourceWithFactoryAndRecovery(ctx, path, role, &createdRole, NewRoleResource, recovery)
 	if err != nil {
 		// Special handling for specific errors
 		if apiErr, ok := err.(*APIError); ok && apiErr.StatusCode == http.StatusInternalServerError {
