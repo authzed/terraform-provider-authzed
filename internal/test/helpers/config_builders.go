@@ -47,7 +47,7 @@ resource "authzed_policy" "test" {
 `,
 		BuildProviderConfig(),
 		name,
-		GetPermissionSystemID(),
+		GetTestPermissionSystemID(),
 		GenerateTestID("principal"),
 	)
 }
@@ -67,7 +67,7 @@ resource "authzed_role" "test" {
 `,
 		BuildProviderConfig(),
 		name,
-		GetPermissionSystemID(),
+		GetTestPermissionSystemID(),
 	)
 }
 
@@ -84,7 +84,7 @@ resource "authzed_service_account" "test" {
 `,
 		BuildProviderConfig(),
 		name,
-		GetPermissionSystemID(),
+		GetTestPermissionSystemID(),
 	)
 }
 
@@ -108,7 +108,7 @@ resource "authzed_token" "test" {
 `,
 		BuildProviderConfig(),
 		serviceAccountName,
-		GetPermissionSystemID(),
+		GetTestPermissionSystemID(),
 		name,
 	)
 }
@@ -125,7 +125,7 @@ data "authzed_permission_system" "test" {
 }
 `,
 			BuildProviderConfig(),
-			GetPermissionSystemID(),
+			GetTestPermissionSystemID(),
 		)
 	case "permission_systems":
 		return fmt.Sprintf(`
@@ -146,7 +146,7 @@ data "authzed_%[2]s" "test" {
 `,
 			BuildProviderConfig(),
 			dataSourceType,
-			GetPermissionSystemID(),
+			GetTestPermissionSystemID(),
 			name,
 		)
 	}
@@ -188,6 +188,6 @@ resource "authzed_token" "test" {
 `,
 		BuildProviderConfig(),
 		baseName,
-		GetPermissionSystemID(),
+		GetTestPermissionSystemID(),
 	)
 }
