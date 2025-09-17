@@ -34,7 +34,7 @@ func (p *PolicyWithETag) SetETag(etag string) {
 }
 
 // GetResource returns the underlying policy
-func (p *PolicyWithETag) GetResource() interface{} {
+func (p *PolicyWithETag) GetResource() any {
 	return p.Policy
 }
 
@@ -108,7 +108,7 @@ func (c *CloudClient) CreatePolicy(ctx context.Context, policy *models.Policy) (
 	retryConfig := DefaultRetryConfig()
 	prevShouldRetry := retryConfig.ShouldRetry
 	retryConfig.ShouldRetry = func(statusCode int) bool {
-		if statusCode >= 500 { // include 5xx like 502/503/504
+		if statusCode >= 500 {
 			return true
 		}
 		return prevShouldRetry(statusCode) // 409/412/429

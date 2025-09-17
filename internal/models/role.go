@@ -11,7 +11,6 @@ type Role struct {
 	Creator             string            `json:"creator,omitempty"`
 	UpdatedAt           string            `json:"updatedAt,omitempty"`
 	Updater             string            `json:"updater,omitempty"`
-	ConfigETag          string            `json:"configETag,omitempty"`
 }
 
 type PermissionExprMap map[string]string

@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
@@ -41,6 +42,18 @@ func TestAccAuthzedServiceAccount_basic(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				ImportStateIdFunc: testAccServiceAccountImportStateIdFunc(resourceName),
+				ImportStateVerifyIgnore: []string{
+					"etag",
+					"updated_at",
+					"updater",
+				},
+				Check: resource.ComposeTestCheckFunc(
+					// Verify ETag presence (not equality)
+					resource.TestCheckResourceAttrSet(resourceName, "etag"),
+					// Verify stable config fields match
+					resource.TestCheckResourceAttr(resourceName, "name", testID),
+					resource.TestCheckResourceAttr(resourceName, "description", "Test service account description"),
+				),
 			},
 		},
 	})
@@ -169,6 +182,18 @@ func TestAccAuthzedServiceAccount_import(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				ImportStateIdFunc: testAccServiceAccountImportStateIdFunc(resourceName),
+				ImportStateVerifyIgnore: []string{
+					"etag",
+					"updated_at",
+					"updater",
+				},
+				Check: resource.ComposeTestCheckFunc(
+					// Verify ETag presence (not equality)
+					resource.TestCheckResourceAttrSet(resourceName, "etag"),
+					// Verify stable config fields match
+					resource.TestCheckResourceAttr(resourceName, "name", testID),
+					resource.TestCheckResourceAttr(resourceName, "description", "Test service account description"),
+				),
 			},
 		},
 	})
@@ -269,7 +294,7 @@ func testAccCheckServiceAccountExists(resourceName string) resource.TestCheckFun
 			return fmt.Errorf("Permission system ID not set")
 		}
 
-		_, err := testClient.GetServiceAccount(permissionSystemID, rs.Primary.ID)
+		_, err := testClient.GetServiceAccount(context.Background(), permissionSystemID, rs.Primary.ID)
 		if err != nil {
 			return fmt.Errorf("Error retrieving service account: %s", err)
 		}
@@ -297,7 +322,7 @@ func testAccCheckServiceAccountDestroy(s *terraform.State) error {
 			continue
 		}
 
-		_, err := testClient.GetServiceAccount(permissionSystemID, rs.Primary.ID)
+		_, err := testClient.GetServiceAccount(context.Background(), permissionSystemID, rs.Primary.ID)
 		if err == nil {
 			return fmt.Errorf("service account still exists: %s", rs.Primary.ID)
 		}

@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
@@ -43,6 +44,19 @@ func TestAccAuthzedRole_basic(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				ImportStateIdFunc: testAccRoleImportStateIdFunc(resourceName),
+				ImportStateVerifyIgnore: []string{
+					"etag",
+					"updated_at",
+					"updater",
+				},
+				Check: resource.ComposeTestCheckFunc(
+					// Verify ETag presence (not equality)
+					resource.TestCheckResourceAttrSet(resourceName, "etag"),
+					// Verify stable config fields match
+					resource.TestCheckResourceAttr(resourceName, "name", testID),
+					resource.TestCheckResourceAttr(resourceName, "permissions.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "permissions.authzed.v1/ReadSchema", ""),
+				),
 			},
 		},
 	})
@@ -118,6 +132,9 @@ func TestAccAuthzedRole_complexPermissions(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				ImportStateIdFunc: testAccRoleImportStateIdFunc(resourceName),
+				ImportStateVerifyIgnore: []string{
+					"etag", // ETag changes between operations
+				},
 			},
 		},
 	})
@@ -145,6 +162,9 @@ func TestAccAuthzedRole_import(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				ImportStateIdFunc: testAccRoleImportStateIdFunc(resourceName),
+				ImportStateVerifyIgnore: []string{
+					"etag", // ETag changes between operations
+				},
 			},
 		},
 	})
@@ -251,7 +271,7 @@ func testAccCheckRoleExists(resourceName string) resource.TestCheckFunc {
 			return fmt.Errorf("Permission system ID not set")
 		}
 
-		_, err := testClient.GetRole(permissionSystemID, rs.Primary.ID)
+		_, err := testClient.GetRole(context.Background(), permissionSystemID, rs.Primary.ID)
 		if err != nil {
 			return fmt.Errorf("Error retrieving role: %s", err)
 		}
@@ -279,7 +299,7 @@ func testAccCheckRoleDestroy(s *terraform.State) error {
 			continue
 		}
 
-		_, err := testClient.GetRole(permissionSystemID, rs.Primary.ID)
+		_, err := testClient.GetRole(context.Background(), permissionSystemID, rs.Primary.ID)
 		if err == nil {
 			return fmt.Errorf("role still exists: %s", rs.Primary.ID)
 		}

@@ -139,7 +139,7 @@ func (d *permissionsSystemDataSource) Read(ctx context.Context, req datasource.R
 		return
 	}
 
-	permissionsSystemWithETag, err := d.client.GetPermissionsSystem(data.ID.ValueString())
+	permissionsSystemWithETag, err := d.client.GetPermissionsSystem(ctx, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read permission system, got error: %s", err))
 		return

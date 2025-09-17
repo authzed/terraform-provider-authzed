@@ -112,7 +112,7 @@ func TestETagSupport(t *testing.T) {
 		updateRequestCount = 0
 		getRequestCount = 0
 
-		sa, err := c.GetServiceAccount("ps-test123", "asa-test123")
+		sa, err := c.GetServiceAccount(context.Background(), "ps-test123", "asa-test123")
 		assert.NoError(t, err)
 		assert.Equal(t, testETag, sa.GetETag())
 	})

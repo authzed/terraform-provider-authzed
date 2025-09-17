@@ -136,7 +136,7 @@ func CreateTestRoleClient() *client.CloudClient {
 // ValidateRoleExists checks if a role exists via API
 func ValidateRoleExists(permissionSystemID, roleID string) error {
 	testClient := CreateTestRoleClient()
-	_, err := testClient.GetRole(permissionSystemID, roleID)
+	_, err := testClient.GetRole(context.Background(), permissionSystemID, roleID)
 	if err != nil {
 		return fmt.Errorf("role does not exist: %s", err)
 	}
@@ -146,7 +146,7 @@ func ValidateRoleExists(permissionSystemID, roleID string) error {
 // ValidateRoleDestroyed checks if a role has been properly destroyed
 func ValidateRoleDestroyed(permissionSystemID, roleID string) error {
 	testClient := CreateTestRoleClient()
-	_, err := testClient.GetRole(permissionSystemID, roleID)
+	_, err := testClient.GetRole(context.Background(), permissionSystemID, roleID)
 	if err == nil {
 		return fmt.Errorf("role still exists: %s", roleID)
 	}
@@ -161,7 +161,7 @@ func ValidateRoleDestroyed(permissionSystemID, roleID string) error {
 // ValidateRolePermissions checks if a role has the expected permissions
 func ValidateRolePermissions(permissionSystemID, roleID string, expectedPermissions map[string]string) error {
 	testClient := CreateTestRoleClient()
-	roleWithETag, err := testClient.GetRole(permissionSystemID, roleID)
+	roleWithETag, err := testClient.GetRole(context.Background(), permissionSystemID, roleID)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve role: %s", err)
 	}
