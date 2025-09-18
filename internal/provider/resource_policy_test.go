@@ -45,9 +45,9 @@ func TestAccAuthzedPolicy_basic(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateIdFunc: testAccPolicyImportStateIdFunc(resourceName),
 				ImportStateVerifyIgnore: []string{
-					"etag",       // ETag tracks server version, not user intent
-					"updated_at", // Server-managed timestamp
-					"updater",    // Server-managed field
+					"etag",
+					"updated_at",
+					"updater",
 				},
 				Check: resource.ComposeTestCheckFunc(
 					// Verify ETag presence (not equality)
@@ -85,15 +85,9 @@ func TestAccAuthzedPolicy_import(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateIdFunc: testAccPolicyImportStateIdFunc(resourceName),
 				ImportStateVerifyIgnore: []string{
-<<<<<<< HEAD
-					"etag",       // ETag tracks server version, not user intent
-					"updated_at", // Server-managed timestamp
-					"updater",    // Server-managed field
-=======
 					"etag",
 					"updated_at",
 					"updater",
->>>>>>> 9e26cc6 (refactor: rm unused internal/api implementation after optimisations)
 				},
 				Check: resource.ComposeTestCheckFunc(
 					// Verify ETag presence (not equality)
