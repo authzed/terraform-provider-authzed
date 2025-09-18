@@ -27,12 +27,6 @@ type CloudProviderModel struct {
 	MaxConcurrentTokens          types.Int64  `tfsdk:"max_concurrent_tokens"`
 	MaxConcurrentPolicies        types.Int64  `tfsdk:"max_concurrent_policies"`
 	MaxConcurrentRoles           types.Int64  `tfsdk:"max_concurrent_roles"`
-	// Access management configuration
-	AccessBackoffInitial    types.String `tfsdk:"access_backoff_initial"`
-	AccessBackoffMax        types.String `tfsdk:"access_backoff_max"`
-	AccessCreateLane        types.Int64  `tfsdk:"access_create_lane"`
-	AccessDeleteLane        types.Int64  `tfsdk:"access_delete_lane"`
-	EnableVisibilityWaiters types.Bool   `tfsdk:"enable_visibility_waiters"`
 }
 
 // CloudProviderData contains the configured client and essential components
@@ -95,26 +89,6 @@ func (p *CloudProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp
 			"max_concurrent_roles": schema.Int64Attribute{
 				Optional:    true,
 				Description: "Maximum number of concurrent role operations (default: 3). Can also be set via AUTHZED_MAX_CONCURRENT_ROLES.",
-			},
-			"access_backoff_initial": schema.StringAttribute{
-				Optional:    true,
-				Description: "Initial backoff delay for access management operation retries (default: 500ms).",
-			},
-			"access_backoff_max": schema.StringAttribute{
-				Optional:    true,
-				Description: "Maximum backoff delay for access management operation retries (default: 5s).",
-			},
-			"access_create_lane": schema.Int64Attribute{
-				Optional:    true,
-				Description: "Concurrency limit for CREATE/UPDATE operations per Permission System (default: 1).",
-			},
-			"access_delete_lane": schema.Int64Attribute{
-				Optional:    true,
-				Description: "Concurrency limit for DELETE operations per Permission System (default: 1).",
-			},
-			"enable_visibility_waiters": schema.BoolAttribute{
-				Optional:    true,
-				Description: "Enable visibility waiters for create operations (default: false, experimental only).",
 			},
 		},
 	}
