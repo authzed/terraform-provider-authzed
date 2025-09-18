@@ -26,11 +26,8 @@ func waitForExists(ctx context.Context, check func(context.Context) (bool, error
 			return nil
 		}
 
-		// Determine retryability
-		if err != nil {
-			// For existence checks, we only care about 404s - everything else should be retried
-			// The specific error type checking will be done by the individual check functions
-		}
+		// For existence checks, we only care about 404s, everything else should be retried
+		// The specific error type checking will be done by the individual check functions
 
 		// Sleep with jitter
 		jitter := time.Duration(rand.Int63n(int64(backoff / 2)))

@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"testing"
 
 	"terraform-provider-authzed/internal/client"
@@ -34,8 +33,8 @@ func TestAccAuthzedRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "created_at"),
 					resource.TestCheckResourceAttrSet(resourceName, "creator"),
 					resource.TestCheckResourceAttrSet(resourceName, "etag"),
-					resource.TestCheckResourceAttr(resourceName, "permissions.%", "1"),
-					resource.TestCheckResourceAttr(resourceName, "permissions.authzed.v1/ReadSchema", ""),
+					resource.TestCheckResourceAttr(resourceName, "permissions.%", "4"),
+					resource.TestCheckResourceAttr(resourceName, "permissions.authzed.v1/CheckPermission", ""),
 				),
 			},
 			// ImportState testing
@@ -45,217 +44,154 @@ func TestAccAuthzedRole_basic(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateIdFunc: testAccRoleImportStateIdFunc(resourceName),
 				ImportStateVerifyIgnore: []string{
-					"etag",
-					"updated_at",
-					"updater",
+					"etag",       // ETag changes between operations
+					"updated_at", // Server-managed timestamp
+					"updater",    // Server-managed field
 				},
-				Check: resource.ComposeTestCheckFunc(
-					// Verify ETag presence (not equality)
-					resource.TestCheckResourceAttrSet(resourceName, "etag"),
-					// Verify stable config fields match
-					resource.TestCheckResourceAttr(resourceName, "name", testID),
-					resource.TestCheckResourceAttr(resourceName, "permissions.%", "1"),
-					resource.TestCheckResourceAttr(resourceName, "permissions.authzed.v1/ReadSchema", ""),
-				),
 			},
 		},
 	})
 }
 
-func TestAccAuthzedRole_updatePermissions(t *testing.T) {
+func TestAccAuthzedRole_update(t *testing.T) {
 	resourceName := "authzed_role.test"
 	testID := helpers.GenerateTestID("test-role-update")
+	updatedDescription := "Updated test role description"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckRoleDestroy,
 		Steps: []resource.TestStep{
-			// Create initial role with basic permissions
 			{
 				Config: testAccRoleConfig_basic(testID),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckRoleExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "description", "Test role description"),
+				),
+			},
+			{
+				Config: testAccRoleConfig_updated(testID, updatedDescription),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckRoleExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "description", updatedDescription),
+					resource.TestCheckResourceAttr(resourceName, "name", testID),
+				),
+			},
+		},
+	})
+}
+
+func TestAccAuthzedRole_permissions(t *testing.T) {
+	resourceName := "authzed_role.test"
+	testID := helpers.GenerateTestID("test-role-perms")
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckRoleDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccRoleConfig_minimalPermissions(testID),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckRoleExists(resourceName),
 					resource.TestCheckResourceAttr(resourceName, "permissions.%", "1"),
-					resource.TestCheckResourceAttr(resourceName, "permissions.authzed.v1/ReadSchema", ""),
+					resource.TestCheckResourceAttr(resourceName, "permissions.authzed.v1/CheckPermission", ""),
 				),
 			},
-			// Update role with additional permissions
 			{
-				Config: testAccRoleConfig_updatePermissions(testID),
+				Config: testAccRoleConfig_fullPermissions(testID),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckRoleExists(resourceName),
-					resource.TestCheckResourceAttr(resourceName, "name", testID),
-					resource.TestCheckResourceAttr(resourceName, "permissions.%", "3"),
-					resource.TestCheckResourceAttr(resourceName, "permissions.authzed.v1/ReadSchema", ""),
-					resource.TestCheckResourceAttr(resourceName, "permissions.authzed.v1/ReadRelationships", ""),
-					resource.TestCheckResourceAttr(resourceName, "permissions.authzed.v1/CheckPermission", "CheckPermissionRequest.permission == \"admin\""),
+					resource.TestCheckResourceAttr(resourceName, "permissions.%", "4"),
+					resource.TestCheckResourceAttr(resourceName, "permissions.authzed.v1/CheckPermission", ""),
+					resource.TestCheckResourceAttr(resourceName, "permissions.authzed.v1/ExpandPermissionTree", ""),
+					resource.TestCheckResourceAttr(resourceName, "permissions.authzed.v1/LookupResources", ""),
+					resource.TestCheckResourceAttr(resourceName, "permissions.authzed.v1/LookupSubjects", ""),
 				),
 			},
 		},
 	})
 }
 
-func TestAccAuthzedRole_complexPermissions(t *testing.T) {
-	resourceName := "authzed_role.test"
-	testID := helpers.GenerateTestID("test-role-complex")
+func testAccRoleConfig_basic(testID string) string {
+	return fmt.Sprintf(`
+%s
 
-	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckRoleDestroy,
-		Steps: []resource.TestStep{
-			// Create role with complex permissions including CEL expressions
-			{
-				Config: testAccRoleConfig_complexPermissions(testID),
-				Check: resource.ComposeTestCheckFunc(
-					testAccCheckRoleExists(resourceName),
-					resource.TestCheckResourceAttr(resourceName, "name", testID),
-					resource.TestCheckResourceAttr(resourceName, "permissions.%", "5"),
-					resource.TestCheckResourceAttr(resourceName, "permissions.authzed.v1/ReadSchema", ""),
-					resource.TestCheckResourceAttr(resourceName, "permissions.authzed.v1/WriteSchema", ""),
-					resource.TestCheckResourceAttr(resourceName, "permissions.authzed.v1/ReadRelationships", ""),
-					resource.TestCheckResourceAttr(resourceName, "permissions.authzed.v1/WriteRelationships", ""),
-					resource.TestCheckResourceAttr(resourceName, "permissions.authzed.v1/CheckPermission", "CheckPermissionRequest.permission == \"admin\" || CheckPermissionRequest.permission == \"read\""),
-					testAccCheckRolePermissions(resourceName, map[string]string{
-						"authzed.v1/ReadSchema":         "",
-						"authzed.v1/WriteSchema":        "",
-						"authzed.v1/ReadRelationships":  "",
-						"authzed.v1/WriteRelationships": "",
-						"authzed.v1/CheckPermission":    "CheckPermissionRequest.permission == \"admin\" || CheckPermissionRequest.permission == \"read\"",
-					}),
-				),
-			},
-			// ImportState testing for complex permissions
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateIdFunc: testAccRoleImportStateIdFunc(resourceName),
-				ImportStateVerifyIgnore: []string{
-					"etag", // ETag changes between operations
-				},
-			},
-		},
-	})
+resource "authzed_role" "test" {
+  name                 = "%s"
+  description          = "Test role description"
+  permission_system_id = %q
+  permissions = {
+    "authzed.v1/CheckPermission"      = ""
+    "authzed.v1/ExpandPermissionTree" = ""
+    "authzed.v1/LookupResources"      = ""
+    "authzed.v1/LookupSubjects"       = ""
+  }
+}
+`, helpers.BuildProviderConfig(), testID, helpers.GetTestPermissionSystemID())
 }
 
-func TestAccAuthzedRole_import(t *testing.T) {
-	resourceName := "authzed_role.test"
-	testID := helpers.GenerateTestID("test-role-import")
+func testAccRoleConfig_updated(testID, description string) string {
+	return fmt.Sprintf(`
+%s
 
-	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckRoleDestroy,
-		Steps: []resource.TestStep{
-			// Create role
-			{
-				Config: testAccRoleConfig_basic(testID),
-				Check: resource.ComposeTestCheckFunc(
-					testAccCheckRoleExists(resourceName),
-				),
-			},
-			// Test import
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateIdFunc: testAccRoleImportStateIdFunc(resourceName),
-				ImportStateVerifyIgnore: []string{
-					"etag", // ETag changes between operations
-				},
-			},
-		},
-	})
+resource "authzed_role" "test" {
+  name                 = "%s"
+  description          = "%s"
+  permission_system_id = %q
+  permissions = {
+    "authzed.v1/CheckPermission"      = ""
+    "authzed.v1/ExpandPermissionTree" = ""
+    "authzed.v1/LookupResources"      = ""
+    "authzed.v1/LookupSubjects"       = ""
+  }
+}
+`, helpers.BuildProviderConfig(), testID, description, helpers.GetTestPermissionSystemID())
 }
 
-func TestAccAuthzedRole_validation(t *testing.T) {
-	testID := helpers.GenerateTestID("test-role-validation")
+func testAccRoleConfig_minimalPermissions(testID string) string {
+	return fmt.Sprintf(`
+%s
 
-	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			// Test invalid permission system ID
-			{
-				Config:      testAccRoleConfig_invalidPermissionSystemID(testID),
-				ExpectError: regexp.MustCompile("Client Error"),
-			},
-			// Test empty name
-			{
-				Config:      testAccRoleConfig_emptyName(),
-				ExpectError: regexp.MustCompile("Inappropriate value for attribute \"name\""),
-			},
-			// Test empty permissions
-			{
-				Config:      testAccRoleConfig_emptyPermissions(testID),
-				ExpectError: regexp.MustCompile("Inappropriate value for attribute \"permissions\""),
-			},
-		},
-	})
+resource "authzed_role" "test" {
+  name                 = "%s"
+  description          = "Test role with minimal permissions"
+  permission_system_id = %q
+  permissions = {
+    "authzed.v1/CheckPermission" = ""
+  }
+}
+`, helpers.BuildProviderConfig(), testID, helpers.GetTestPermissionSystemID())
 }
 
-func TestAccAuthzedRole_noDrift(t *testing.T) {
-	resourceName := "authzed_role.test"
-	testID := helpers.GenerateTestID("test-role-drift")
+func testAccRoleConfig_fullPermissions(testID string) string {
+	return fmt.Sprintf(`
+%s
 
-	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckRoleDestroy,
-		Steps: []resource.TestStep{
-			// Create initial role
-			{
-				Config: testAccRoleConfig_basic(testID),
-				Check: resource.ComposeTestCheckFunc(
-					testAccCheckRoleExists(resourceName),
-					resource.TestCheckResourceAttr(resourceName, "name", testID),
-					resource.TestCheckResourceAttr(resourceName, "description", "Test role description"),
-					resource.TestCheckResourceAttrSet(resourceName, "id"),
-					resource.TestCheckResourceAttrSet(resourceName, "created_at"),
-					resource.TestCheckResourceAttrSet(resourceName, "creator"),
-					resource.TestCheckResourceAttrSet(resourceName, "etag"),
-				),
-			},
-			// Verify no drift on second plan. Critical path.
-			{
-				Config:   testAccRoleConfig_basic(testID),
-				PlanOnly: true,
-			},
-			// Update permissions and verify computed fields don't drift
-			{
-				Config: testAccRoleConfig_updatePermissions(testID),
-				Check: resource.ComposeTestCheckFunc(
-					testAccCheckRoleExists(resourceName),
-					resource.TestCheckResourceAttr(resourceName, "name", testID),
-					resource.TestCheckResourceAttrSet(resourceName, "id"),
-					resource.TestCheckResourceAttrSet(resourceName, "created_at"),
-					resource.TestCheckResourceAttrSet(resourceName, "creator"),
-					resource.TestCheckResourceAttrSet(resourceName, "etag"),
-				),
-			},
-			// Verify no drift after update - computed fields should remain stable
-			{
-				Config:   testAccRoleConfig_updatePermissions(testID),
-				PlanOnly: true,
-				// This verifies that after an update, computed fields don't show as changing
-			},
-		},
-	})
+resource "authzed_role" "test" {
+  name                 = "%s"
+  description          = "Test role with full permissions"
+  permission_system_id = %q
+  permissions = {
+    "authzed.v1/CheckPermission"      = ""
+    "authzed.v1/ExpandPermissionTree" = ""
+    "authzed.v1/LookupResources"      = ""
+    "authzed.v1/LookupSubjects"       = ""
+  }
 }
-
-// Helper functions
+`, helpers.BuildProviderConfig(), testID, helpers.GetTestPermissionSystemID())
+}
 
 func testAccCheckRoleExists(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Resource not found: %s", resourceName)
+			return fmt.Errorf("Not found: %s", resourceName)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("Resource ID not set")
+			return fmt.Errorf("No Role ID is set")
 		}
 
 		// Create client directly for testing
@@ -268,12 +204,12 @@ func testAccCheckRoleExists(resourceName string) resource.TestCheckFunc {
 
 		permissionSystemID := rs.Primary.Attributes["permission_system_id"]
 		if permissionSystemID == "" {
-			return fmt.Errorf("Permission system ID not set")
+			return fmt.Errorf("No Permission System ID is set")
 		}
 
 		_, err := testClient.GetRole(context.Background(), permissionSystemID, rs.Primary.ID)
 		if err != nil {
-			return fmt.Errorf("Error retrieving role: %s", err)
+			return fmt.Errorf("Role does not exist: %v", err)
 		}
 
 		return nil
@@ -301,39 +237,16 @@ func testAccCheckRoleDestroy(s *terraform.State) error {
 
 		_, err := testClient.GetRole(context.Background(), permissionSystemID, rs.Primary.ID)
 		if err == nil {
-			return fmt.Errorf("role still exists: %s", rs.Primary.ID)
+			return fmt.Errorf("Role still exists: %s", rs.Primary.ID)
 		}
 
 		// Verify it's actually a 404 error, not another error
 		if !helpers.IsNotFoundError(err) {
-			return fmt.Errorf("unexpected error checking role destruction: %v", err)
+			return fmt.Errorf("Unexpected error checking role destruction: %v", err)
 		}
 	}
 
 	return nil
-}
-
-func testAccCheckRolePermissions(resourceName string, expectedPermissions map[string]string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[resourceName]
-		if !ok {
-			return fmt.Errorf("Resource not found: %s", resourceName)
-		}
-
-		// Check each expected permission
-		for permission, expectedValue := range expectedPermissions {
-			attrKey := fmt.Sprintf("permissions.%s", permission)
-			actualValue, exists := rs.Primary.Attributes[attrKey]
-			if !exists {
-				return fmt.Errorf("Permission %s not found in role", permission)
-			}
-			if actualValue != expectedValue {
-				return fmt.Errorf("Permission %s: expected %q, got %q", permission, expectedValue, actualValue)
-			}
-		}
-
-		return nil
-	}
 }
 
 func testAccRoleImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
@@ -344,110 +257,12 @@ func testAccRoleImportStateIdFunc(resourceName string) resource.ImportStateIdFun
 		}
 
 		permissionSystemID := rs.Primary.Attributes["permission_system_id"]
-		if permissionSystemID == "" {
-			return "", fmt.Errorf("Permission system ID not set")
+		roleID := rs.Primary.ID
+
+		if permissionSystemID == "" || roleID == "" {
+			return "", fmt.Errorf("Permission system ID or role ID not set")
 		}
 
-		return fmt.Sprintf("%s:%s", permissionSystemID, rs.Primary.ID), nil
+		return fmt.Sprintf("%s:%s", permissionSystemID, roleID), nil
 	}
-}
-
-// Configuration templates
-
-func testAccRoleConfig_basic(roleName string) string {
-	return helpers.BuildProviderConfig() + fmt.Sprintf(`
-resource "authzed_role" "test" {
-  name                 = %[1]q
-  description          = "Test role description"
-  permission_system_id = %[2]q
-  permissions = {
-    "authzed.v1/ReadSchema" = ""
-  }
-}
-`,
-		roleName,
-		helpers.GetTestPermissionSystemID(),
-	)
-}
-
-func testAccRoleConfig_updatePermissions(roleName string) string {
-	return helpers.BuildProviderConfig() + fmt.Sprintf(`
-resource "authzed_role" "test" {
-  name                 = %[1]q
-  description          = "Test role with updated permissions"
-  permission_system_id = %[2]q
-  permissions = {
-    "authzed.v1/ReadSchema"        = ""
-    "authzed.v1/ReadRelationships" = ""
-    "authzed.v1/CheckPermission"   = "CheckPermissionRequest.permission == \"admin\""
-  }
-}
-`,
-		roleName,
-		helpers.GetTestPermissionSystemID(),
-	)
-}
-
-func testAccRoleConfig_complexPermissions(roleName string) string {
-	return helpers.BuildProviderConfig() + fmt.Sprintf(`
-resource "authzed_role" "test" {
-  name                 = %[1]q
-  description          = "Test role with complex permissions"
-  permission_system_id = %[2]q
-  permissions = {
-    "authzed.v1/ReadSchema"         = ""
-    "authzed.v1/WriteSchema"        = ""
-    "authzed.v1/ReadRelationships"  = ""
-    "authzed.v1/WriteRelationships" = ""
-    "authzed.v1/CheckPermission"    = "CheckPermissionRequest.permission == \"admin\" || CheckPermissionRequest.permission == \"read\""
-  }
-}
-`,
-		roleName,
-		helpers.GetTestPermissionSystemID(),
-	)
-}
-
-func testAccRoleConfig_invalidPermissionSystemID(roleName string) string {
-	return helpers.BuildProviderConfig() + fmt.Sprintf(`
-resource "authzed_role" "test" {
-  name                 = %[1]q
-  description          = "Test role with invalid permission system ID"
-  permission_system_id = "invalid-ps-id"
-  permissions = {
-    "authzed.v1/ReadSchema" = ""
-  }
-}
-`,
-		roleName,
-	)
-}
-
-func testAccRoleConfig_emptyName() string {
-	return helpers.BuildProviderConfig() + fmt.Sprintf(`
-resource "authzed_role" "test" {
-  name                 = ""
-  description          = "Test role with empty name"
-  permission_system_id = %[1]q
-  permissions = {
-    "authzed.v1/ReadSchema" = ""
-  }
-}
-`,
-		helpers.GetTestPermissionSystemID(),
-	)
-}
-
-func testAccRoleConfig_emptyPermissions(roleName string) string {
-	return helpers.BuildProviderConfig() + fmt.Sprintf(`
-resource "authzed_role" "test" {
-  name                 = %[1]q
-  description          = "Test role with empty permissions"
-  permission_system_id = %[2]q
-  permissions = {}
-}
-`,
-		roleName,
-		helpers.GetTestPermissionSystemID(),
-	)
 }

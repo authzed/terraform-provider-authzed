@@ -8,13 +8,14 @@ import (
 
 	"terraform-provider-authzed/internal/client"
 	"terraform-provider-authzed/internal/models"
-	"terraform-provider-authzed/internal/provider/deletelanes"
+	"terraform-provider-authzed/internal/provider/pslanes"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -30,8 +31,8 @@ func NewTokenResource() resource.Resource {
 }
 
 type TokenResource struct {
-	client      *client.CloudClient
-	deleteLanes *deletelanes.DeleteLanes
+	client  *client.CloudClient
+	psLanes *pslanes.PSLanes
 }
 
 type TokenResourceModel struct {
@@ -72,6 +73,11 @@ func (r *TokenResource) Schema(ctx context.Context, _ resource.SchemaRequest, re
 			"description": schema.StringAttribute{
 				Description: "The human-supplied description of the token",
 				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString(""),
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"permission_system_id": schema.StringAttribute{
 				Description: "The globally unique ID for the permission system",
@@ -144,7 +150,7 @@ func (r *TokenResource) Configure(_ context.Context, req resource.ConfigureReque
 	}
 
 	r.client = providerData.Client
-	r.deleteLanes = providerData.DeleteLanes
+	r.psLanes = providerData.PSLanes
 }
 
 func (r *TokenResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -166,7 +172,7 @@ func (r *TokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	createCtx, cancel := context.WithTimeout(ctx, createTimeout)
 	defer cancel()
 
-	// Create new token directly (retry logic will handle FGAM conflicts)
+	// Create new token
 	token := &models.TokenRequest{
 		Name:                plan.Name.ValueString(),
 		Description:         plan.Description.ValueString(),
@@ -175,7 +181,16 @@ func (r *TokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		ReturnPlainText:     true, // Always request plain text during creation
 	}
 
-	createdTokenWithETag, err := r.client.CreateToken(createCtx, token)
+	// Serialize token create per Permission System to avoid FGAM conflicts
+	var createdTokenWithETag *client.TokenWithETag
+	err := r.psLanes.WithCreateLane(createCtx, token.PermissionsSystemID, func() error {
+		ct, cerr := r.client.CreateToken(createCtx, token)
+		if cerr != nil {
+			return cerr
+		}
+		createdTokenWithETag = ct
+		return nil
+	})
 
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -297,7 +312,7 @@ func (r *TokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		Hash:                state.Hash.ValueString(),
 	}
 
-	// Handle Creator field - it might be null in state
+	// Handle Creator field,it might be null in state
 	if !state.Creator.IsNull() {
 		token.Creator = state.Creator.ValueString()
 	}
@@ -348,9 +363,9 @@ func (r *TokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 
 	permissionSystemID := state.PermissionsSystemID.ValueString()
 
-	// Serialize delete per Permission System with 409 retry
-	err := r.deleteLanes.WithDelete(deleteCtx, permissionSystemID, func(ctx context.Context) error {
-		return deletelanes.Retry409Delete(ctx, func(ctx context.Context) error {
+	// Serialize token deletion per Permission System with 409 retry
+	err := r.psLanes.WithDeleteLane(deleteCtx, permissionSystemID, func() error {
+		return pslanes.Retry409Delete(deleteCtx, func() error {
 			return r.client.DeleteToken(
 				permissionSystemID,
 				state.ServiceAccountID.ValueString(),

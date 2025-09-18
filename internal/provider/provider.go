@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"terraform-provider-authzed/internal/client"
-	"terraform-provider-authzed/internal/provider/deletelanes"
+	"terraform-provider-authzed/internal/provider/pslanes"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -31,8 +31,8 @@ type CloudProviderModel struct {
 
 // CloudProviderData contains the configured client and essential components
 type CloudProviderData struct {
-	Client      *client.CloudClient
-	DeleteLanes *deletelanes.DeleteLanes
+	Client  *client.CloudClient
+	PSLanes *pslanes.PSLanes
 }
 
 var _ provider.Provider = &CloudProvider{}
@@ -109,12 +109,12 @@ func (p *CloudProvider) Configure(ctx context.Context, req provider.ConfigureReq
 
 	cloudClient := client.NewCloudClient(clientConfig)
 
-	// Initialize delete lanes for handling real delete conflicts
-	deleteLanes := deletelanes.NewDeleteLanes()
+	// Initialize PSLanes for per-Permission System serialization
+	psLanes := pslanes.NewPSLanes()
 
 	providerData := &CloudProviderData{
-		Client:      cloudClient,
-		DeleteLanes: deleteLanes,
+		Client:  cloudClient,
+		PSLanes: psLanes,
 	}
 
 	resp.DataSourceData = providerData

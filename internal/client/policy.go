@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
 	"terraform-provider-authzed/internal/models"
 )
@@ -34,7 +33,7 @@ func (p *PolicyWithETag) SetETag(etag string) {
 }
 
 // GetResource returns the underlying policy
-func (p *PolicyWithETag) GetResource() any {
+func (p *PolicyWithETag) GetResource() interface{} {
 	return p.Policy
 }
 
@@ -108,7 +107,7 @@ func (c *CloudClient) CreatePolicy(ctx context.Context, policy *models.Policy) (
 	retryConfig := DefaultRetryConfig()
 	prevShouldRetry := retryConfig.ShouldRetry
 	retryConfig.ShouldRetry = func(statusCode int) bool {
-		if statusCode >= 500 {
+		if statusCode >= 500 { // include 5xx like 502/503/504
 			return true
 		}
 		return prevShouldRetry(statusCode) // 409/412/429
@@ -174,38 +173,11 @@ func (c *CloudClient) CreatePolicy(ctx context.Context, policy *models.Policy) (
 		return nil, fmt.Errorf("failed to decode created policy: %w", err)
 	}
 
-	// Initial resource from POST (write ETag wins)
-	resource := &PolicyWithETag{
+	// Create and return the wrapped policy with ETag
+	return &PolicyWithETag{
 		Policy: &createdPolicy,
 		ETag:   respWithETag.ETag,
-	}
-
-	// Existence-only stabilization: confirm GET /policies/{id} returns 200 once; cap at ~30s
-	deadlineCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-
-	attempt := 0
-	for {
-		if deadlineCtx.Err() != nil {
-			// Return resource from POST; let Read catch up later
-			return resource, nil
-		}
-
-		fresh, gerr := c.GetPolicy(policy.PermissionsSystemID, createdPolicy.ID)
-		attempt++
-		if gerr == nil && fresh != nil {
-			// Preserve write ETag from POST
-			fresh.ETag = resource.ETag
-			return fresh, nil
-		}
-
-		// Backoff with jitter between probes
-		delay := backoffDelay(200*time.Millisecond, 1500*time.Millisecond, attempt)
-		select {
-		case <-time.After(delay):
-		case <-deadlineCtx.Done():
-		}
-	}
+	}, nil
 }
 
 // UpdatePolicy updates an existing policy using the PUT method

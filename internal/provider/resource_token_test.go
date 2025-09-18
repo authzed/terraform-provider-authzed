@@ -218,8 +218,6 @@ func TestAccAuthzedToken_noDrift(t *testing.T) {
 	})
 }
 
-// Helper functions
-
 func testAccCheckTokenExists(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]

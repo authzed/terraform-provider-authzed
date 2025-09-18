@@ -8,7 +8,7 @@ import (
 
 	"terraform-provider-authzed/internal/client"
 	"terraform-provider-authzed/internal/models"
-	"terraform-provider-authzed/internal/provider/deletelanes"
+	"terraform-provider-authzed/internal/provider/pslanes"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -29,8 +29,8 @@ func NewRoleResource() resource.Resource {
 }
 
 type roleResource struct {
-	client      *client.CloudClient
-	deleteLanes *deletelanes.DeleteLanes
+	client  *client.CloudClient
+	psLanes *pslanes.PSLanes
 }
 
 type roleResourceModel struct {
@@ -130,7 +130,7 @@ func (r *roleResource) Configure(_ context.Context, req resource.ConfigureReques
 	}
 
 	r.client = providerData.Client
-	r.deleteLanes = providerData.DeleteLanes
+	r.psLanes = providerData.PSLanes
 }
 
 func (r *roleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -160,6 +160,7 @@ func (r *roleResource) Create(ctx context.Context, req resource.CreateRequest, r
 			}
 			return true, nil
 		})
+
 	}
 
 	// Extract permissions map from types.Map
@@ -174,7 +175,13 @@ func (r *roleResource) Create(ctx context.Context, req resource.CreateRequest, r
 		Permissions:         permissionsMap,
 	}
 
-	createdRoleWithETag, err := r.client.CreateRole(createCtx, role)
+	// Serialize role creation per Permission System to prevent FGAM conflicts
+	var createdRoleWithETag *client.RoleWithETag
+	err := r.psLanes.WithCreateLane(createCtx, role.PermissionsSystemID, func() error {
+		var createErr error
+		createdRoleWithETag, createErr = r.client.CreateRole(createCtx, role)
+		return createErr
+	})
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create role, got error: %s", err))
 		return
@@ -329,9 +336,9 @@ func (r *roleResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 
 	permissionSystemID := data.PermissionsSystemID.ValueString()
 
-	// Serialize delete per Permission System with 409 retry
-	err := r.deleteLanes.WithDelete(deleteCtx, permissionSystemID, func(ctx context.Context) error {
-		return deletelanes.Retry409Delete(ctx, func(ctx context.Context) error {
+	// Serialize role deletion per Permission System with 409 retry
+	err := r.psLanes.WithDeleteLane(deleteCtx, permissionSystemID, func() error {
+		return pslanes.Retry409Delete(deleteCtx, func() error {
 			return r.client.DeleteRole(permissionSystemID, data.ID.ValueString())
 		})
 	})

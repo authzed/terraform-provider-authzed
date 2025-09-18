@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -50,21 +49,9 @@ func NewCloudClient(cfg *CloudClientConfig) *CloudClient {
 		apiVersion = DefaultAPIVersion
 	}
 
-	// Configure transport based on env flags
-	transport := &http.Transport{}
-
-	// Force HTTP/1.1 if requested (optional debugging flag)
-	if os.Getenv("AUTHZED_HTTP1") == "1" {
-		transport.ForceAttemptHTTP2 = false
-		transport.TLSNextProto = map[string]func(string, *tls.Conn) http.RoundTripper{}
-	}
-
-	// Default: disable compression to preserve ETag headers reliably.
-	// Explicitly enable compression only when AUTHZED_DISABLE_GZIP=0.
-	if os.Getenv("AUTHZED_DISABLE_GZIP") == "0" {
-		transport.DisableCompression = false
-	} else {
-		transport.DisableCompression = true
+	// Configure transport, disable compression to preserve ETag headers
+	transport := &http.Transport{
+		DisableCompression: true,
 	}
 
 	return &CloudClient{
@@ -111,16 +98,11 @@ func (c *CloudClient) NewRequest(method, path string, body any, options ...Reque
 	}
 	req.Header.Set("Accept", "application/json")
 
-	// Set User-Agent (configurable for debugging)
-	userAgent := os.Getenv("AUTHZED_USER_AGENT")
-	if userAgent != "" {
-		req.Header.Set("User-Agent", userAgent)
-	}
+	// Set consistent User-Agent
+	req.Header.Set("User-Agent", "terraform-provider-authzed")
 
-	// Send Accept-Encoding: identity by default. Allow compression only when AUTHZED_DISABLE_GZIP=0
-	if os.Getenv("AUTHZED_DISABLE_GZIP") != "0" {
-		req.Header.Set("Accept-Encoding", "identity")
-	}
+	// Disable compression to preserve ETag headers
+	req.Header.Set("Accept-Encoding", "identity")
 
 	// Apply any provided options
 	for _, option := range options {
@@ -410,25 +392,8 @@ func (c *CloudClient) GetResourceWithFactory(endpoint string, dest any, factory 
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	// Header-only ETag stabilization: retry up to 3 times if header missing
-	etag := respWithETag.ETag
-	if etag == "" {
-		for i := 0; i < 3 && etag == ""; i++ {
-			if retryReq, rerr := c.NewRequest(http.MethodGet, endpoint, nil); rerr == nil {
-				if retryResp, derr := c.Do(retryReq); derr == nil {
-					etag = retryResp.ETag
-					if retryResp.Response.Body != nil {
-						_ = retryResp.Response.Body.Close()
-					}
-				}
-			}
-			if etag == "" {
-				time.Sleep(200 * time.Millisecond)
-			}
-		}
-	}
-
-	return factory(dest, etag), nil
+	// Use ETag directly from response without additional stabilization retries
+	return factory(dest, respWithETag.ETag), nil
 }
 
 // GetResourceWithFactoryWithContext is the context-aware version of GetResourceWithFactory
@@ -458,29 +423,8 @@ func (c *CloudClient) GetResourceWithFactoryWithContext(ctx context.Context, end
 		return nil, err
 	}
 
-	// Header-only ETag stabilization: retry up to 3 times if header missing
-	etag := respWithETag.ETag
-	if etag == "" {
-		for i := 0; i < 3 && etag == ""; i++ {
-			select {
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			default:
-			}
-
-			if retryReq, rerr := c.NewRequest(http.MethodGet, endpoint, nil); rerr == nil {
-				retryReq = retryReq.WithContext(ctx)
-				if retryResp, derr := c.Do(retryReq); derr == nil {
-					etag = retryResp.ETag
-					if retryResp.Response.Body != nil {
-						_ = retryResp.Response.Body.Close()
-					}
-				}
-			}
-		}
-	}
-
-	return factory(dest, etag), nil
+	// Use ETag directly from response without additional stabilization retries
+	return factory(dest, respWithETag.ETag), nil
 }
 
 // CreateResourceWithFactory combines CreateResource with a factory to create a proper Resource

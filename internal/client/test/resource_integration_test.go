@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"os"
 	"testing"
 	"time"
@@ -43,7 +44,7 @@ func TestResourceIntegration(t *testing.T) {
 
 	// Test GetPermissionsSystem
 	t.Run("GetPermissionsSystem", func(t *testing.T) {
-		ps, err := c.GetPermissionsSystem(permissionsSystemID)
+		ps, err := c.GetPermissionsSystem(context.Background(), permissionsSystemID)
 		if err != nil {
 			t.Fatalf("Failed to get permissions system: %v", err)
 		}

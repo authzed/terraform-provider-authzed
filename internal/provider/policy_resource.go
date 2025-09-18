@@ -8,7 +8,7 @@ import (
 
 	"terraform-provider-authzed/internal/client"
 	"terraform-provider-authzed/internal/models"
-	"terraform-provider-authzed/internal/provider/deletelanes"
+	"terraform-provider-authzed/internal/provider/pslanes"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -29,8 +29,8 @@ func NewPolicyResource() resource.Resource {
 }
 
 type policyResource struct {
-	client      *client.CloudClient
-	deleteLanes *deletelanes.DeleteLanes
+	client  *client.CloudClient
+	psLanes *pslanes.PSLanes
 }
 
 type policyResourceModel struct {
@@ -135,7 +135,7 @@ func (r *policyResource) Configure(_ context.Context, req resource.ConfigureRequ
 	}
 
 	r.client = providerData.Client
-	r.deleteLanes = providerData.DeleteLanes
+	r.psLanes = providerData.PSLanes
 }
 
 func (r *policyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -200,7 +200,13 @@ func (r *policyResource) Create(ctx context.Context, req resource.CreateRequest,
 		RoleIDs:             roleIDs,
 	}
 
-	createdPolicyWithETag, err := r.client.CreatePolicy(createCtx, policy)
+	// Serialize policy creation per Permission System to prevent FGAM conflicts
+	var createdPolicyWithETag *client.PolicyWithETag
+	err := r.psLanes.WithCreateLane(createCtx, policy.PermissionsSystemID, func() error {
+		var createErr error
+		createdPolicyWithETag, createErr = r.client.CreatePolicy(createCtx, policy)
+		return createErr
+	})
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating Policy", err.Error())
 		return
@@ -235,27 +241,7 @@ func (r *policyResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 	data.RoleIDs = roleIDList
 
-	// Post-create GET to stabilize metadata and ETag
-	fresh, gerr := r.client.GetPolicy(data.PermissionsSystemID.ValueString(), data.ID.ValueString())
-	if gerr == nil {
-		data.CreatedAt = types.StringValue(fresh.Policy.CreatedAt)
-		if fresh.Policy.Creator == "" {
-			data.Creator = types.StringNull()
-		} else {
-			data.Creator = types.StringValue(fresh.Policy.Creator)
-		}
-		if fresh.Policy.UpdatedAt == "" {
-			data.UpdatedAt = types.StringNull()
-		} else {
-			data.UpdatedAt = types.StringValue(fresh.Policy.UpdatedAt)
-		}
-		if fresh.Policy.Updater == "" {
-			data.Updater = types.StringNull()
-		} else {
-			data.Updater = types.StringValue(fresh.Policy.Updater)
-		}
-		data.ETag = types.StringValue(fresh.ETag)
-	}
+	// Skip post-create stabilization; rely on POST response and next Read
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -410,9 +396,9 @@ func (r *policyResource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 	permissionSystemID := data.PermissionsSystemID.ValueString()
 
-	// Serialize delete per Permission System with 409 retry
-	err := r.deleteLanes.WithDelete(deleteCtx, permissionSystemID, func(ctx context.Context) error {
-		return deletelanes.Retry409Delete(ctx, func(ctx context.Context) error {
+	// Serialize policy deletion per Permission System with 409 retry
+	err := r.psLanes.WithDeleteLane(deleteCtx, permissionSystemID, func() error {
+		return pslanes.Retry409Delete(deleteCtx, func() error {
 			return r.client.DeletePolicy(permissionSystemID, data.ID.ValueString())
 		})
 	})

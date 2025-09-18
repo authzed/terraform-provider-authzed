@@ -8,13 +8,14 @@ import (
 
 	"terraform-provider-authzed/internal/client"
 	"terraform-provider-authzed/internal/models"
-	"terraform-provider-authzed/internal/provider/deletelanes"
+	"terraform-provider-authzed/internal/provider/pslanes"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -29,8 +30,8 @@ func NewServiceAccountResource() resource.Resource {
 }
 
 type serviceAccountResource struct {
-	client      *client.CloudClient
-	deleteLanes *deletelanes.DeleteLanes
+	client  *client.CloudClient
+	psLanes *pslanes.PSLanes
 }
 
 type serviceAccountResourceModel struct {
@@ -66,7 +67,12 @@ func (r *serviceAccountResource) Schema(ctx context.Context, _ resource.SchemaRe
 				Description: "Name of the service account",
 			},
 			"description": schema.StringAttribute{
-				Optional:    true,
+				Optional: true,
+				Computed: true,
+				Default:  stringdefault.StaticString(""),
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 				Description: "Description of the service account",
 			},
 			"permission_system_id": schema.StringAttribute{
@@ -124,7 +130,7 @@ func (r *serviceAccountResource) Configure(_ context.Context, req resource.Confi
 	}
 
 	r.client = providerData.Client
-	r.deleteLanes = providerData.DeleteLanes
+	r.psLanes = providerData.PSLanes
 }
 
 func (r *serviceAccountResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -194,51 +200,7 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 	} else {
 		data.Updater = types.StringValue(createdServiceAccountWithETag.ServiceAccount.Updater)
 	}
-	// Post-create GET to stabilize metadata and ETag - retry until ETag is non-empty
-	var fresh *client.ServiceAccountWithETag
-	var gerr error
-	for i := 0; i < 5; i++ {
-		fresh, gerr = r.client.GetServiceAccount(createCtx, data.PermissionsSystemID.ValueString(), data.ID.ValueString())
-		if gerr == nil && fresh.ETag != "" {
-			break
-		}
-		if i < 4 { // Don't sleep on the last iteration
-			time.Sleep(200 * time.Millisecond)
-		}
-	}
-
-	if gerr != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read service account after creation for stabilization, got error: %s", gerr))
-		return
-	}
-
-	if fresh.ETag == "" {
-		// According to the OpenAPI spec, all service account operations should return ETags
-		// If we don't get one, this indicates an API issue that needs to be resolved
-		if fresh != nil && fresh.ServiceAccount != nil {
-			resp.Diagnostics.AddError("API Error", fmt.Sprintf("Service account created successfully (ID: %s) but the API did not return the required ETag header. This violates the OpenAPI specification and indicates an API-side issue that needs to be resolved.", fresh.ServiceAccount.ID))
-		} else {
-			resp.Diagnostics.AddError("API Error", "Unable to obtain required ETag header from service account API response. This violates the OpenAPI specification and indicates an API-side issue that needs to be resolved.")
-		}
-		return
-	}
-
-	// Use stabilized data from the GET operation
-	data.Name = types.StringValue(fresh.ServiceAccount.Name)
-	data.Description = types.StringValue(fresh.ServiceAccount.Description)
-	data.CreatedAt = types.StringValue(fresh.ServiceAccount.CreatedAt)
-	data.Creator = types.StringValue(fresh.ServiceAccount.Creator)
-	if fresh.ServiceAccount.UpdatedAt == "" {
-		data.UpdatedAt = types.StringNull()
-	} else {
-		data.UpdatedAt = types.StringValue(fresh.ServiceAccount.UpdatedAt)
-	}
-	if fresh.ServiceAccount.Updater == "" {
-		data.Updater = types.StringNull()
-	} else {
-		data.Updater = types.StringValue(fresh.ServiceAccount.Updater)
-	}
-	data.ETag = types.StringValue(fresh.ETag)
+	data.ETag = types.StringValue(createdServiceAccountWithETag.ETag)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -366,9 +328,9 @@ func (r *serviceAccountResource) Delete(ctx context.Context, req resource.Delete
 
 	permissionSystemID := data.PermissionsSystemID.ValueString()
 
-	// Serialize delete per Permission System with 409 retry
-	err := r.deleteLanes.WithDelete(deleteCtx, permissionSystemID, func(ctx context.Context) error {
-		return deletelanes.Retry409Delete(ctx, func(ctx context.Context) error {
+	// Serialize service account deletion per Permission System with 409 retry
+	err := r.psLanes.WithDeleteLane(deleteCtx, permissionSystemID, func() error {
+		return pslanes.Retry409Delete(deleteCtx, func() error {
 			return r.client.DeleteServiceAccount(permissionSystemID, data.ID.ValueString())
 		})
 	})
