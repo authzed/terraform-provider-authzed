@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"terraform-provider-authzed/internal/models"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+
+	"terraform-provider-authzed/internal/models"
 )
 
 // ServiceAccountWithETag represents a service account resource with its ETag
@@ -33,7 +34,7 @@ func (sa *ServiceAccountWithETag) SetETag(etag string) {
 }
 
 // GetResource returns the underlying service account
-func (sa *ServiceAccountWithETag) GetResource() interface{} {
+func (sa *ServiceAccountWithETag) GetResource() any {
 	return sa.ServiceAccount
 }
 

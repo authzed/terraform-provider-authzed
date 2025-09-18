@@ -83,7 +83,7 @@ func ValidateServiceAccountExists(permissionSystemID, serviceAccountID string) e
 	testClient := CreateTestServiceAccountClient()
 	_, err := testClient.GetServiceAccount(permissionSystemID, serviceAccountID)
 	if err != nil {
-		return fmt.Errorf("service account does not exist: %v", err)
+		return fmt.Errorf("service account does not exist: %w", err)
 	}
 	return nil
 }
@@ -96,15 +96,15 @@ func ValidateServiceAccountDestroyed(permissionSystemID, serviceAccountID string
 		return fmt.Errorf("service account still exists")
 	}
 	if !IsNotFoundError(err) {
-		return fmt.Errorf("unexpected error checking service account destruction: %v", err)
+		return fmt.Errorf("unexpected error checking service account destruction: %w", err)
 	}
 	return nil
 }
 
 // GenerateServiceAccountTestData generates test data for service account testing
-func GenerateServiceAccountTestData(baseName string) map[string]interface{} {
+func GenerateServiceAccountTestData(baseName string) map[string]any {
 	testID := GenerateTestID(baseName)
-	return map[string]interface{}{
+	return map[string]any{
 		"name":                 testID,
 		"description":          fmt.Sprintf("Test service account %s", testID),
 		"permission_system_id": GetTestPermissionSystemID(),
@@ -126,7 +126,7 @@ func CreateTestServiceAccount(name string) (*models.ServiceAccount, error) {
 
 	created, err := testClient.CreateServiceAccount(context.Background(), serviceAccount)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create test service account: %v", err)
+		return nil, fmt.Errorf("failed to create test service account: %w", err)
 	}
 
 	return created.ServiceAccount, nil
