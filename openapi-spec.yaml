@@ -5103,6 +5103,7 @@ components:
     PlatformCapability:
       enum:
       - UserOrgCreation
+      - DatadogExport
       type: string
     Policy:
       properties:
