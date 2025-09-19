@@ -509,14 +509,14 @@ func (c *CloudClient) CreateResourceWithFactoryAndRecovery(ctx context.Context, 
 	// Create resource from response - no stabilization needed for simple resources
 	resource := factory(dest, respWithETag.ETag)
 
-	// Skip stabilization if ETag is already present (resource is immediately ready)
-	if resource.GetETag() != "" {
-		return resource, nil
+	if resource.GetETag() == "" {
+		// Missing ETag after successful creation violates OpenAPI spec
+		// This indicates either an API issue or incomplete resource creation
+		return nil, fmt.Errorf("created resource missing required ETag header - this may indicate HTTP compression is enabled (check AUTHZED_DISABLE_GZIP setting) or an API issue")
 	}
-
-	// Missing ETag after successful creation violates OpenAPI spec
-	// This indicates either an API issue or incomplete resource creation
-	return nil, fmt.Errorf("created resource missing required ETag header - this may indicate HTTP compression is enabled (check AUTHZED_DISABLE_GZIP setting) or an API issue")
+	
+	// Skip stabilization if ETag is already present (resource is immediately ready)
+	return resource, nil
 }
 
 // isAmbiguousError checks if an error represents an ambiguous outcome
