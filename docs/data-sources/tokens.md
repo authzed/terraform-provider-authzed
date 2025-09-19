@@ -38,11 +38,8 @@ The following attributes are exported:
   * `id` - The ID of the token. Will start with `atk-` followed by alphanumeric characters or hyphens.
   * `name` - The name of the token. Will be between 1 and 50 characters.
   * `description` - The description of the token. Maximum length is 200 characters.
-  * `hash` - The SHA256 hash of the secret part of the token, without the prefix.
   * `created_at` - The timestamp when the token was created (RFC 3339 format).
   * `creator` - The name of the user that created this token.
-  * `updated_at` - The timestamp when the token was last updated (RFC 3339 format).
-  * `updater` - The name of the user that last updated this token.
 * `tokens_count` - The total number of tokens found.
 
 ~> **Note:** For security reasons, token secrets are not available through this data source.  

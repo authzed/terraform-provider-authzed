@@ -4,14 +4,18 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"terraform-provider-authzed/internal/client"
 	"terraform-provider-authzed/internal/models"
+	"terraform-provider-authzed/internal/provider/pslanes"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -27,29 +31,31 @@ func NewTokenResource() resource.Resource {
 }
 
 type TokenResource struct {
-	client *client.CloudClient
+	client  *client.CloudClient
+	psLanes *pslanes.PSLanes
 }
 
 type TokenResourceModel struct {
-	ID                  types.String `tfsdk:"id"`
-	Name                types.String `tfsdk:"name"`
-	Description         types.String `tfsdk:"description"`
-	PermissionsSystemID types.String `tfsdk:"permission_system_id"`
-	ServiceAccountID    types.String `tfsdk:"service_account_id"`
-	CreatedAt           types.String `tfsdk:"created_at"`
-	Creator             types.String `tfsdk:"creator"`
-	UpdatedAt           types.String `tfsdk:"updated_at"`
-	Updater             types.String `tfsdk:"updater"`
-	Hash                types.String `tfsdk:"hash"`
-	PlainText           types.String `tfsdk:"plain_text"`
-	ETag                types.String `tfsdk:"etag"`
+	ID                  types.String   `tfsdk:"id"`
+	Name                types.String   `tfsdk:"name"`
+	Description         types.String   `tfsdk:"description"`
+	PermissionsSystemID types.String   `tfsdk:"permission_system_id"`
+	ServiceAccountID    types.String   `tfsdk:"service_account_id"`
+	CreatedAt           types.String   `tfsdk:"created_at"`
+	Creator             types.String   `tfsdk:"creator"`
+	UpdatedAt           types.String   `tfsdk:"updated_at"`
+	Updater             types.String   `tfsdk:"updater"`
+	Hash                types.String   `tfsdk:"hash"`
+	PlainText           types.String   `tfsdk:"plain_text"`
+	ETag                types.String   `tfsdk:"etag"`
+	Timeouts            timeouts.Value `tfsdk:"timeouts"`
 }
 
 func (r *TokenResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_token"
 }
 
-func (r *TokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *TokenResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Manages a service account token.",
 		Attributes: map[string]schema.Attribute{
@@ -67,6 +73,11 @@ func (r *TokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"description": schema.StringAttribute{
 				Description: "The human-supplied description of the token",
 				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString(""),
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"permission_system_id": schema.StringAttribute{
 				Description: "The globally unique ID for the permission system",
@@ -115,6 +126,12 @@ func (r *TokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Description: "Version identifier used to prevent conflicts from concurrent updates",
 			},
 		},
+		Blocks: map[string]schema.Block{
+			"timeouts": timeouts.Block(ctx, timeouts.Opts{
+				Create: true,
+				Delete: true,
+			}),
+		},
 	}
 }
 
@@ -133,6 +150,7 @@ func (r *TokenResource) Configure(_ context.Context, req resource.ConfigureReque
 	}
 
 	r.client = providerData.Client
+	r.psLanes = providerData.PSLanes
 }
 
 func (r *TokenResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -144,6 +162,16 @@ func (r *TokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
+	// Get context with create timeout (default 4 minutes for tokens)
+	createTimeout, diags := plan.Timeouts.Create(ctx, 4*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	createCtx, cancel := context.WithTimeout(ctx, createTimeout)
+	defer cancel()
+
 	// Create new token
 	token := &models.TokenRequest{
 		Name:                plan.Name.ValueString(),
@@ -153,7 +181,17 @@ func (r *TokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		ReturnPlainText:     true, // Always request plain text during creation
 	}
 
-	createdTokenWithETag, err := r.client.CreateToken(ctx, token)
+	// Serialize token create per Permission System to avoid FGAM conflicts
+	var createdTokenWithETag *client.TokenWithETag
+	err := r.psLanes.WithCreateLane(createCtx, token.PermissionsSystemID, func() error {
+		ct, cerr := r.client.CreateToken(createCtx, token)
+		if cerr != nil {
+			return cerr
+		}
+		createdTokenWithETag = ct
+		return nil
+	})
+
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating token",
@@ -201,6 +239,7 @@ func (r *TokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 
 	tokenWithETag, err := r.client.GetToken(
+		ctx,
 		state.PermissionsSystemID.ValueString(),
 		state.ServiceAccountID.ValueString(),
 		state.ID.ValueString(),
@@ -273,7 +312,7 @@ func (r *TokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		Hash:                state.Hash.ValueString(),
 	}
 
-	// Handle Creator field - it might be null in state
+	// Handle Creator field,it might be null in state
 	if !state.Creator.IsNull() {
 		token.Creator = state.Creator.ValueString()
 	}
@@ -312,23 +351,31 @@ func (r *TokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 		return
 	}
 
-	permissionSystemID := state.PermissionsSystemID.ValueString()
-	err := r.client.DeleteToken(
-		permissionSystemID,
-		state.ServiceAccountID.ValueString(),
-		state.ID.ValueString(),
-	)
-	if err != nil {
-		apiErr, ok := err.(*client.APIError)
-		if ok && apiErr.StatusCode == 404 {
-			// Token already deleted, ignore
-			return
-		}
+	// Get context with delete timeout (default 10 minutes for deletes)
+	deleteTimeout, diags := state.Timeouts.Delete(ctx, 10*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-		resp.Diagnostics.AddError(
-			"Error deleting token",
-			fmt.Sprintf("Unable to delete token: %v", err),
-		)
+	deleteCtx, cancel := context.WithTimeout(ctx, deleteTimeout)
+	defer cancel()
+
+	permissionSystemID := state.PermissionsSystemID.ValueString()
+
+	// Serialize token deletion per Permission System with 409 retry
+	err := r.psLanes.WithDeleteLane(deleteCtx, permissionSystemID, func() error {
+		return pslanes.Retry409Delete(deleteCtx, func() error {
+			return r.client.DeleteToken(
+				permissionSystemID,
+				state.ServiceAccountID.ValueString(),
+				state.ID.ValueString(),
+			)
+		})
+	})
+
+	if err != nil {
+		resp.Diagnostics.AddError("Error deleting token", fmt.Sprintf("Unable to delete token: %v", err))
 		return
 	}
 }

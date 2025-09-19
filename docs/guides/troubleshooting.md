@@ -8,6 +8,14 @@ description: |-
 
 This guide covers common issues you might encounter when using the AuthZed Terraform provider and their solutions.
 
+## ETag and Compression Issues
+
+### Missing ETag Headers
+
+**Problem**: You see errors like "API did not return the required ETag header" or resources fail to update properly.
+
+**Solution**: The provider disables HTTP compression by default to preserve ETag headers reliably. This is a temporary workaround - do not attempt to re-enable compression as it will cause ETag header issues.
+
 ## Provider Installation Issues
 
 ### "Failed to query available provider packages" or "no available releases match"
@@ -97,20 +105,6 @@ terraform {
 echo $AUTHZED_API_TOKEN
 ```
 
-### "Invalid endpoint"
-
-**Check your endpoint configuration:**
-- Verify the endpoint URL is correct for your environment
-- Ensure you're using the correct API version if specified
-
-```hcl
-provider "authzed" {
-  endpoint    = "https://api.admin.stage.aws.authzed.net"  # Verify this URL
-  token       = var.authzed_api_token
-  api_version = "25r1"  # Optional, verify if needed
-}
-```
-
 ## Resource Management Issues
 
 ### "Provider produced inconsistent result after apply"
@@ -128,6 +122,33 @@ When applying changes to authzed_policy.example, provider
 **Root Cause:**
 This error was caused by incorrect plan modifier configuration for computed fields in provider versions prior to v0.5.0.
 
+## Performance and Parallelism
+
+**Problem**: Terraform deployments fail with FGAM conflicts or service accounts disappear from state.
+
+**Solution**: Use `parallelism=1`. This is a temporary workaround for Cloud API limitations that will be addressed in future provider versions.
+
+### When to Use parallelism=1
+
+```bash
+terraform apply -parallelism=1
+```
+
+**Required for:**
+- **Mixed resource types**: >8 total resources (prevents FGAM conflicts)
+- **Service accounts**: >5 service accounts (resources disappear from Terraform state due to eventual consistency; wait logic added but `parallelism=1` still required)
+- **Large deployments**: >50 resources (avoids API rate limits)
+
+**Default parallelism works for:**
+- Small deployments (≤8 resources)
+- Single resource type deployments of roles or tokens (15+ resources)
+
+**Performance Note:** While `parallelism=1` is inherently slower than concurrent execution, the provider implements several optimizations to minimize this impact:
+- **Per-Permission System serialization lanes** that allow concurrent operations across different permission systems
+- **Intelligent retry logic** with exponential backoff for API conflicts
+- **Wait logic** to handle eventual consistency without unnecessary delays
+
+These optimizations significantly reduce execution time compared to naive serial processing, though some performance trade-off remains necessary for reliability.
 
 ## Getting Help
 

@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
@@ -48,6 +49,9 @@ func TestAccAuthzedToken_basic(t *testing.T) {
 				ImportStateIdFunc: testAccTokenImportStateIdFunc(resourceName),
 				ImportStateVerifyIgnore: []string{
 					"plain_text", // plain_text is only available during creation
+					"etag",       // ETag changes between operations
+					"updated_at", // Server-managed timestamp
+					"updater",    // Server-managed field
 				},
 			},
 		},
@@ -134,6 +138,9 @@ func TestAccAuthzedToken_import(t *testing.T) {
 				ImportStateIdFunc: testAccTokenImportStateIdFunc(resourceName),
 				ImportStateVerifyIgnore: []string{
 					"plain_text", // plain_text is only available during creation
+					"etag",       // ETag changes between operations
+					"updated_at", // Server-managed timestamp
+					"updater",    // Server-managed field
 				},
 			},
 		},
@@ -211,8 +218,6 @@ func TestAccAuthzedToken_noDrift(t *testing.T) {
 	})
 }
 
-// Helper functions
-
 func testAccCheckTokenExists(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
@@ -238,7 +243,7 @@ func testAccCheckTokenExists(resourceName string) resource.TestCheckFunc {
 			return fmt.Errorf("Permission system ID or service account ID not set")
 		}
 
-		_, err := testClient.GetToken(permissionSystemID, serviceAccountID, rs.Primary.ID)
+		_, err := testClient.GetToken(context.Background(), permissionSystemID, serviceAccountID, rs.Primary.ID)
 		if err != nil {
 			return fmt.Errorf("Error retrieving token: %s", err)
 		}
@@ -267,7 +272,7 @@ func testAccCheckTokenDestroy(s *terraform.State) error {
 			continue
 		}
 
-		_, err := testClient.GetToken(permissionSystemID, serviceAccountID, rs.Primary.ID)
+		_, err := testClient.GetToken(context.Background(), permissionSystemID, serviceAccountID, rs.Primary.ID)
 		if err == nil {
 			return fmt.Errorf("token still exists: %s", rs.Primary.ID)
 		}

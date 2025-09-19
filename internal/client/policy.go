@@ -85,13 +85,99 @@ func (c *CloudClient) GetPolicy(permissionsSystemID, policyID string) (*PolicyWi
 func (c *CloudClient) CreatePolicy(ctx context.Context, policy *models.Policy) (*PolicyWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/policies", policy.PermissionsSystemID)
 
-	var createdPolicy models.Policy
-	resource, err := c.CreateResourceWithFactory(ctx, path, policy, &createdPolicy, NewPolicyResource)
-	if err != nil {
-		return nil, err
+	// Setup idempotent recovery
+	recovery := &IdempotentRecoveryConfig{
+		ResourceType: "policy",
+		LookupByName: func(name string) (Resource, error) {
+			policies, err := c.ListPolicies(policy.PermissionsSystemID)
+			if err != nil {
+				return nil, err
+			}
+			for _, p := range policies {
+				if p.Name == name {
+					// Get the full resource with ETag
+					return c.GetPolicy(policy.PermissionsSystemID, p.ID)
+				}
+			}
+			return nil, nil
+		},
 	}
 
-	return resource.(*PolicyWithETag), nil
+	// Use retry logic with exponential backoff and broadened conditions
+	retryConfig := DefaultRetryConfig()
+	prevShouldRetry := retryConfig.ShouldRetry
+	retryConfig.ShouldRetry = func(statusCode int) bool {
+		if statusCode >= 500 { // include 5xx like 502/503/504
+			return true
+		}
+		return prevShouldRetry(statusCode) // 409/412/429
+	}
+
+	// Define the create operation
+	createOperation := func() (*ResponseWithETag, error) {
+		req, err := c.NewRequest(http.MethodPost, path, policy)
+		if err != nil {
+			return nil, err
+		}
+
+		respWithETag, err := c.Do(req)
+		if err != nil {
+			return nil, err
+		}
+
+		// Treat 409/429/5xx as retryable
+		if respWithETag.Response != nil {
+			code := respWithETag.Response.StatusCode
+			if code == http.StatusConflict || code == http.StatusTooManyRequests || code >= 500 {
+				return nil, NewAPIError(respWithETag)
+			}
+		}
+
+		return respWithETag, nil
+	}
+
+	// For CREATE operations, we don't need to get fresh ETags
+	getLatestETag := func() (string, error) { return "", nil }
+	createWithETag := func(etag string) (*ResponseWithETag, error) { return createOperation() }
+
+	// Execute with retry logic
+	respWithETag, err := retryConfig.RetryWithExponentialBackoffLegacy(
+		ctx,
+		createOperation,
+		getLatestETag,
+		createWithETag,
+		"policy create",
+	)
+	if err != nil {
+		// Attempt idempotent recovery for ambiguous outcomes
+		if isAmbiguousError(err) {
+			if recovered, recErr := recovery.RecoverFromAmbiguousCreate(ctx, policy.Name, err); recErr == nil {
+				return recovered.(*PolicyWithETag), nil
+			}
+		}
+		return nil, err
+	}
+	defer func() {
+		if respWithETag.Response.Body != nil {
+			_ = respWithETag.Response.Body.Close()
+		}
+	}()
+
+	if respWithETag.Response.StatusCode != http.StatusCreated {
+		return nil, NewAPIError(respWithETag)
+	}
+
+	// Decode created policy from POST response
+	var createdPolicy models.Policy
+	if err := json.NewDecoder(respWithETag.Response.Body).Decode(&createdPolicy); err != nil {
+		return nil, fmt.Errorf("failed to decode created policy: %w", err)
+	}
+
+	// Create and return the wrapped policy with ETag
+	return &PolicyWithETag{
+		Policy: &createdPolicy,
+		ETag:   respWithETag.ETag,
+	}, nil
 }
 
 // UpdatePolicy updates an existing policy using the PUT method
@@ -119,9 +205,8 @@ func (c *CloudClient) UpdatePolicy(ctx context.Context, policy *models.Policy, e
 			return "", fmt.Errorf("failed to get latest ETag, status: %d", getResp.Response.StatusCode)
 		}
 
-		// Extract ETag from response header
-		latestETag := getResp.ETag
-		return latestETag, nil
+		// Extract ETag from response header only
+		return getResp.ETag, nil
 	}
 
 	// Try update with provided ETag
@@ -230,10 +315,20 @@ func (c *CloudClient) UpdatePolicy(ctx context.Context, policy *models.Policy, e
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
+	etagOut := respWithETag.ETag
+
+	// As a last resort, GET to fetch ETag
+	if etagOut == "" {
+		fresh, gerr := c.GetPolicy(policy.PermissionsSystemID, policy.ID)
+		if gerr == nil && fresh.ETag != "" {
+			etagOut = fresh.ETag
+		}
+	}
+
 	// Create and return the wrapped policy with ETag
 	return &PolicyWithETag{
 		Policy: &updatedPolicy,
-		ETag:   respWithETag.ETag,
+		ETag:   etagOut,
 	}, nil
 }
 

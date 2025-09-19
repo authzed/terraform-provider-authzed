@@ -107,6 +107,7 @@ func (d *TokenDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	}
 
 	tokenWithETag, err := d.client.GetToken(
+		ctx,
 		config.PermissionsSystemID.ValueString(),
 		config.ServiceAccountID.ValueString(),
 		config.TokenID.ValueString(),

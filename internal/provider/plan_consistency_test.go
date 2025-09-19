@@ -44,11 +44,23 @@ func TestPlanConsistency_ServiceAccountImmutableFields(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create initial service account
 			{
-				Config: testAccServiceAccountConfig_basic(testID),
+				Config: helpers.BuildProviderConfig() + fmt.Sprintf(`
+resource "authzed_service_account" "test" {
+  name                 = %q
+  description          = "PC: initial"
+  permission_system_id = %q
+}
+`, testID, helpers.GetTestPermissionSystemID()),
 			},
 			// Plan an update to test plan modifier behavior
 			{
-				Config:             testAccServiceAccountConfig_updated(testID),
+				Config: helpers.BuildProviderConfig() + fmt.Sprintf(`
+resource "authzed_service_account" "test" {
+  name                 = %q
+  description          = "PC: updated"
+  permission_system_id = %q
+}
+`, testID, helpers.GetTestPermissionSystemID()),
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: true,
 			},

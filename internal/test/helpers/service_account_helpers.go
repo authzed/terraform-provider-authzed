@@ -81,7 +81,7 @@ func CreateTestServiceAccountClient() *client.CloudClient {
 // ValidateServiceAccountExists validates that a service account exists via API
 func ValidateServiceAccountExists(permissionSystemID, serviceAccountID string) error {
 	testClient := CreateTestServiceAccountClient()
-	_, err := testClient.GetServiceAccount(permissionSystemID, serviceAccountID)
+	_, err := testClient.GetServiceAccount(context.Background(), permissionSystemID, serviceAccountID)
 	if err != nil {
 		return fmt.Errorf("service account does not exist: %v", err)
 	}
@@ -91,7 +91,7 @@ func ValidateServiceAccountExists(permissionSystemID, serviceAccountID string) e
 // ValidateServiceAccountDestroyed validates that a service account has been destroyed
 func ValidateServiceAccountDestroyed(permissionSystemID, serviceAccountID string) error {
 	testClient := CreateTestServiceAccountClient()
-	_, err := testClient.GetServiceAccount(permissionSystemID, serviceAccountID)
+	_, err := testClient.GetServiceAccount(context.Background(), permissionSystemID, serviceAccountID)
 	if err == nil {
 		return fmt.Errorf("service account still exists")
 	}

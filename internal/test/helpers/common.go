@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// generateTestID prevents conflicts between parallel test runs
+// GenerateTestID prevents conflicts between parallel test runs
 func GenerateTestID(prefix string) string {
 	// Timestamp and random number for uniqueness
 	timestamp := time.Now().Unix()
@@ -90,5 +90,5 @@ func IsNotFoundError(err error) bool {
 		return false
 	}
 	errStr := err.Error()
-	return strings.Contains(errStr, "status 404") || strings.Contains(errStr, "not found")
+	return strings.Contains(errStr, "status 404") || strings.Contains(errStr, "status 410") || strings.Contains(errStr, "not found")
 }

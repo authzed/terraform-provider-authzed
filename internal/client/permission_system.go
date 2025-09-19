@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -90,11 +91,11 @@ func (c *CloudClient) ListPermissionsSystems() ([]models.PermissionsSystem, erro
 }
 
 // GetPermissionsSystem retrieves a permission system by ID
-func (c *CloudClient) GetPermissionsSystem(permissionsSystemID string) (*PermissionsSystemWithETag, error) {
+func (c *CloudClient) GetPermissionsSystem(ctx context.Context, permissionsSystemID string) (*PermissionsSystemWithETag, error) {
 	path := fmt.Sprintf("/ps/%s", permissionsSystemID)
 
 	var permissionsSystem models.PermissionsSystem
-	resource, err := c.GetResourceWithFactory(path, &permissionsSystem, NewPermissionsSystemResource)
+	resource, err := c.GetResourceWithFactoryWithContext(ctx, path, &permissionsSystem, NewPermissionsSystemResource)
 	if err != nil {
 		return nil, err
 	}

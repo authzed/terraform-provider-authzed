@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"terraform-provider-authzed/internal/client"
+	"terraform-provider-authzed/internal/provider/pslanes"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -17,14 +18,21 @@ type CloudProvider struct {
 }
 
 type CloudProviderModel struct {
-	Endpoint   types.String `tfsdk:"endpoint"`
-	Token      types.String `tfsdk:"token"`
-	APIVersion types.String `tfsdk:"api_version"`
+	Endpoint                     types.String `tfsdk:"endpoint"`
+	Token                        types.String `tfsdk:"token"`
+	APIVersion                   types.String `tfsdk:"api_version"`
+	DeleteTimeout                types.String `tfsdk:"delete_timeout"`
+	AutoParallelism              types.Bool   `tfsdk:"auto_parallelism"`
+	MaxConcurrentServiceAccounts types.Int64  `tfsdk:"max_concurrent_service_accounts"`
+	MaxConcurrentTokens          types.Int64  `tfsdk:"max_concurrent_tokens"`
+	MaxConcurrentPolicies        types.Int64  `tfsdk:"max_concurrent_policies"`
+	MaxConcurrentRoles           types.Int64  `tfsdk:"max_concurrent_roles"`
 }
 
-// CloudProviderData contains the configured client and coordinator
+// CloudProviderData contains the configured client and essential components
 type CloudProviderData struct {
-	Client *client.CloudClient
+	Client  *client.CloudClient
+	PSLanes *pslanes.PSLanes
 }
 
 var _ provider.Provider = &CloudProvider{}
@@ -58,6 +66,30 @@ func (p *CloudProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp
 				Optional:    true,
 				Description: "The version of the API to use (defaults to 25r1)",
 			},
+			"delete_timeout": schema.StringAttribute{
+				Optional:    true,
+				Description: "Maximum time to wait for asynchronous deletes to complete (e.g., 5m, 15m).",
+			},
+			"auto_parallelism": schema.BoolAttribute{
+				Optional:    true,
+				Description: "Enable automatic parallelism recommendations based on resource count. Can also be set via AUTHZED_AUTO_PARALLELISM.",
+			},
+			"max_concurrent_service_accounts": schema.Int64Attribute{
+				Optional:    true,
+				Description: "Maximum number of concurrent service account operations (default: 6). Can also be set via AUTHZED_MAX_CONCURRENT_SERVICE_ACCOUNTS.",
+			},
+			"max_concurrent_tokens": schema.Int64Attribute{
+				Optional:    true,
+				Description: "Maximum number of concurrent token operations (default: 8). Can also be set via AUTHZED_MAX_CONCURRENT_TOKENS.",
+			},
+			"max_concurrent_policies": schema.Int64Attribute{
+				Optional:    true,
+				Description: "Maximum number of concurrent policy operations (default: 3). Can also be set via AUTHZED_MAX_CONCURRENT_POLICIES.",
+			},
+			"max_concurrent_roles": schema.Int64Attribute{
+				Optional:    true,
+				Description: "Maximum number of concurrent role operations (default: 3). Can also be set via AUTHZED_MAX_CONCURRENT_ROLES.",
+			},
 		},
 	}
 }
@@ -77,8 +109,12 @@ func (p *CloudProvider) Configure(ctx context.Context, req provider.ConfigureReq
 
 	cloudClient := client.NewCloudClient(clientConfig)
 
+	// Initialize PSLanes for per-Permission System serialization
+	psLanes := pslanes.NewPSLanes()
+
 	providerData := &CloudProviderData{
-		Client: cloudClient,
+		Client:  cloudClient,
+		PSLanes: psLanes,
 	}
 
 	resp.DataSourceData = providerData

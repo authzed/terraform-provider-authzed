@@ -40,6 +40,7 @@ func (t *TokenWithETag) GetResource() interface{} {
 
 // CreateToken creates a new token
 func (c *CloudClient) CreateToken(ctx context.Context, token *models.TokenRequest) (*TokenWithETag, error) {
+
 	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s/tokens", token.PermissionsSystemID, token.ServiceAccountID)
 
 	// Create the request body
@@ -51,8 +52,38 @@ func (c *CloudClient) CreateToken(ctx context.Context, token *models.TokenReques
 		Description: token.Description,
 	}
 
+	// Setup idempotent recovery
+	recovery := &IdempotentRecoveryConfig{
+		ResourceType: "token",
+		LookupByName: func(name string) (Resource, error) {
+			tokens, err := c.ListTokens(token.PermissionsSystemID, token.ServiceAccountID)
+			if err != nil {
+				return nil, err
+			}
+			for _, t := range tokens {
+				if t.Name == name {
+					// Get the full resource with ETag
+					return c.GetToken(ctx, token.PermissionsSystemID, token.ServiceAccountID, t.ID)
+				}
+			}
+			return nil, nil
+		},
+	}
+
 	// Use retry logic with exponential backoff
 	retryConfig := DefaultRetryConfig()
+	// Broaden retry conditions for CREATE: include 5xx and 404 (SA not visible yet) as retryable
+	previousShouldRetry := retryConfig.ShouldRetry
+	retryConfig.ShouldRetry = func(statusCode int) bool {
+		if statusCode >= 500 {
+			return true
+		}
+		// Retry 404s for token creation, service account may not be globally visible yet
+		if statusCode == http.StatusNotFound {
+			return true
+		}
+		return previousShouldRetry(statusCode)
+	}
 
 	// Define the create operation
 	createOperation := func() (*ResponseWithETag, error) {
@@ -66,16 +97,23 @@ func (c *CloudClient) CreateToken(ctx context.Context, token *models.TokenReques
 			return nil, err
 		}
 
+		// Treat 409/429/5xx as retryable by converting to APIError
+		if respWithETag.Response != nil {
+			code := respWithETag.Response.StatusCode
+			if code == http.StatusConflict || code == http.StatusTooManyRequests || code >= 500 {
+				return nil, NewAPIError(respWithETag)
+			}
+		}
+
 		return respWithETag, nil
 	}
 
 	// For CREATE operations, we don't need to get fresh ETags since there's no existing resource
-	// We just retry the same operation
 	getLatestETag := func() (string, error) {
 		return "", nil // Not used for CREATE operations
 	}
 
-	createWithETag := func(etag string) (*ResponseWithETag, error) {
+	createWithETag := func(etag string) (*ResponseWithETag, error) { //nolint:unparam
 		return createOperation() // Retry the same CREATE operation
 	}
 
@@ -88,6 +126,12 @@ func (c *CloudClient) CreateToken(ctx context.Context, token *models.TokenReques
 		"token create",
 	)
 	if err != nil {
+		// Attempt idempotent recovery for ambiguous outcomes
+		if isAmbiguousError(err) {
+			if recovered, recErr := recovery.RecoverFromAmbiguousCreate(ctx, token.Name, err); recErr == nil {
+				return recovered.(*TokenWithETag), nil
+			}
+		}
 		return nil, err
 	}
 
@@ -119,11 +163,24 @@ func (c *CloudClient) CreateToken(ctx context.Context, token *models.TokenReques
 		Updater             string `json:"updater"`
 		Hash                string `json:"hash"`
 		Secret              string `json:"secret"`
-		ConfigETag          string `json:"ConfigETag"`
 	}
 
 	if err := json.Unmarshal(body, &createResp); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+		return nil, fmt.Errorf("failed to decode token creation response: %w (response body: %s)", err, string(body))
+	}
+
+	// Validate required fields in the response
+	if createResp.ID == "" {
+		return nil, fmt.Errorf("token creation response missing required field 'id' (response body: %s)", string(body))
+	}
+	if createResp.Secret == "" {
+		return nil, fmt.Errorf("token creation response missing required field 'secret' (response body: %s)", string(body))
+	}
+	if createResp.PermissionsSystemID == "" {
+		return nil, fmt.Errorf("token creation response missing required field 'permissionsSystemId' (response body: %s)", string(body))
+	}
+	if createResp.ServiceAccountID == "" {
+		return nil, fmt.Errorf("token creation response missing required field 'serviceAccountId' (response body: %s)", string(body))
 	}
 
 	// Convert to our model structure
@@ -139,19 +196,25 @@ func (c *CloudClient) CreateToken(ctx context.Context, token *models.TokenReques
 		Secret:              createResp.Secret,
 	}
 
-	return &TokenWithETag{
+	// Create initial resource
+	resource := &TokenWithETag{
 		Token: tokenModel,
 		ETag:  respWithETag.ETag,
-	}, nil
+	}
+
+	return resource, nil
 }
 
-func (c *CloudClient) GetToken(permissionsSystemID, serviceAccountID, tokenID string) (*TokenWithETag, error) {
+func (c *CloudClient) GetToken(ctx context.Context, permissionsSystemID, serviceAccountID, tokenID string) (*TokenWithETag, error) {
 	path := fmt.Sprintf("/ps/%s/access/service-accounts/%s/tokens/%s", permissionsSystemID, serviceAccountID, tokenID)
 
 	req, err := c.NewRequest(http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
 	}
+
+	// Apply context to the request
+	req = req.WithContext(ctx)
 
 	respWithETag, err := c.Do(req)
 	if err != nil {
@@ -177,7 +240,18 @@ func (c *CloudClient) GetToken(permissionsSystemID, serviceAccountID, tokenID st
 
 	var token models.TokenRequest
 	if err := json.Unmarshal(body, &token); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+		return nil, fmt.Errorf("failed to decode token GET response: %w (response body: %s)", err, string(body))
+	}
+
+	// Validate required fields in the GET response
+	if token.ID == "" {
+		return nil, fmt.Errorf("token GET response missing required field 'id' (response body: %s)", string(body))
+	}
+	if token.PermissionsSystemID == "" {
+		return nil, fmt.Errorf("token GET response missing required field 'permissionsSystemID' (response body: %s)", string(body))
+	}
+	if token.ServiceAccountID == "" {
+		return nil, fmt.Errorf("token GET response missing required field 'serviceAccountID' (response body: %s)", string(body))
 	}
 
 	return &TokenWithETag{
@@ -206,11 +280,22 @@ func (c *CloudClient) ListTokens(permissionsSystemID, serviceAccountID string) (
 		return nil, NewAPIError(respWithETag)
 	}
 
+	// Read the response body for better error reporting
+	body, err := io.ReadAll(respWithETag.Response.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
 	var listResp struct {
 		Items []models.TokenRequest `json:"items"`
 	}
-	if err := json.NewDecoder(respWithETag.Response.Body).Decode(&listResp); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+	if err := json.Unmarshal(body, &listResp); err != nil {
+		return nil, fmt.Errorf("failed to decode token list response: %w (response body: %s)", err, string(body))
+	}
+
+	// Validate the response structure
+	if listResp.Items == nil {
+		return []models.TokenRequest{}, nil // Return empty slice instead of nil
 	}
 
 	return listResp.Items, nil

@@ -13,7 +13,7 @@ This data source retrieves a list of all service accounts defined in an AuthZed 
 
 ```terraform
 data "authzed_service_accounts" "all" {
-  permission_system_id = "sys_123456789"
+  permission_system_id = "ps-123456789"
 }
 
 output "service_account_names" {
@@ -37,5 +37,4 @@ The following attributes are exported:
   * `name` - The name of the service account.
   * `description` - The description of the service account.
   * `created_at` - The timestamp when the service account was created.
-  * `updated_at` - The timestamp when the service account was last updated.
-* `service_accounts_count` - The total number of service accounts found. 
+  * `creator` - The name of the user that created this service account. 

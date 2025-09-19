@@ -12,5 +12,4 @@ type Policy struct {
 	Creator             string   `json:"creator,omitempty"`
 	UpdatedAt           string   `json:"updatedAt,omitempty"`
 	Updater             string   `json:"updater,omitempty"`
-	ConfigETag          string   `json:"ConfigETag,omitempty"`
 }

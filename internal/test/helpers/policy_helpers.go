@@ -2,8 +2,6 @@ package helpers
 
 import (
 	"fmt"
-
-	"terraform-provider-authzed/internal/client"
 )
 
 // BuildPolicyConfigBasic creates a basic policy config for testing
@@ -101,16 +99,6 @@ resource "authzed_policy" "test" {
 	)
 
 	return config
-}
-
-// CreateTestClient creates a client for testing purposes
-func CreateTestClient() *client.CloudClient {
-	clientConfig := &client.CloudClientConfig{
-		Host:       GetTestHost(),
-		Token:      GetTestToken(),
-		APIVersion: GetTestAPIVersion(),
-	}
-	return client.NewCloudClient(clientConfig)
 }
 
 // ValidatePolicyExists checks if a policy exists in the API

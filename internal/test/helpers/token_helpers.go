@@ -119,7 +119,7 @@ func CreateTestTokenClient() *client.CloudClient {
 // ValidateTokenExists validates that a token exists via API
 func ValidateTokenExists(permissionSystemID, serviceAccountID, tokenID string) error {
 	testClient := CreateTestTokenClient()
-	_, err := testClient.GetToken(permissionSystemID, serviceAccountID, tokenID)
+	_, err := testClient.GetToken(context.Background(), permissionSystemID, serviceAccountID, tokenID)
 	if err != nil {
 		return fmt.Errorf("token does not exist: %v", err)
 	}
@@ -129,7 +129,7 @@ func ValidateTokenExists(permissionSystemID, serviceAccountID, tokenID string) e
 // ValidateTokenDestroyed validates that a token has been destroyed
 func ValidateTokenDestroyed(permissionSystemID, serviceAccountID, tokenID string) error {
 	testClient := CreateTestTokenClient()
-	_, err := testClient.GetToken(permissionSystemID, serviceAccountID, tokenID)
+	_, err := testClient.GetToken(context.Background(), permissionSystemID, serviceAccountID, tokenID)
 	if err == nil {
 		return fmt.Errorf("token still exists")
 	}

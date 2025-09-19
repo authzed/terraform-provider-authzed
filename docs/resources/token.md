@@ -53,6 +53,8 @@ terraform output -raw token_plain_text
 
 ~> **Security Note:** When using Option 2, the token will be displayed in the terraform apply output.
 
+~> **Performance Note:** When creating mixed resource types (tokens, service accounts, policies, roles) with more than 8 total resources, use `terraform apply -parallelism=1` to avoid FGAM conflicts during token creation due to temporary API limitations. See the [troubleshooting guide](../guides/troubleshooting.md#performance-and-parallelism) for details.
+
 ## Recommended Workflow
 
 Here's a recommended pattern for handling service account tokens:
@@ -93,6 +95,7 @@ In addition to the arguments listed above, the following attributes are exported
 * `id` - The unique identifier for the token. Will start with `atk-` followed by alphanumeric characters or hyphens.
 * `plain_text` - The actual token value that should be used for authentication. **This is only available when the token is first created and cannot be retrieved later.**
 * `hash` - The SHA256 hash of the token value, without the prefix.
+* `etag` - Version identifier used for optimistic concurrency control; updates when the token changes.
 * `created_at` - The timestamp when the token was created (RFC 3339 format). May not be specified.
 * `creator` - The name of the user that created this token. May be empty.
 * `updated_at` - The timestamp when the token was last updated (RFC 3339 format). May not be specified.
@@ -123,3 +126,20 @@ terraform import authzed_token.example "ps-example123:asa-myserviceaccount:atk-m
 After import, you can manage the token using Terraform. The imported token will include all computed attributes like `created_at`, `creator`, etc. and the token hash.
 
 ~> **Note:** When importing a token, the `plain_text` value is **not available**—only the hash can be imported. This is because tokens are only returned in plaintext during their initial creation.
+
+## Timeouts
+
+This resource supports a `timeouts` block for create and delete operations.
+
+Example:
+
+```hcl
+resource "authzed_token" "example" {
+  # ... arguments ...
+
+  timeouts {
+    create = "4m"
+    delete = "10m"
+  }
+}
+```

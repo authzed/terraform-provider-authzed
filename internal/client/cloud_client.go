@@ -6,7 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
+	"math/rand"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 )
 
@@ -45,12 +49,18 @@ func NewCloudClient(cfg *CloudClientConfig) *CloudClient {
 		apiVersion = DefaultAPIVersion
 	}
 
+	// Configure transport, disable compression to preserve ETag headers
+	transport := &http.Transport{
+		DisableCompression: true,
+	}
+
 	return &CloudClient{
 		Host:       cfg.Host,
 		Token:      cfg.Token,
 		APIVersion: apiVersion,
 		HTTPClient: &http.Client{
-			Timeout: timeout,
+			Timeout:   timeout,
+			Transport: transport,
 		},
 		DeleteTimeout: deleteTimeout,
 	}
@@ -82,8 +92,17 @@ func (c *CloudClient) NewRequest(method, path string, body any, options ...Reque
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.Token))
 	req.Header.Set("X-API-Version", c.APIVersion)
-	req.Header.Set("Content-Type", "application/json")
+	// Only set Content-Type when a body is present
+	if bodyReader != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
 	req.Header.Set("Accept", "application/json")
+
+	// Set consistent User-Agent
+	req.Header.Set("User-Agent", "terraform-provider-authzed")
+
+	// Disable compression to preserve ETag headers
+	req.Header.Set("Accept-Encoding", "identity")
 
 	// Apply any provided options
 	for _, option := range options {
@@ -93,6 +112,39 @@ func (c *CloudClient) NewRequest(method, path string, body any, options ...Reque
 	return req, nil
 }
 
+// ResponseWithETag wraps an HTTP response and its ETag
+type ResponseWithETag struct {
+	Response *http.Response
+	ETag     string
+}
+
+// RequestOption allows setting optional parameters for requests
+type RequestOption func(*http.Request)
+
+// IdempotentRecoveryConfig configures idempotent recovery for create operations
+type IdempotentRecoveryConfig struct {
+	ResourceType string
+	LookupByName func(name string) (Resource, error)
+}
+
+// RecoverFromAmbiguousCreate attempts to recover from ambiguous create errors
+func (r *IdempotentRecoveryConfig) RecoverFromAmbiguousCreate(ctx context.Context, name string, originalErr error) (Resource, error) {
+	if r.LookupByName == nil {
+		return nil, originalErr
+	}
+
+	resource, err := r.LookupByName(name)
+	if err != nil {
+		return nil, originalErr
+	}
+
+	if resource != nil {
+		return resource, nil
+	}
+
+	return nil, originalErr
+}
+
 // Do sends an HTTP request and returns an HTTP response with the ETag if present
 func (c *CloudClient) Do(req *http.Request) (*ResponseWithETag, error) {
 	resp, err := c.HTTPClient.Do(req)
@@ -100,13 +152,137 @@ func (c *CloudClient) Do(req *http.Request) (*ResponseWithETag, error) {
 		return nil, err
 	}
 
-	// Extract the ETag if it exists
+	// Extract the ETag per OpenAPI specification
 	etag := resp.Header.Get("ETag")
+
+	// Debug logging (optional)
+	if os.Getenv("AUTHZED_DEBUG_HEADERS") == "1" {
+		fmt.Printf("DEBUG: Protocol: %s\n", resp.Proto)
+		fmt.Printf("DEBUG: Status: %s\n", resp.Status)
+		fmt.Printf("DEBUG: All response headers: %+v\n", resp.Header)
+		fmt.Printf("DEBUG: Raw ETag value: '%s'\n", etag)
+	}
 
 	return &ResponseWithETag{
 		Response: resp,
 		ETag:     etag,
 	}, nil
+}
+
+// DeleteResource deletes a resource
+func (c *CloudClient) DeleteResource(endpoint string) error {
+	req, err := c.NewRequest(http.MethodDelete, endpoint, nil)
+	if err != nil {
+		return err
+	}
+
+	respWithETag, err := c.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		// ignore the error
+		_ = respWithETag.Response.Body.Close()
+	}()
+
+	status := respWithETag.Response.StatusCode
+	// 200 OK or 204 No Content: synchronous delete success
+	if status == http.StatusOK || status == http.StatusNoContent {
+		if os.Getenv("AUTHZED_DELETE_CONFIRM_ON_204") == "1" {
+			confirmCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if req2, err := c.NewRequest(http.MethodGet, endpoint, nil); err == nil {
+				req2 = req2.WithContext(confirmCtx)
+				if resp2, err2 := c.Do(req2); err2 == nil {
+					_ = resp2.Response.Body.Close()
+				}
+			}
+		}
+		return nil
+	}
+	// 404 Not Found: idempotent delete success
+	if status == http.StatusNotFound {
+		return nil
+	}
+	// 202 Accepted: async delete, poll for completion
+	if status == http.StatusAccepted {
+		return c.waitForDeletion(endpoint)
+	}
+
+	// Other statuses are errors
+	return NewAPIError(respWithETag)
+}
+
+// waitForDeletion polls the resource endpoint until it returns 404/410 (deleted)
+func (c *CloudClient) waitForDeletion(endpoint string) error {
+	// Overall timeout
+	ctx, cancel := context.WithTimeout(context.Background(), c.DeleteTimeout)
+	defer cancel()
+
+	attempt := 0
+	base := 250 * time.Millisecond
+	capDelay := 5 * time.Second
+	start := time.Now()
+
+	for {
+		if ctx.Err() != nil {
+			return fmt.Errorf("timeout waiting for resource deletion at %s (waited %v)", endpoint, c.DeleteTimeout)
+		}
+
+		// Short per-probe timeout
+		probeCtx, probeCancel := context.WithTimeout(ctx, 15*time.Second)
+		req, err := c.NewRequest(http.MethodGet, endpoint, nil)
+		if err != nil {
+			probeCancel()
+			return fmt.Errorf("failed to create request while polling for deletion: %w", err)
+		}
+		req = req.WithContext(probeCtx)
+
+		respWithETag, err := c.Do(req)
+		probeCancel()
+		attempt++
+
+		var status int
+		if err != nil {
+			// Treat network errors as retryable within timeout
+			status = 0
+		} else {
+			status = respWithETag.Response.StatusCode
+			_ = respWithETag.Response.Body.Close()
+		}
+
+		if os.Getenv("AUTHZED_DEBUG_DELETE") == "1" {
+			fmt.Printf("DEBUG delete poll: path=%s attempt=%d elapsed=%s status=%d err=%v\n", endpoint, attempt, time.Since(start).String(), status, err)
+		}
+
+		// Success terminal states
+		if status == http.StatusNotFound || status == http.StatusGone {
+			return nil
+		}
+
+		// Retryable states: 2xx (still present), 409, 412, 429, 5xx, or network error (status==0)
+		if (status >= 200 && status < 300) || status == http.StatusConflict || status == http.StatusPreconditionFailed || status == http.StatusTooManyRequests || status >= 500 || status == 0 {
+			// backoff with jitter
+			delay := backoffDelay(base, capDelay, attempt)
+			time.Sleep(delay)
+			continue
+		}
+
+		// Non-retryable 4xx (other than 404/410)
+		return fmt.Errorf("unexpected status code %d while polling for deletion", status)
+	}
+}
+
+func backoffDelay(base, cap time.Duration, attempt int) time.Duration {
+	if attempt < 1 {
+		attempt = 1
+	}
+	exp := time.Duration(float64(base) * math.Pow(2, float64(attempt-1)))
+	if exp > cap {
+		exp = cap
+	}
+	jitter := time.Duration(rand.Int63n(int64(exp) / 2))
+	return exp + jitter
 }
 
 // UpdateResource updates any resource that implements the Resource interface
@@ -189,135 +365,6 @@ func (c *CloudClient) UpdateResource(ctx context.Context, resource Resource, end
 	return resource, nil
 }
 
-// GetResource retrieves a resource by its endpoint and unmarshals it into the provided destination
-func (c *CloudClient) GetResource(endpoint string, dest any) (Resource, error) {
-	req, err := c.NewRequest(http.MethodGet, endpoint, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	respWithETag, err := c.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		// ignore the error
-		_ = respWithETag.Response.Body.Close()
-	}()
-
-	if respWithETag.Response.StatusCode != http.StatusOK {
-		return nil, NewAPIError(respWithETag)
-	}
-
-	if err := json.NewDecoder(respWithETag.Response.Body).Decode(dest); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
-	}
-
-	// The caller needs to convert the dest into a Resource implementation
-	// and set the ETag on it before returning
-	return nil, nil
-}
-
-// CreateResource creates a new resource
-func (c *CloudClient) CreateResource(endpoint string, body any, dest any) (Resource, error) {
-	req, err := c.NewRequest(http.MethodPost, endpoint, body)
-	if err != nil {
-		return nil, err
-	}
-
-	respWithETag, err := c.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		// ignore the error
-		_ = respWithETag.Response.Body.Close()
-	}()
-
-	if respWithETag.Response.StatusCode != http.StatusCreated {
-		return nil, NewAPIError(respWithETag)
-	}
-
-	if err := json.NewDecoder(respWithETag.Response.Body).Decode(dest); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
-	}
-
-	// The caller needs to convert the dest into a Resource implementation
-	// and set the ETag on it before returning
-	return nil, nil
-}
-
-// DeleteResource deletes a resource
-func (c *CloudClient) DeleteResource(endpoint string) error {
-	req, err := c.NewRequest(http.MethodDelete, endpoint, nil)
-	if err != nil {
-		return err
-	}
-
-	respWithETag, err := c.Do(req)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		// ignore the error
-		_ = respWithETag.Response.Body.Close()
-	}()
-
-	// Handle synchronous delete (204 No Content)
-	if respWithETag.Response.StatusCode == http.StatusNoContent {
-		return nil
-	}
-
-	// Handle asynchronous delete (202 Accepted)
-	if respWithETag.Response.StatusCode == http.StatusAccepted {
-		return c.waitForDeletion(endpoint)
-	}
-
-	// All other status codes are errors
-	return NewAPIError(respWithETag)
-}
-
-// waitForDeletion polls the resource endpoint until it returns 404 (deleted)
-func (c *CloudClient) waitForDeletion(endpoint string) error {
-	timeout := time.After(c.DeleteTimeout)
-	ticker := time.NewTicker(DefaultDeletePollInterval)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-timeout:
-			return fmt.Errorf("timeout waiting for resource deletion at %s (waited %v)", endpoint, c.DeleteTimeout)
-		case <-ticker.C:
-			// Check if resource still exists
-			req, err := c.NewRequest(http.MethodGet, endpoint, nil)
-			if err != nil {
-				return fmt.Errorf("failed to create request while polling for deletion: %w", err)
-			}
-
-			respWithETag, err := c.Do(req)
-			if err != nil {
-				return fmt.Errorf("failed to poll for deletion: %w", err)
-			}
-
-			// Close response body immediately
-			_ = respWithETag.Response.Body.Close()
-
-			// 404 means resource is deleted - success!
-			if respWithETag.Response.StatusCode == http.StatusNotFound {
-				return nil
-			}
-
-			// 200 means resource still exists - continue polling
-			if respWithETag.Response.StatusCode == http.StatusOK {
-				continue
-			}
-
-			// Any other status code is unexpected
-			return fmt.Errorf("unexpected status code %d while polling for deletion", respWithETag.Response.StatusCode)
-		}
-	}
-}
-
 // ResourceFactory is a function that creates a Resource from the decoded response
 type ResourceFactory func(decoded any, etag string) Resource
 
@@ -345,12 +392,48 @@ func (c *CloudClient) GetResourceWithFactory(endpoint string, dest any, factory 
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	// Use the factory to create a Resource from the decoded object
+	// Use ETag directly from response without additional stabilization retries
+	return factory(dest, respWithETag.ETag), nil
+}
+
+// GetResourceWithFactoryWithContext is the context-aware version of GetResourceWithFactory
+func (c *CloudClient) GetResourceWithFactoryWithContext(ctx context.Context, endpoint string, dest any, factory ResourceFactory) (Resource, error) {
+	req, err := c.NewRequest(http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Apply context to the request
+	req = req.WithContext(ctx)
+
+	respWithETag, err := c.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		// ignore the error
+		_ = respWithETag.Response.Body.Close()
+	}()
+
+	if respWithETag.Response.StatusCode != http.StatusOK {
+		return nil, NewAPIError(respWithETag)
+	}
+
+	if err := json.NewDecoder(respWithETag.Response.Body).Decode(dest); err != nil {
+		return nil, err
+	}
+
+	// Use ETag directly from response without additional stabilization retries
 	return factory(dest, respWithETag.ETag), nil
 }
 
 // CreateResourceWithFactory combines CreateResource with a factory to create a proper Resource
 func (c *CloudClient) CreateResourceWithFactory(ctx context.Context, endpoint string, body any, dest any, factory ResourceFactory) (Resource, error) {
+	return c.CreateResourceWithFactoryAndRecovery(ctx, endpoint, body, dest, factory, nil)
+}
+
+// CreateResourceWithFactoryAndRecovery creates a resource with optional idempotent recovery
+func (c *CloudClient) CreateResourceWithFactoryAndRecovery(ctx context.Context, endpoint string, body any, dest any, factory ResourceFactory, recovery *IdempotentRecoveryConfig) (Resource, error) {
 	// Use retry logic with exponential backoff
 	retryConfig := DefaultRetryConfig()
 
@@ -364,6 +447,15 @@ func (c *CloudClient) CreateResourceWithFactory(ctx context.Context, endpoint st
 		respWithETag, err := c.Do(req)
 		if err != nil {
 			return nil, err
+		}
+
+		// Retryable statuses for CREATE: 409/429/5xx
+		if respWithETag.Response != nil {
+			code := respWithETag.Response.StatusCode
+			if code == http.StatusConflict || code == http.StatusTooManyRequests || code >= 500 {
+				// Return as error to trigger retry wrapper
+				return nil, NewAPIError(respWithETag)
+			}
 		}
 
 		return respWithETag, nil
@@ -388,6 +480,16 @@ func (c *CloudClient) CreateResourceWithFactory(ctx context.Context, endpoint st
 		"resource create",
 	)
 	if err != nil {
+		// Attempt idempotent recovery for ambiguous outcomes
+		if recovery != nil && isAmbiguousError(err) {
+			if bodyMap, ok := body.(map[string]interface{}); ok {
+				if name, exists := bodyMap["name"].(string); exists {
+					if recovered, recErr := recovery.RecoverFromAmbiguousCreate(ctx, name, err); recErr == nil {
+						return recovered, nil
+					}
+				}
+			}
+		}
 		return nil, err
 	}
 
@@ -404,6 +506,27 @@ func (c *CloudClient) CreateResourceWithFactory(ctx context.Context, endpoint st
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	// Use the factory to create a Resource from the decoded object
-	return factory(dest, respWithETag.ETag), nil
+	// Create resource from response - no stabilization needed for simple resources
+	resource := factory(dest, respWithETag.ETag)
+
+	if resource.GetETag() == "" {
+		// Missing ETag after successful creation violates OpenAPI spec
+		// This indicates either an API issue or incomplete resource creation
+		return nil, fmt.Errorf("created resource missing required ETag header - this may indicate HTTP compression is enabled (check AUTHZED_DISABLE_GZIP setting) or an API issue")
+	}
+
+	// Skip stabilization if ETag is already present (resource is immediately ready)
+	return resource, nil
+}
+
+// isAmbiguousError checks if an error represents an ambiguous outcome
+func isAmbiguousError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	return strings.Contains(errStr, "timeout") ||
+		strings.Contains(errStr, "504") ||
+		strings.Contains(errStr, "502") ||
+		strings.Contains(errStr, "503")
 }

@@ -102,6 +102,7 @@ func (d *serviceAccountDataSource) Read(ctx context.Context, req datasource.Read
 	}
 
 	serviceAccountWithETag, err := d.client.GetServiceAccount(
+		ctx,
 		data.PermissionsSystemID.ValueString(),
 		data.ServiceAccountID.ValueString(),
 	)

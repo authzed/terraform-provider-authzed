@@ -106,7 +106,7 @@ func (d *roleDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		return
 	}
 
-	roleWithETag, err := d.client.GetRole(data.PermissionsSystemID.ValueString(), data.RoleID.ValueString())
+	roleWithETag, err := d.client.GetRole(ctx, data.PermissionsSystemID.ValueString(), data.RoleID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read role, got error: %s", err))
 		return

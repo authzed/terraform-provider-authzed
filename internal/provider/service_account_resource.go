@@ -4,14 +4,18 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"terraform-provider-authzed/internal/client"
 	"terraform-provider-authzed/internal/models"
+	"terraform-provider-authzed/internal/provider/pslanes"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -26,26 +30,28 @@ func NewServiceAccountResource() resource.Resource {
 }
 
 type serviceAccountResource struct {
-	client *client.CloudClient
+	client  *client.CloudClient
+	psLanes *pslanes.PSLanes
 }
 
 type serviceAccountResourceModel struct {
-	ID                  types.String `tfsdk:"id"`
-	Name                types.String `tfsdk:"name"`
-	Description         types.String `tfsdk:"description"`
-	PermissionsSystemID types.String `tfsdk:"permission_system_id"`
-	CreatedAt           types.String `tfsdk:"created_at"`
-	Creator             types.String `tfsdk:"creator"`
-	UpdatedAt           types.String `tfsdk:"updated_at"`
-	Updater             types.String `tfsdk:"updater"`
-	ETag                types.String `tfsdk:"etag"`
+	ID                  types.String   `tfsdk:"id"`
+	Name                types.String   `tfsdk:"name"`
+	Description         types.String   `tfsdk:"description"`
+	PermissionsSystemID types.String   `tfsdk:"permission_system_id"`
+	CreatedAt           types.String   `tfsdk:"created_at"`
+	Creator             types.String   `tfsdk:"creator"`
+	UpdatedAt           types.String   `tfsdk:"updated_at"`
+	Updater             types.String   `tfsdk:"updater"`
+	ETag                types.String   `tfsdk:"etag"`
+	Timeouts            timeouts.Value `tfsdk:"timeouts"`
 }
 
 func (r *serviceAccountResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_service_account"
 }
 
-func (r *serviceAccountResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *serviceAccountResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Manages a service account",
 		Attributes: map[string]schema.Attribute{
@@ -61,7 +67,12 @@ func (r *serviceAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 				Description: "Name of the service account",
 			},
 			"description": schema.StringAttribute{
-				Optional:    true,
+				Optional: true,
+				Computed: true,
+				Default:  stringdefault.StaticString(""),
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 				Description: "Description of the service account",
 			},
 			"permission_system_id": schema.StringAttribute{
@@ -95,6 +106,12 @@ func (r *serviceAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 				Description: "Version identifier used to prevent conflicts from concurrent updates, ensuring safe resource modifications",
 			},
 		},
+		Blocks: map[string]schema.Block{
+			"timeouts": timeouts.Block(ctx, timeouts.Opts{
+				Create: true,
+				Delete: true,
+			}),
+		},
 	}
 }
 
@@ -113,14 +130,26 @@ func (r *serviceAccountResource) Configure(_ context.Context, req resource.Confi
 	}
 
 	r.client = providerData.Client
+	r.psLanes = providerData.PSLanes
 }
 
 func (r *serviceAccountResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	// Retrieve values from plan
 	var data serviceAccountResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// Get context with create timeout (default 10 minutes for service accounts)
+	createTimeout, diags := data.Timeouts.Create(ctx, 10*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	createCtx, cancel := context.WithTimeout(ctx, createTimeout)
+	defer cancel()
 
 	// Create service account
 	serviceAccount := &models.ServiceAccount{
@@ -129,12 +158,41 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 		PermissionsSystemID: data.PermissionsSystemID.ValueString(),
 	}
 
-	createdServiceAccountWithETag, err := r.client.CreateServiceAccount(ctx, serviceAccount)
+	createdServiceAccountWithETag, err := r.client.CreateServiceAccount(createCtx, serviceAccount)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create service account, got error: %s", err))
 		return
 	}
 
+	// Wait for service account to be globally visible
+	if err := waitForServiceAccountExists(createCtx, r.client, data.PermissionsSystemID.ValueString(), createdServiceAccountWithETag.ServiceAccount.ID); err != nil {
+		resp.Diagnostics.AddError("Service Account Visibility Error", fmt.Sprintf("Service account was created but is not yet globally visible: %s", err))
+		return
+	}
+
+	// Check if CREATE returned an ETag
+	if createdServiceAccountWithETag.ETag != "" {
+		// Use the ETag from CREATE operation
+		data.ID = types.StringValue(createdServiceAccountWithETag.ServiceAccount.ID)
+		data.CreatedAt = types.StringValue(createdServiceAccountWithETag.ServiceAccount.CreatedAt)
+		data.Creator = types.StringValue(createdServiceAccountWithETag.ServiceAccount.Creator)
+		if createdServiceAccountWithETag.ServiceAccount.UpdatedAt == "" {
+			data.UpdatedAt = types.StringNull()
+		} else {
+			data.UpdatedAt = types.StringValue(createdServiceAccountWithETag.ServiceAccount.UpdatedAt)
+		}
+		if createdServiceAccountWithETag.ServiceAccount.Updater == "" {
+			data.Updater = types.StringNull()
+		} else {
+			data.Updater = types.StringValue(createdServiceAccountWithETag.ServiceAccount.Updater)
+		}
+		data.ETag = types.StringValue(createdServiceAccountWithETag.ETag)
+
+		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+		return
+	}
+
+	// If CREATE didn't return ETag, set the basic fields and continue to GET retry logic
 	data.ID = types.StringValue(createdServiceAccountWithETag.ServiceAccount.ID)
 	data.CreatedAt = types.StringValue(createdServiceAccountWithETag.ServiceAccount.CreatedAt)
 	data.Creator = types.StringValue(createdServiceAccountWithETag.ServiceAccount.Creator)
@@ -160,7 +218,7 @@ func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	serviceAccountWithETag, err := r.client.GetServiceAccount(data.PermissionsSystemID.ValueString(), data.ID.ValueString())
+	serviceAccountWithETag, err := r.client.GetServiceAccount(ctx, data.PermissionsSystemID.ValueString(), data.ID.ValueString())
 	if err != nil {
 		// Check if the resource was not found (404 error)
 		if strings.Contains(err.Error(), "status 404") || strings.Contains(err.Error(), "not found") {
@@ -207,7 +265,7 @@ func (r *serviceAccountResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	// Create service account with updated data - use state values for immutable fields
+	// Create service account with updated data. Use state values for immutable fields
 	serviceAccount := &models.ServiceAccount{
 		ID:                  state.ID.ValueString(), // Use state for immutable ID
 		Name:                data.Name.ValueString(),
@@ -232,7 +290,7 @@ func (r *serviceAccountResource) Update(ctx context.Context, req resource.Update
 
 	updatedServiceAccountWithETag := updateResult.ServiceAccount
 
-	// Update resource data with the response - preserve immutable fields from state
+	// Update resource data with the response. Preserve immutable fields from state
 	data.ID = state.ID
 	data.CreatedAt = state.CreatedAt
 	data.Creator = state.Creator
@@ -257,16 +315,34 @@ func (r *serviceAccountResource) Update(ctx context.Context, req resource.Update
 }
 
 func (r *serviceAccountResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	// Get current state
 	var data serviceAccountResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
+	// Get context with delete timeout (default 10 minutes for deletes)
+	deleteTimeout, diags := data.Timeouts.Delete(ctx, 10*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	deleteCtx, cancel := context.WithTimeout(ctx, deleteTimeout)
+	defer cancel()
+
 	permissionSystemID := data.PermissionsSystemID.ValueString()
-	err := r.client.DeleteServiceAccount(permissionSystemID, data.ID.ValueString())
+
+	// Serialize service account deletion per Permission System with 409 retry
+	err := r.psLanes.WithDeleteLane(deleteCtx, permissionSystemID, func() error {
+		return pslanes.Retry409Delete(deleteCtx, func() error {
+			return r.client.DeleteServiceAccount(permissionSystemID, data.ID.ValueString())
+		})
+	})
+
 	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete service account, got error: %s", err))
+		resp.Diagnostics.AddError("Error deleting service account", fmt.Sprintf("Unable to delete service account: %v", err))
 		return
 	}
 }
