@@ -164,6 +164,12 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
+	// Wait for service account to be globally visible
+	if err := waitForServiceAccountExists(createCtx, r.client, data.PermissionsSystemID.ValueString(), createdServiceAccountWithETag.ServiceAccount.ID); err != nil {
+		resp.Diagnostics.AddError("Service Account Visibility Error", fmt.Sprintf("Service account was created but is not yet globally visible: %s", err))
+		return
+	}
+
 	// Check if CREATE returned an ETag
 	if createdServiceAccountWithETag.ETag != "" {
 		// Use the ETag from CREATE operation
@@ -259,7 +265,7 @@ func (r *serviceAccountResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	// Create service account with updated data - use state values for immutable fields
+	// Create service account with updated data. Use state values for immutable fields
 	serviceAccount := &models.ServiceAccount{
 		ID:                  state.ID.ValueString(), // Use state for immutable ID
 		Name:                data.Name.ValueString(),
@@ -284,7 +290,7 @@ func (r *serviceAccountResource) Update(ctx context.Context, req resource.Update
 
 	updatedServiceAccountWithETag := updateResult.ServiceAccount
 
-	// Update resource data with the response - preserve immutable fields from state
+	// Update resource data with the response. Preserve immutable fields from state
 	data.ID = state.ID
 	data.CreatedAt = state.CreatedAt
 	data.Creator = state.Creator

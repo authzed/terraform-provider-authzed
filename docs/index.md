@@ -10,6 +10,8 @@ The AuthZed provider allows you to manage resources via the [AuthZed Cloud API](
 
 Use the navigation to the left to read about the available resources and data sources.
 
+> **Note**: The provider disables HTTP compression by default to ensure ETag headers are preserved behind certain proxies. If you experience ETag-related issues, see the [troubleshooting guide](guides/troubleshooting.md#etag-and-compression-issues).
+
 ## Example Usage
 
 ```terraform

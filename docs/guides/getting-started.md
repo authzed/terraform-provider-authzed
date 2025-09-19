@@ -250,6 +250,7 @@ terraform output -raw admin_token_plain_text
 2. **Secret Rotation**: If you need to rotate secrets, plan for a transition period where both old and new tokens might be valid.
 3. **Separate Environments**: Use different Terraform workspaces or states for development and production environments.
 4. **Use Variables**: Keep tokens and IDs in variables to make your configurations more flexible.
+5. **Large Deployments**: For deployments with more than 8 resources or 5+ service accounts, use `terraform apply -parallelism=1` to avoid API conflicts. See the [troubleshooting guide](troubleshooting.md#performance-and-parallelism) for details.
 
 ## Additional Resources 
 

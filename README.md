@@ -72,7 +72,9 @@ Contributions are welcome! Please see the [contribution guidelines](CONTRIBUTING
 
 ## Troubleshooting
 
-If you encounter issues with provider installation such as "Failed to query available provider packages" or "no available releases match", this is often caused by locally cached provider files. 
+### Common Issues
+
+**Provider Installation**: If you encounter "Failed to query available provider packages" or "no available releases match", this is often caused by locally cached provider files. 
 
 **Quick fix:**
 ```bash
@@ -80,5 +82,7 @@ If you encounter issues with provider installation such as "Failed to query avai
 rm -rf ~/.terraform.d/plugins/*/authzed
 terraform init
 ```
+
+**Large Deployments**: For deployments with 8+ mixed resources or 5+ service accounts, use `terraform apply -parallelism=1` to avoid FGAM conflicts and state management issues due to temporary API limitation. The provider includes optimizations to minimize performance impact. 
 
 For more detailed troubleshooting information, see our [Troubleshooting Guide](https://registry.terraform.io/providers/authzed/authzed/latest/docs/guides/troubleshooting).
