@@ -514,7 +514,7 @@ func (c *CloudClient) CreateResourceWithFactoryAndRecovery(ctx context.Context, 
 		// This indicates either an API issue or incomplete resource creation
 		return nil, fmt.Errorf("created resource missing required ETag header - this may indicate HTTP compression is enabled (check AUTHZED_DISABLE_GZIP setting) or an API issue")
 	}
-	
+
 	// Skip stabilization if ETag is already present (resource is immediately ready)
 	return resource, nil
 }
