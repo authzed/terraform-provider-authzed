@@ -18,6 +18,8 @@ resource "authzed_service_account" "api_service" {
 }
 ```
 
+~> **Performance Note:** When creating 5 or more service accounts, use `terraform apply -parallelism=1` to avoid state management issues due to temporary API eventual consistency limitations. See the [troubleshooting guide](../guides/troubleshooting.md#performance-and-parallelism) for details.
+
 ## Argument Reference
 
 * `name` - (Required) A name for the service account. Must be between 1 and 50 characters.
@@ -33,6 +35,24 @@ In addition to the arguments listed above, the following attributes are exported
 * `creator` - The name of the user that created this service account.
 * `updated_at` - The timestamp when the service account was last updated (RFC 3339 format).
 * `updater` - The name of the user that last updated this service account.
+* `etag` - Version identifier used for optimistic concurrency control; updates when the service account changes.
+
+## Timeouts
+
+This resource supports a `timeouts` block for create and delete operations.
+
+Example:
+
+```hcl
+resource "authzed_service_account" "example" {
+  # ... arguments ...
+
+  timeouts {
+    create = "10m"
+    delete = "10m"
+  }
+}
+```
 
 ## Import
 

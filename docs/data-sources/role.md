@@ -38,5 +38,4 @@ In addition to all arguments above, the following attributes are exported:
 * `permissions` - A map of permissions granted by this role. Most permissions are boolean and use "true" as the value.
 * `created_at` - The timestamp when the role was created (RFC 3339 format).
 * `creator` - The name of the user that created this role.
-* `updated_at` - The timestamp when the role was last updated (RFC 3339 format).
-* `updater` - The name of the user that last updated this role. 
+* `etag` - Version identifier used for optimistic concurrency control. 

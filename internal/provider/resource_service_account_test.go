@@ -43,7 +43,6 @@ func TestAccAuthzedServiceAccount_basic(t *testing.T) {
 		},
 	})
 }
-
 func TestAccAuthzedServiceAccount_update(t *testing.T) {
 	resourceName := "authzed_service_account.test"
 	name := helpers.GenerateTestID("acc-sa-update")
@@ -169,4 +168,3 @@ func testAccServiceAccountImportStateIdFunc(resourceName string) resource.Import
 		return fmt.Sprintf("%s:%s", psID, id), nil
 	}
 }
-

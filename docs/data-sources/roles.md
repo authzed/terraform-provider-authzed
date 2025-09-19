@@ -12,7 +12,7 @@ This data source retrieves a list of all roles defined in an AuthZed permission 
 
 ```terraform
 data "authzed_roles" "all" {
-  permission_system_id = "sys_123456789"
+  permission_system_id = "ps-123456789"
 }
 
 output "role_names" {
@@ -35,7 +35,5 @@ The following attributes are exported:
   * `id` - The ID of the role.
   * `name` - The name of the role.
   * `description` - The description of the role.
-  * `permissions` - A map of permissions granted by this role.
-  * `created_at` - The timestamp when the role was created.
-  * `updated_at` - The timestamp when the role was last updated.
-* `roles_count` - The total number of roles found. 
+  * `creator` - The name of the user that created this role.
+  * `created_at` - The timestamp when the role was created. 

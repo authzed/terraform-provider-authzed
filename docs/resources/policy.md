@@ -1,6 +1,5 @@
 ---
 page_title: "Resource: authzed_policy"
-page_title: "Resource: authzed_policy"
 description: |-
   Manages access control policies in an AuthZed permission system.
 ---
@@ -21,6 +20,8 @@ resource "authzed_policy" "reader_policy" {
 }
 ```
 
+~> **Performance Note:** When creating mixed resource types (policies, service accounts, tokens, roles) with more than 8 total resources, use `terraform apply -parallelism=1` to avoid FGAM conflicts due to temporary API limitations. See the [troubleshooting guide](../guides/troubleshooting.md#performance-and-parallelism) for details.
+
 ## Argument Reference
 
 * `name` - (Required) A name for the policy. Must be between 1 and 50 characters.
@@ -38,6 +39,24 @@ In addition to the arguments listed above, the following attributes are exported
 * `creator` - The name of the user that created this policy.
 * `updated_at` - The timestamp when the policy was last updated (RFC 3339 format).
 * `updater` - The name of the user that last updated this policy.
+* `etag` - Version identifier used for optimistic concurrency control; updates when the policy changes.
+
+## Timeouts
+
+This resource supports a `timeouts` block for create and delete operations.
+
+Example:
+
+```hcl
+resource "authzed_policy" "example" {
+  # ... arguments ...
+
+  timeouts {
+    create = "5m"
+    delete = "10m"
+  }
+}
+```
 
 ## Import
 

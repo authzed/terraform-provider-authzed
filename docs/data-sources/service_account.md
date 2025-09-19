@@ -33,10 +33,9 @@ The following arguments are supported:
 
 In addition to all arguments above, the following attributes are exported:
 
-* `id` - A composite ID uniquely identifying this service account.
+* `id` - The service account ID.
 * `name` - The name of the service account. Will be between 1 and 50 characters.
 * `description` - The description of the service account. Maximum length is 200 characters.
 * `created_at` - The timestamp when the service account was created (RFC 3339 format).
 * `creator` - The name of the user that created this service account.
-* `updated_at` - The timestamp when the service account was last updated (RFC 3339 format).
-* `updater` - The name of the user that last updated this service account. 
+* `etag` - Version identifier used for optimistic concurrency control. 

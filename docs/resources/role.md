@@ -23,6 +23,8 @@ resource "authzed_role" "reader" {
 }
 ```
 
+~> **Performance Note:** When creating mixed resource types (roles, service accounts, tokens, policies) with more than 8 total resources, use `terraform apply -parallelism=1` to avoid FGAM conflicts due to temporary API limitations. See the [troubleshooting guide](../guides/troubleshooting.md#performance-and-parallelism) for details.
+
 ## Argument Reference
 
 * `name` - (Required) The name of the role. Must be between 1 and 50 characters.
@@ -54,6 +56,24 @@ In addition to the arguments listed above, the following attributes are exported
 * `creator` - The name of the user that created this role.
 * `updated_at` - The timestamp when the role was last updated (RFC 3339 format).
 * `updater` - The name of the user that last updated this role.
+* `etag` - Version identifier used for optimistic concurrency control; updates when the role changes.
+
+## Timeouts
+
+This resource supports a `timeouts` block for create and delete operations.
+
+Example:
+
+```hcl
+resource "authzed_role" "example" {
+  # ... arguments ...
+
+  timeouts {
+    create = "10m"
+    delete = "10m"
+  }
+}
+```
 
 ## Import
 
