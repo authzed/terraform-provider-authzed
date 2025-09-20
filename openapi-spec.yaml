@@ -5375,7 +5375,7 @@ components:
       properties:
         apiKey:
           description: The Datadog API key. Will not be returned after writing.
-          pattern: ^\S{32}$
+          minLength: 1
           type: string
         site:
           description: The Datadog Site associated with your API key.
