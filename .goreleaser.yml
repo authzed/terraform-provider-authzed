@@ -67,13 +67,13 @@ changelog:
       - '^Merge remote-tracking'
   groups:
     - title: Features
-      regexp: "^.*feat[(\\w)]*:+.*$|^.*add[(\\w)]*:+.*$"
+      regexp: "^feat(\\([^)]+\\))?:|^add(\\([^)]+\\))?:"
       order: 0
     - title: Bug Fixes
-      regexp: "^.*fix[(\\w)]*:+.*$"
+      regexp: "^fix(\\([^)]+\\))?:"
       order: 1
     - title: Documentation
-      regexp: "^.*docs[(\\w)]*:+.*$"
+      regexp: "^docs(\\([^)]+\\))?:"
       order: 2
     - title: Other Changes
       order: 999
