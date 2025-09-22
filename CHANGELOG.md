@@ -7,11 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Concurrency testing suite** - Performance benchmarking (15-75 resources), concurrent creation tests, and eventual consistency validation
+- **DeleteLanes infrastructure** - Conflict resolution system for resource deletion with intelligent retry logic
+- **Per-Permission System serialization lanes (PSLanes)** - Concurrent operations across different permission systems while preventing FGAM conflicts
+- **Enhanced troubleshooting documentation** - Performance guidance with resource count thresholds and parallelism recommendations
+
+### Changed
+- **Client architecture refactor** - Improved retry mechanisms, exponential backoff, and enhanced context handling
+- **Performance optimizations** - Intelligent serialization, wait logic for eventual consistency, and significantly reduced execution time
+- **Resource creation flow** - Better context handling to prevent timeout and deadline exceeded errors
+- **Performance recommendations** - Default parallelism for ≤8 resources; use `parallelism=1` for >8 mixed resources, >5 service accounts, or >50 total resources
+- **HTTP compression disabled by default** - Ensures ETag visibility behind proxies
+- **Updated dependencies** - golang.org/x/sync v0.17.0, terraform-plugin-framework v1.16.0, terraform-plugin-framework-timeouts v0.6.0
+
 ### Fixed
-- Resolved plan modifier inconsistencies introduced with FGAM field additions in v0.4.0
-- Fixed "Provider produced inconsistent result after apply" errors by correctly configuring UseStateForUnknown() plan modifiers for immutable vs mutable computed fields
-- Immutable fields (id, created_at, creator) now use UseStateForUnknown() to prevent "(known after apply)" noise
-- Mutable FGAM fields (updated_at, updater) correctly omit UseStateForUnknown() to display actual API values
+- **FGAM field drift** - Resolved `updated_at`/`updater` drift with proper UseStateForUnknown plan modifiers
+- **Context deadline errors** - Fixed timeout issues in policy/role creation
+- **Resource deletion conflicts** - Enhanced conflict handling with DeleteLanes
+- **Service account state consistency** - Resolved disappearing resources due to eventual consistency
+- **FGAM conflicts** - PSLanes prevent 409 errors within same Permission System
+- **Plan modifier inconsistencies** - Fixed "Provider produced inconsistent result after apply" errors
+- **ETag header extraction** - Fixed issues with compressed responses
+- **Test suite stability** - Removed merge conflict markers breaking CI
+
+### Removed
+- **Obsolete FGAM serialization configuration** - Removed deprecated `fgam_serialization` provider option and related documentation (replaced by more sophisticated PSLanes system)
+- **Legacy API implementation** - Cleaned up unused internal/api code after client optimizations and refactoring
 
 ## [0.4.1] - 2025-01-08 [YANKED]
 
@@ -53,4 +75,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documentation and examples
 
 [Unreleased]: https://github.com/authzed/terraform-provider-cloudapi/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/authzed/terraform-provider-cloudapi/releases/tag/v0.1.0 
+[0.1.0]: https://github.com/authzed/terraform-provider-cloudapi/releases/tag/v0.1.0
