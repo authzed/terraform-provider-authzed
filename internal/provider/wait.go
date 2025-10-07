@@ -87,7 +87,7 @@ func waitForRoleExists(ctx context.Context, client *client.CloudClient, psID, ro
 			if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "not found") {
 				return false, nil
 			}
-			return false, err //let waitForExists decide retryability
+			return false, err // let waitForExists decide retryability
 		}
 		return true, nil // Found!
 	})

@@ -2,13 +2,10 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
-
-	"terraform-provider-authzed/internal/client"
-	"terraform-provider-authzed/internal/models"
-	"terraform-provider-authzed/internal/provider/pslanes"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -18,6 +15,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"terraform-provider-authzed/internal/client"
+	"terraform-provider-authzed/internal/models"
+	"terraform-provider-authzed/internal/provider/pslanes"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -191,7 +192,6 @@ func (r *TokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		createdTokenWithETag = ct
 		return nil
 	})
-
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating token",
@@ -245,7 +245,8 @@ func (r *TokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		state.ID.ValueString(),
 	)
 	if err != nil {
-		apiErr, ok := err.(*client.APIError)
+		apiErr := &client.APIError{}
+		ok := errors.As(err, &apiErr)
 		if ok && apiErr.StatusCode == 404 {
 			// Token was deleted outside of Terraform
 			resp.State.RemoveResource(ctx)
@@ -373,7 +374,6 @@ func (r *TokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 			)
 		})
 	})
-
 	if err != nil {
 		resp.Diagnostics.AddError("Error deleting token", fmt.Sprintf("Unable to delete token: %v", err))
 		return

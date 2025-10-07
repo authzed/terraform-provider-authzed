@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"terraform-provider-authzed/internal/test/helpers"
-
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+
+	"terraform-provider-authzed/internal/test/helpers"
 )
 
 // TestPlanConsistency_PolicyImmutableFields validates plan modifier behavior for policy updates

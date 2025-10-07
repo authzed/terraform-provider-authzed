@@ -138,7 +138,7 @@ func ValidateRoleExists(permissionSystemID, roleID string) error {
 	testClient := CreateTestRoleClient()
 	_, err := testClient.GetRole(context.Background(), permissionSystemID, roleID)
 	if err != nil {
-		return fmt.Errorf("role does not exist: %s", err)
+		return fmt.Errorf("role does not exist: %w", err)
 	}
 	return nil
 }
@@ -152,7 +152,7 @@ func ValidateRoleDestroyed(permissionSystemID, roleID string) error {
 	}
 
 	if !IsNotFoundError(err) {
-		return fmt.Errorf("unexpected error checking role destruction: %v", err)
+		return fmt.Errorf("unexpected error checking role destruction: %w", err)
 	}
 
 	return nil
@@ -163,7 +163,7 @@ func ValidateRolePermissions(permissionSystemID, roleID string, expectedPermissi
 	testClient := CreateTestRoleClient()
 	roleWithETag, err := testClient.GetRole(context.Background(), permissionSystemID, roleID)
 	if err != nil {
-		return fmt.Errorf("failed to retrieve role: %s", err)
+		return fmt.Errorf("failed to retrieve role: %w", err)
 	}
 
 	role := roleWithETag.Role
@@ -226,7 +226,7 @@ func CreateTestRole(roleName string, permissions map[string]string) (*models.Rol
 
 	roleWithETag, err := testClient.CreateRole(context.Background(), role)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create test role: %s", err)
+		return nil, fmt.Errorf("failed to create test role: %w", err)
 	}
 
 	return roleWithETag.Role, nil
@@ -237,7 +237,7 @@ func DeleteTestRole(permissionSystemID, roleID string) error {
 	testClient := CreateTestRoleClient()
 	err := testClient.DeleteRole(permissionSystemID, roleID)
 	if err != nil && !IsNotFoundError(err) {
-		return fmt.Errorf("failed to delete test role: %s", err)
+		return fmt.Errorf("failed to delete test role: %w", err)
 	}
 	return nil
 }

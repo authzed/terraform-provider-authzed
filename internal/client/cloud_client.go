@@ -118,6 +118,8 @@ type ResponseWithETag struct {
 	ETag     string
 }
 
+var _ HTTPResponder = (*ResponseWithETag)(nil)
+
 // RequestOption allows setting optional parameters for requests
 type RequestOption func(*http.Request)
 
@@ -273,13 +275,13 @@ func (c *CloudClient) waitForDeletion(endpoint string) error {
 	}
 }
 
-func backoffDelay(base, cap time.Duration, attempt int) time.Duration {
+func backoffDelay(base, capDelay time.Duration, attempt int) time.Duration {
 	if attempt < 1 {
 		attempt = 1
 	}
 	exp := time.Duration(float64(base) * math.Pow(2, float64(attempt-1)))
-	if exp > cap {
-		exp = cap
+	if exp > capDelay {
+		exp = capDelay
 	}
 	jitter := time.Duration(rand.Int63n(int64(exp) / 2))
 	return exp + jitter
@@ -482,7 +484,7 @@ func (c *CloudClient) CreateResourceWithFactoryAndRecovery(ctx context.Context, 
 	if err != nil {
 		// Attempt idempotent recovery for ambiguous outcomes
 		if recovery != nil && isAmbiguousError(err) {
-			if bodyMap, ok := body.(map[string]interface{}); ok {
+			if bodyMap, ok := body.(map[string]any); ok {
 				if name, exists := bodyMap["name"].(string); exists {
 					if recovered, recErr := recovery.RecoverFromAmbiguousCreate(ctx, name, err); recErr == nil {
 						return recovered, nil

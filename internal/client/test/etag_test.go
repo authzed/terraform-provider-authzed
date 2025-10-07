@@ -6,10 +6,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"terraform-provider-authzed/internal/client"
 	"terraform-provider-authzed/internal/models"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestETagSupport(t *testing.T) {
@@ -113,7 +114,7 @@ func TestETagSupport(t *testing.T) {
 		getRequestCount = 0
 
 		sa, err := c.GetServiceAccount(context.Background(), "ps-test123", "asa-test123")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, testETag, sa.GetETag())
 	})
 

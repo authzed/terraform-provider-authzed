@@ -2,6 +2,7 @@ package pslanes
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -24,7 +25,8 @@ func Retry409Delete(ctx context.Context, operation func() error) error {
 		}
 
 		// Treat 404 as success, idempotent deletes
-		if apiErr, ok := err.(*client.APIError); ok && apiErr.StatusCode == http.StatusNotFound {
+		apiErr := &client.APIError{}
+		if errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusNotFound {
 			return nil
 		}
 
@@ -60,7 +62,8 @@ func Retry409Delete(ctx context.Context, operation func() error) error {
 
 // is409Conflict checks if the error is a 409 conflict
 func is409Conflict(err error) bool {
-	if apiErr, ok := err.(*client.APIError); ok {
+	apiErr := &client.APIError{}
+	if errors.As(err, &apiErr) {
 		return apiErr.StatusCode == http.StatusConflict
 	}
 
