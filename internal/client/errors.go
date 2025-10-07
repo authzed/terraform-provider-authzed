@@ -13,7 +13,6 @@ type HTTPResponder interface {
 	GetResponse() *http.Response
 }
 
-// Make http.Response implement HTTPResponder
 type HTTPResponseWrapper struct {
 	*http.Response
 }
@@ -22,7 +21,6 @@ func (r *HTTPResponseWrapper) GetResponse() *http.Response {
 	return r.Response
 }
 
-// Make ResponseWithETag implement HTTPResponder
 func (r *ResponseWithETag) GetResponse() *http.Response {
 	return r.Response
 }

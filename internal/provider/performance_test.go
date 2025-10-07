@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"terraform-provider-authzed/internal/client"
-	"terraform-provider-authzed/internal/test/helpers"
-
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+
+	"terraform-provider-authzed/internal/client"
+	"terraform-provider-authzed/internal/test/helpers"
 )
 
 func TestAccReasonableWorkload(t *testing.T) {
@@ -47,11 +47,12 @@ func TestAccReasonableWorkload(t *testing.T) {
 						t.Logf("Reasonable workload (15 resources) completed in: %v", duration)
 
 						// Log performance metrics
-						if duration > 30*time.Second {
+						switch {
+						case duration > 30*time.Second:
 							t.Logf("WARNING: Performance slower than expected (>30s): %v", duration)
-						} else if duration < 15*time.Second {
+						case duration < 15*time.Second:
 							t.Logf("EXCELLENT: Performance very good (<15s): %v", duration)
-						} else {
+						default:
 							t.Logf("GOOD: Performance acceptable (15-30s): %v", duration)
 						}
 
@@ -201,7 +202,7 @@ func testAccCheckReasonableWorkloadDestroy(s *terraform.State) error {
 
 		// Verify it's actually a 404 error, not another error
 		if !helpers.IsNotFoundError(err) {
-			return fmt.Errorf("Unexpected error checking %s destruction: %v", rs.Type, err)
+			return fmt.Errorf("Unexpected error checking %s destruction: %w", rs.Type, err)
 		}
 	}
 	return nil

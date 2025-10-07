@@ -3,9 +3,9 @@ package test
 import (
 	"testing"
 
-	"terraform-provider-authzed/internal/client"
-
 	"github.com/stretchr/testify/assert"
+
+	"terraform-provider-authzed/internal/client"
 )
 
 func TestFGAMErrorMessages(t *testing.T) {

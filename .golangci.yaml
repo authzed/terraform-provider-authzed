@@ -1,0 +1,61 @@
+---
+version: "2"
+run:
+  allow-parallel-runners: true
+  build-tags:
+    - "mage"
+linters:
+  enable:
+    - "bidichk"
+#    - "bodyclose"
+    - "errcheck"
+    - "errname"
+    - "errorlint"
+    - "gocritic"
+    - "goprintffuncname"
+    #    - "gosec"
+    - "govet"
+    - "importas"
+    - "ineffassign"
+    - "makezero"
+    - "prealloc"
+    - "predeclared"
+    - "promlinter"
+    #    - "revive"
+    - "rowserrcheck"
+    - "spancheck"
+    - "staticcheck"
+    - "tagalign"
+    - "testifylint"
+    - "tparallel"
+    - "unconvert"
+    #    - "usetesting"
+    - "wastedassign"
+    - "whitespace"
+    - "unused"
+  settings:
+    staticcheck:
+      checks:
+        - "all"
+        - "-ST1000" # at least one file in a package should have a package comment
+        - "-ST1003" # Poorly chosen identifier
+formatters:
+  enable:
+    - "gci"
+    - "gofmt"
+    - "gofumpt"
+    - "goimports"
+  settings:
+    gofmt:
+      rewrite-rules:
+        - pattern: "interface{}"
+          replacement: "any"
+    gci:
+      sections:
+        - "standard"
+        - "default"
+        - "prefix(github.com/authzed)"
+        - "localmodule"
+    goimports:
+      local-prefixes:
+        - "github.com/authzed/terraform-provider-authzed"

@@ -6,10 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"terraform-provider-authzed/internal/client"
-	"terraform-provider-authzed/internal/models"
-	"terraform-provider-authzed/internal/provider/pslanes"
-
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -18,6 +14,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"terraform-provider-authzed/internal/client"
+	"terraform-provider-authzed/internal/models"
+	"terraform-provider-authzed/internal/provider/pslanes"
 )
 
 var (
@@ -340,7 +340,6 @@ func (r *serviceAccountResource) Delete(ctx context.Context, req resource.Delete
 			return r.client.DeleteServiceAccount(permissionSystemID, data.ID.ValueString())
 		})
 	})
-
 	if err != nil {
 		resp.Diagnostics.AddError("Error deleting service account", fmt.Sprintf("Unable to delete service account: %v", err))
 		return

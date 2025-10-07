@@ -6,10 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"terraform-provider-authzed/internal/client"
-	"terraform-provider-authzed/internal/models"
-	"terraform-provider-authzed/internal/provider/pslanes"
-
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -17,6 +13,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"terraform-provider-authzed/internal/client"
+	"terraform-provider-authzed/internal/models"
+	"terraform-provider-authzed/internal/provider/pslanes"
 )
 
 var (
@@ -160,7 +160,6 @@ func (r *roleResource) Create(ctx context.Context, req resource.CreateRequest, r
 			}
 			return true, nil
 		})
-
 	}
 
 	// Extract permissions map from types.Map
@@ -342,7 +341,6 @@ func (r *roleResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 			return r.client.DeleteRole(permissionSystemID, data.ID.ValueString())
 		})
 	})
-
 	if err != nil {
 		resp.Diagnostics.AddError("Error deleting role", fmt.Sprintf("Unable to delete role: %v", err))
 		return

@@ -153,7 +153,6 @@ func TestUpdateResource(t *testing.T) {
 	body := map[string]any{"name": "Updated Service Account"}
 
 	updated, err := c.UpdateResource(context.Background(), resource, endpoint, body)
-
 	// Verify results
 	if err != nil {
 		// This is expected since we're not actually making a real HTTP request

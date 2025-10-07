@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"terraform-provider-authzed/internal/test/helpers"
-
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+
+	"terraform-provider-authzed/internal/test/helpers"
 )
 
 // Proves PSLanes serialization for roles in same Permission System (small N)

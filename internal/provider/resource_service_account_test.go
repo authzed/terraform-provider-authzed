@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"testing"
 
-	"terraform-provider-authzed/internal/client"
-	"terraform-provider-authzed/internal/test/helpers"
-
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+
+	"terraform-provider-authzed/internal/client"
+	"terraform-provider-authzed/internal/test/helpers"
 )
 
 func TestAccAuthzedServiceAccount_basic(t *testing.T) {
@@ -43,6 +43,7 @@ func TestAccAuthzedServiceAccount_basic(t *testing.T) {
 		},
 	})
 }
+
 func TestAccAuthzedServiceAccount_update(t *testing.T) {
 	resourceName := "authzed_service_account.test"
 	name := helpers.GenerateTestID("acc-sa-update")
@@ -114,7 +115,7 @@ func testAccCheckServiceAccountExists(resourceName string) resource.TestCheckFun
 
 		_, err := testClient.GetServiceAccount(context.Background(), permissionSystemID, rs.Primary.ID)
 		if err != nil {
-			return fmt.Errorf("Service Account does not exist: %v", err)
+			return fmt.Errorf("Service Account does not exist: %w", err)
 		}
 
 		return nil
@@ -147,7 +148,7 @@ func testAccCheckServiceAccountDestroy(s *terraform.State) error {
 
 		// Verify it's actually a 404 error, not another error
 		if !helpers.IsNotFoundError(err) {
-			return fmt.Errorf("Unexpected error checking service account destruction: %v", err)
+			return fmt.Errorf("Unexpected error checking service account destruction: %w", err)
 		}
 	}
 
