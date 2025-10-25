@@ -3296,9 +3296,10 @@ components:
           example: rapid
           minLength: 1
           type: string
+        datastore:
+          $ref: '#/components/schemas/EmbeddedDatastoreSpec'
         datastoreId:
           description: The ID of the datastore instance to use (from ListDatastores).
-            If empty, a standard CockroachDB cluster will be created.
           example: dbi-qRGmqnr3EUxBZitpC3Moh
           pattern: ^(dbi-[a-zA-Z0-9-]+)?$
           type: string
@@ -4040,6 +4041,15 @@ components:
       - configYAML
       type: object
     Duration:
+      type: object
+    EmbeddedDatastoreSpec:
+      properties:
+        class:
+          description: The datastore class to use for the instance
+          example: cockroachdb-basic
+          type: string
+        cockroachdb:
+          $ref: '#/components/schemas/ClusterSpec'
       type: object
     EstimatedLineItem:
       properties:
