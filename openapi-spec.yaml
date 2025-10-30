@@ -5,12 +5,10 @@ info:
   description: Cloud API for AuthZed Dedicated
   termsOfService: https://authzed.com/terms-conditions
   title: AuthZed Cloud API
-  version: ""
+  version: 25r1
 externalDocs:
   description: Find out more at the official Authzed Docs site
   url: https://authzed.com/docs
-servers:
-- url: https://api.admin.stage.aws.authzed.net
 tags:
 - description: A permissions system defines a managed SpiceDB instance
   externalDocs:
@@ -91,7 +89,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -120,7 +118,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -150,7 +148,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -179,7 +177,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       requestBody:
@@ -222,7 +220,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -255,7 +253,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -292,7 +290,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       requestBody:
@@ -318,431 +316,6 @@ paths:
       tags:
       - system
       - datastore
-  /deployment-templates:
-    get:
-      description: list all deployment templates available to an organization
-      operationId: ListDeploymentTemplates
-      parameters:
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ListDeploymentTemplatesResponse'
-          description: OK
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - deployment
-  /deployment-templates/{deploymentTemplateID}:
-    get:
-      description: get a deployment template available to an organization by its ID
-      operationId: GetDeploymentTemplate
-      parameters:
-      - description: The ID of the Deployment Template
-        in: path
-        name: deploymentTemplateID
-        required: true
-        schema:
-          description: The ID of the Deployment Template
-          example: dt-YUCnUAA7QFAyalREJboOH
-          pattern: ^dt-[a-zA-Z0-9-]+$
-          readOnly: true
-          type: string
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GetDeploymentTemplateResponse'
-          description: OK
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - deployment
-  /organizations:
-    get:
-      description: list all organizations
-      operationId: ListOrganizations
-      parameters:
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ListOrganizationsResponse'
-          description: OK
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - organization
-    post:
-      description: create a new organization
-      operationId: CreateOrganization
-      parameters:
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateOrganizationRequest'
-      responses:
-        "201":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CreateOrganizationResponse'
-          description: Created
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - organization
-  /organizations/{organizationID}:
-    delete:
-      description: delete an organization by its ID. The organization must have no
-        permission systems.
-      operationId: DeleteOrganization
-      parameters:
-      - description: The ID of the Organization
-        in: path
-        name: organizationID
-        required: true
-        schema:
-          description: The ID of the Organization
-          example: org-example
-          pattern: ^org-[a-zA-Z0-9-]+$
-          type: string
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      responses:
-        "202":
-          description: Accepted
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - organization
-    get:
-      description: get an organization by its ID
-      operationId: GetOrganization
-      parameters:
-      - description: The ID of the Organization
-        in: path
-        name: organizationID
-        required: true
-        schema:
-          description: The ID of the Organization
-          example: org-example
-          pattern: ^org-[a-zA-Z0-9-]+$
-          type: string
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Organization'
-          description: OK
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - organization
-  /organizations/{organizationID}/payments:
-    put:
-      description: supply payment details for an organization
-      operationId: AddOrganizationPaymentDetails
-      parameters:
-      - description: The ID of the Organization
-        in: path
-        name: organizationID
-        required: true
-        schema:
-          description: The ID of the Organization
-          example: org-example
-          pattern: ^org-[a-zA-Z0-9-]+$
-          type: string
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AddOrganizationPaymentDetailsResponse'
-          description: OK
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - organization
-  /organizations/{organizationID}/roles:
-    get:
-      description: list all roles on an organization
-      operationId: ListOrganizationRoles
-      parameters:
-      - description: The ID of the Organization
-        in: path
-        name: organizationID
-        required: true
-        schema:
-          description: The ID of the Organization
-          example: org-example
-          pattern: ^org-[a-zA-Z0-9-]+$
-          type: string
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ListOrganizationRolesResponse'
-          description: OK
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - organization
-      - access management
-    post:
-      description: set a role on an organization
-      operationId: SetOrganizationRole
-      parameters:
-      - description: The ID of the Organization
-        in: path
-        name: organizationID
-        required: true
-        schema:
-          description: The ID of the Organization
-          example: org-example
-          pattern: ^org-[a-zA-Z0-9-]+$
-          type: string
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SetOrganizationRoleRequest'
-      responses:
-        "201":
-          description: Created
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - organization
-      - access management
-  /organizations/{organizationID}/roles/{subjectId}:
-    delete:
-      description: delete a role on an organization
-      operationId: DeleteOrganizationRole
-      parameters:
-      - description: The ID of the Organization
-        in: path
-        name: organizationID
-        required: true
-        schema:
-          description: The ID of the Organization
-          example: org-example
-          pattern: ^org-[a-zA-Z0-9-]+$
-          type: string
-      - description: The ID of the subject whose role is to be deleted
-        in: path
-        name: subjectId
-        required: true
-        schema:
-          description: The ID of the subject whose role is to be deleted
-          example: user-12345
-          pattern: ^user-[\$a-zA-Z0-9-]+$
-          type: string
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      responses:
-        "202":
-          description: Accepted
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - organization
-      - access management
-  /organizations/internal:
-    post:
-      description: create a new organization as an internal user
-      operationId: CreateOrganizationInternal
-      parameters:
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateOrganizationInternalRequest'
-      responses:
-        "201":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CreateOrganizationInternalResponse'
-          description: Created
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - organization
-  /platform:
-    get:
-      description: get platform capabilities for the currently running instance
-      operationId: GetPlatform
-      parameters:
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GetPlatformResponse'
-          description: OK
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - system
   /ps:
     get:
       description: list all permissions systems
@@ -752,7 +325,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -762,40 +335,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ListPermissionsSystemsResponse'
           description: OK
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - permissions system
-    post:
-      description: create a new permissions system with associated database and secret
-        resources
-      operationId: CreatePermissionsSystem
-      parameters:
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreatePermissionsSystemRequest'
-      responses:
-        "201":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CreatePermissionsSystemResponse'
-          description: Created
         "400":
           description: Input parameters are incorrect
         "401":
@@ -822,7 +361,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -852,7 +391,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -886,7 +425,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       requestBody:
@@ -926,7 +465,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -962,7 +501,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       requestBody:
@@ -1015,7 +554,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -1051,7 +590,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -1106,7 +645,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       requestBody:
@@ -1153,7 +692,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -1189,7 +728,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       requestBody:
@@ -1242,7 +781,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -1278,7 +817,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -1333,7 +872,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       requestBody:
@@ -1380,7 +919,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -1416,7 +955,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       requestBody:
@@ -1470,7 +1009,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -1507,7 +1046,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -1566,7 +1105,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       requestBody:
@@ -1620,7 +1159,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -1665,7 +1204,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       requestBody:
@@ -1725,7 +1264,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -1768,7 +1307,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -1829,7 +1368,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       requestBody:
@@ -1876,7 +1415,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -1885,126 +1424,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ListDeploymentsResponse'
-          description: OK
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - permissions system
-    post:
-      description: create a deployment for a permissions system
-      operationId: CreateDeployment
-      parameters:
-      - description: The ID of the Permissions System to create the Deployment in
-        in: path
-        name: permissionsSystemID
-        required: true
-        schema:
-          description: The ID of the Permissions System to create the Deployment in
-          pattern: ^ps-[a-zA-Z0-9-]+$
-          type: string
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateDeploymentRequest'
-      responses:
-        "201":
-          description: Created
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - permissions system
-  /ps/{permissionsSystemID}/deployments/{deploymentID}:
-    delete:
-      description: delete a deployment for a permissions system. All associated resources
-        will be deleted.
-      operationId: DeleteDeployment
-      parameters:
-      - in: path
-        name: permissionsSystemID
-        required: true
-        schema:
-          pattern: ^ps-[a-zA-Z0-9-]+$
-          type: string
-      - in: path
-        name: deploymentID
-        required: true
-        schema:
-          pattern: ^dp-[a-zA-Z0-9-]+$
-          type: string
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      responses:
-        "202":
-          description: Accepted
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - permissions system
-    put:
-      description: update a deployment for a permissions system
-      operationId: UpdateDeployment
-      parameters:
-      - description: The ID of the Permissions System
-        in: path
-        name: permissionsSystemID
-        required: true
-        schema:
-          description: The ID of the Permissions System
-          pattern: ^ps-[a-zA-Z0-9-]+$
-          type: string
-      - description: The ID of the Deployment to update
-        in: path
-        name: deploymentID
-        required: true
-        schema:
-          description: The ID of the Deployment to update
-          pattern: ^dp-[a-zA-Z0-9-]+$
-          type: string
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateDeploymentRequest'
-      responses:
-        "200":
           description: OK
         "400":
           description: Input parameters are incorrect
@@ -2033,7 +1452,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -2069,7 +1488,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -2114,7 +1533,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -2149,7 +1568,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -2184,7 +1603,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       requestBody:
@@ -2224,7 +1643,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -2259,7 +1678,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       requestBody:
@@ -2284,82 +1703,6 @@ paths:
       - auth: []
       tags:
       - permissions system
-  /ps/{permissionsSystemID}/fgam/config:
-    get:
-      description: download FGAM configuration as YAML
-      operationId: DownloadFGAMConfig
-      parameters:
-      - description: The ID of the Permissions System
-        in: path
-        name: permissionsSystemID
-        required: true
-        schema:
-          description: The ID of the Permissions System
-          example: ps-YUCnUAA7QFAyalREJboOH
-          pattern: ^ps-[a-zA-Z0-9-]+$
-          type: string
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DownloadFGAMConfigResponse'
-          description: OK
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - access management
-    post:
-      description: upload FGAM configuration as YAML
-      operationId: UploadFGAMConfig
-      parameters:
-      - description: The ID of the Permissions System
-        in: path
-        name: permissionsSystemID
-        required: true
-        schema:
-          description: The ID of the Permissions System
-          example: ps-YUCnUAA7QFAyalREJboOH
-          pattern: ^ps-[a-zA-Z0-9-]+$
-          type: string
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UploadFGAMConfigRequest'
-      responses:
-        "201":
-          description: Created
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - access management
   /ps/{permissionsSystemID}/materialize:
     get:
       description: list all materialize clusters for a permissions system
@@ -2386,7 +1729,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -2445,7 +1788,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -2466,328 +1809,6 @@ paths:
       tags:
       - permissions system
       - performance insights
-  /ps/{permissionsSystemID}/perf-insights/topk-range:
-    get:
-      description: returns a range query over the top K most expensive permissions
-        API calls
-      operationId: PerformanceInsightsTopKRange
-      parameters:
-      - description: The time period to analyze. The default is the last hour.
-        in: query
-        name: period
-        schema:
-          $ref: '#/components/schemas/Period'
-      - description: The number of times this API shape was called
-        in: query
-        name: count
-        schema:
-          description: The number of times this API shape was called
-          type: integer
-      - description: The field to sort the results by. The default is total impact,
-          which is defined as P50 latency * count over the period.
-        in: query
-        name: sortBy
-        schema:
-          $ref: '#/components/schemas/SortBy'
-      - description: The globally unique ID for the Permissions System
-        in: path
-        name: permissionsSystemID
-        required: true
-        schema:
-          description: The globally unique ID for the Permissions System
-          pattern: ^ps-[a-zA-Z0-9-]+$
-          readOnly: true
-          type: string
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PerfInsightsTopKRangeResponse'
-          description: OK
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - permissions system
-      - performance insights
-  /ps/{permissionsSystemID}/roles:
-    get:
-      description: list all roles on a permissions systems
-      operationId: ListPermissionsSystemRoles
-      parameters:
-      - description: The ID of the Permissions System
-        in: path
-        name: permissionsSystemID
-        required: true
-        schema:
-          description: The ID of the Permissions System
-          example: ps-YUCnUAA7QFAyalREJboOH
-          pattern: ^ps-[a-zA-Z0-9-]+$
-          type: string
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ListPermissionsSystemRolesResponse'
-          description: OK
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - permissions system
-      - access management
-    post:
-      description: set a role on a permissions system
-      operationId: SetPermissionsSystemRole
-      parameters:
-      - description: The ID of the Permissions System
-        in: path
-        name: permissionsSystemID
-        required: true
-        schema:
-          description: The ID of the Permissions System
-          example: ps-YUCnUAA7QFAyalREJboOH
-          pattern: ^ps-[a-zA-Z0-9-]+$
-          type: string
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SetPermissionsSystemRoleRequest'
-      responses:
-        "201":
-          description: Created
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - permissions system
-      - access management
-  /ps/{permissionsSystemID}/roles/{subjectId}:
-    delete:
-      description: delete a role on a permissions system
-      operationId: DeletePermissionsSystemRole
-      parameters:
-      - description: The ID of the Permissions System
-        in: path
-        name: permissionsSystemID
-        required: true
-        schema:
-          description: The ID of the Permissions System
-          example: ps-YUCnUAA7QFAyalREJboOH
-          pattern: ^ps-[a-zA-Z0-9-]+$
-          type: string
-      - description: The ID of the subject whose role is to be deleted
-        in: path
-        name: subjectId
-        required: true
-        schema:
-          description: The ID of the subject whose role is to be deleted
-          example: user-12345
-          type: string
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      responses:
-        "202":
-          description: Accepted
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - permissions system
-      - access management
-  /ps/{permissionsSystemID}/tokens:
-    get:
-      description: list all preshared keys/tokens for a permissions system
-      operationId: ListPermissionsSystemTokens
-      parameters:
-      - in: path
-        name: permissionsSystemID
-        required: true
-        schema:
-          pattern: ^ps-[a-zA-Z0-9-]+$
-          type: string
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ListPermissionsSystemTokensResponse'
-          description: OK
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - permissions system
-      - access management
-    post:
-      description: create a new preshared key/token for a permissions system
-      operationId: CreatePermissionsSystemToken
-      parameters:
-      - in: path
-        name: permissionsSystemID
-        required: true
-        schema:
-          pattern: ^ps-[a-zA-Z0-9-]+$
-          type: string
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      responses:
-        "201":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CreatePermissionsSystemTokenResponse'
-          description: Created
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - permissions system
-      - access management
-  /ps/{permissionsSystemID}/tokens/{tokenName}:
-    delete:
-      description: revokes a preshared key/token for a permissions system
-      operationId: RevokePermissionsSystemToken
-      parameters:
-      - in: path
-        name: permissionsSystemID
-        required: true
-        schema:
-          pattern: ^ps-[a-zA-Z0-9-]+$
-          type: string
-      - description: The name/prefix of the token to revoke
-        in: path
-        name: tokenName
-        required: true
-        schema:
-          description: The name/prefix of the token to revoke
-          type: string
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      responses:
-        "202":
-          description: Accepted
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - permissions system
-      - access management
-  /ps/estimated-cost:
-    post:
-      description: get estimated costs for a permissions system configuration
-      operationId: PermissionsSystemEstimatedCost
-      parameters:
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PermissionsSystemEstimatedCostRequest'
-      responses:
-        "201":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PermissionsSystemEstimatedCostResponse'
-          description: Created
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - permissions system
   /regions:
     get:
       description: list all regions available for SpiceDB clusters
@@ -2797,7 +1818,7 @@ paths:
         in: header
         name: X-API-Version
         schema:
-          default: internal
+          default: 25r1
           description: The version of the API to use. Must be specified.
           type: string
       responses:
@@ -2817,106 +1838,6 @@ paths:
       - auth: []
       tags:
       - permissions system
-  /user/accept-invitation:
-    post:
-      description: accept a role invitation using an invitation code
-      operationId: AcceptRoleInvitation
-      parameters:
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AcceptRoleInvitationRequest'
-      responses:
-        "201":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AcceptRoleInvitationResponse'
-          description: Created
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - organization
-      - permissions system
-      - access management
-  /user/invite:
-    post:
-      description: send a role invitation via email for an organization or permissions
-        system
-      operationId: SendRoleInvitation
-      parameters:
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SendRoleInvitationRequest'
-      responses:
-        "201":
-          description: Created
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - organization
-      - permissions system
-      - access management
-  /user/metadata:
-    put:
-      description: update the current authenticated user's metadata
-      operationId: UpdateMyMetadata
-      parameters:
-      - description: The version of the API to use. Must be specified.
-        in: header
-        name: X-API-Version
-        schema:
-          default: internal
-          description: The version of the API to use. Must be specified.
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateMyMetadataRequest'
-      responses:
-        "200":
-          description: OK
-        "400":
-          description: Input parameters are incorrect
-        "401":
-          description: The credentials provided are invalid
-        "403":
-          description: Missing permission(s) to perform this operation
-      security:
-      - auth: []
-      tags:
-      - user
-      - metadata
 components:
   schemas:
     APICategory:
@@ -2969,43 +1890,6 @@ components:
           description: The ID of the API shape
           type: string
       type: object
-    AcceptRoleInvitationRequest:
-      properties:
-        email:
-          description: The email address of the person accepting the invitation
-          example: accepter@example.com
-          maxLength: 255
-          minLength: 1
-          type: string
-        invitationCode:
-          description: The invitation code (JWT) to accept
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-          minLength: 1
-          type: string
-      required:
-      - invitationCode
-      - email
-      type: object
-    AcceptRoleInvitationResponse:
-      properties:
-        roleName:
-          $ref: '#/components/schemas/InvitationRoleName'
-        targetResourceId:
-          description: The ID of the resource where the role was granted
-          example: org-example
-          maxLength: 255
-          minLength: 1
-          type: string
-      type: object
-    AddOrganizationPaymentDetailsResponse:
-      properties:
-        url:
-          description: The Stripe checkout session URL
-          example: https://checkout.stripe.com/pay/cs_test_...
-          type: string
-      required:
-      - url
-      type: object
     AuditLogFeatureConfig:
       properties:
         disabledOnMethods:
@@ -3038,19 +1922,6 @@ components:
       - aws-s3
       - gcp-cloud-storage
       type: string
-    AuthzedRole:
-      properties:
-        kind:
-          $ref: '#/components/schemas/RoleKind'
-        metadata:
-          $ref: '#/components/schemas/SubjectMetadata'
-        subjectId:
-          description: The ID of the subject this role applies to, e.g., 'user-12345'
-          type: string
-      required:
-      - kind
-      - subjectId
-      type: object
     Capability:
       enum:
       - version_pinning
@@ -3127,14 +1998,6 @@ components:
         secretName:
           type: string
       type: object
-    CockroachDBOverlapStrategy:
-      enum:
-      - request
-      - prefix
-      - static
-      - insecure
-      - unknown
-      type: string
     CreateDatastoreRequest:
       properties:
         cockroachdb:
@@ -3156,34 +2019,6 @@ components:
         datastore:
           $ref: '#/components/schemas/Datastore'
       type: object
-    CreateDeploymentRequest:
-      properties:
-        deploymentTemplateID:
-          description: The ID of the Deployment Template to use for this Deployment
-          example: dt-dev
-          minLength: 1
-          type: string
-        name:
-          description: The name of the Deployment
-          maxLength: 64
-          minLength: 1
-          type: string
-        regionId:
-          description: The region where the Deployment will be created
-          example: rg-us-west-2
-          minLength: 1
-          type: string
-        replicas:
-          description: The number of replicas on this Deployment
-          maximum: 32
-          minimum: 1
-          type: integer
-      required:
-      - name
-      - deploymentTemplateID
-      - replicas
-      - regionId
-      type: object
     CreateExternalMetricsTokenResponse:
       properties:
         id:
@@ -3200,153 +2035,6 @@ components:
       required:
       - id
       - secret
-      type: object
-    CreateOrganizationInternalRequest:
-      properties:
-        description:
-          description: The organization description
-          maxLength: 1000
-          type: string
-        orbBillingId:
-          description: The ORB billing ID for the organization
-          maxLength: 1000
-          minLength: 1
-          type: string
-        sub:
-          description: The subject ID that will become the admin user of the organization
-          minLength: 1
-          type: string
-        title:
-          description: The organization title
-          maxLength: 255
-          minLength: 1
-          type: string
-      required:
-      - title
-      - sub
-      - orbBillingId
-      type: object
-    CreateOrganizationInternalResponse:
-      properties:
-        capabilities:
-          description: The capabilities available to the organization
-          items:
-            $ref: '#/components/schemas/OrganizationCapability'
-          type: array
-        description:
-          description: The organization description
-          type: string
-        id:
-          description: The created organization ID
-          pattern: ^org-[a-zA-Z0-9-]+$
-          type: string
-        slug:
-          description: The organization slug
-          type: string
-        title:
-          description: The organization title
-          type: string
-      required:
-      - id
-      - title
-      type: object
-    CreateOrganizationRequest:
-      properties:
-        description:
-          description: The organization description
-          maxLength: 1000
-          type: string
-        email:
-          description: The primary email associated with the organization
-          maxLength: 255
-          minLength: 1
-          type: string
-        title:
-          description: The organization title
-          maxLength: 255
-          minLength: 1
-          type: string
-      required:
-      - title
-      - email
-      type: object
-    CreateOrganizationResponse:
-      properties:
-        description:
-          description: The organization description
-          type: string
-        id:
-          description: The created organization ID
-          pattern: ^org-[a-zA-Z0-9-]+$
-          type: string
-        slug:
-          description: The organization slug
-          type: string
-        title:
-          description: The organization title
-          type: string
-      required:
-      - id
-      - title
-      type: object
-    CreatePermissionsSystemRequest:
-      properties:
-        channel:
-          description: The SpiceDB channel to use
-          example: rapid
-          minLength: 1
-          type: string
-        datastoreId:
-          description: The ID of the datastore instance to use (from ListDatastores).
-            If empty, a standard CockroachDB cluster will be created.
-          example: dbi-qRGmqnr3EUxBZitpC3Moh
-          pattern: ^(dbi-[a-zA-Z0-9-]+)?$
-          type: string
-        deployments:
-          description: The deployment configurations for the Permissions System
-          items:
-            $ref: '#/components/schemas/DeploymentConfig'
-          minItems: 1
-          nullable: true
-          type: array
-        name:
-          description: The name of the Permissions System
-          example: My Permissions System
-          maxLength: 100
-          minLength: 1
-          type: string
-        systemType:
-          $ref: '#/components/schemas/InternalSystemType'
-      required:
-      - name
-      - systemType
-      - deployments
-      - channel
-      type: object
-    CreatePermissionsSystemResponse:
-      properties:
-        databaseID:
-          description: The ID of the created database
-          minLength: 1
-          type: string
-        permissionsSystem:
-          $ref: '#/components/schemas/PermissionsSystem'
-        secretName:
-          description: The name of the created secret
-          minLength: 1
-          type: string
-      required:
-      - permissionsSystem
-      - databaseID
-      - secretName
-      type: object
-    CreatePermissionsSystemTokenResponse:
-      properties:
-        tokenContents:
-          description: The full token contents. This will only be returned once.
-          type: string
-      required:
-      - tokenContents
       type: object
     CreatePolicyRequest:
       properties:
@@ -3717,28 +2405,6 @@ components:
           description: The number of virtual CPUs allocated to this Datastore.
           type: integer
       type: object
-    DatastoreRegionConfig:
-      properties:
-        regionID:
-          description: The region ID for the datastore node
-          type: string
-        replicaCount:
-          description: The number of replicas for the datastore
-          minimum: 0
-          type: integer
-        storageGiBPerNode:
-          description: The storage per node for the datastore in GiB
-          type: number
-        vCPUPerNode:
-          description: The number of vCPUs per replica
-          minimum: 0
-          type: integer
-      required:
-      - regionID
-      - replicaCount
-      - vCPUPerNode
-      - storageGiBPerNode
-      type: object
     DatastoreTemplate:
       properties:
         allowOverrides:
@@ -3839,36 +2505,6 @@ components:
       - dnsName
       - regionId
       type: object
-    DeploymentConfig:
-      properties:
-        deploymentTemplateID:
-          description: The ID of the deployment template to use
-          example: dt-basic-template
-          pattern: ^dt-[a-zA-Z0-9-]+$
-          type: string
-        name:
-          description: Optional name for the deployment. If not provided, will be
-            auto-generated based on the region.
-          example: my-deployment
-          maxLength: 64
-          minLength: 1
-          type: string
-        regionID:
-          description: The ID of the region where the deployment will be created
-          example: rg-us-west-1
-          pattern: ^rg-[a-zA-Z0-9-]+$
-          type: string
-        replicas:
-          description: The number of replicas for the deployment
-          example: 3
-          maximum: 32
-          minimum: 1
-          type: integer
-      required:
-      - deploymentTemplateID
-      - regionID
-      - replicas
-      type: object
     DeploymentState:
       properties:
         message:
@@ -3891,211 +2527,7 @@ components:
       - VALIDATING
       - VALIDATION_FAILED
       type: string
-    DeploymentTemplate:
-      properties:
-        compute:
-          description: The compute allocated for Deployments using this Template,
-            described in millicores
-          type: integer
-        datastoreCockroachDBTxOverlapStrategy:
-          $ref: '#/components/schemas/CockroachDBOverlapStrategy'
-        datastoreColumnOptimization:
-          description: Whether the experimental datastore column optimization is enabled
-            in Deployments using this Template
-          type: boolean
-        datastoreFollowerReadDelay:
-          description: amount of time to subtract from computed revision to ensure
-            they are sufficiently in the past to enable follower reads. Used for cockroach/spanner
-            and postgres read-replicas. Described in seconds
-          type: number
-        datastoreGCInterval:
-          description: The interval at which revision garbage collection runs in the
-            datastore for Deployments using this Template, in seconds
-          minimum: 0
-          type: integer
-        datastoreGCWindow:
-          description: The window of time before which revisions are garbage collected
-            in the datastore for Deployments using this Template, in seconds
-          minimum: 0
-          type: integer
-        datastoreRevisionQuantizationInterval:
-          description: The quantization interval for revisions in the datastore for
-            Deployments using this Template, in seconds
-          minimum: 0
-          type: integer
-        datastoreRevisionQuantizationMaxStalenessPercent:
-          description: The maximum staleness percentage for revision quantization
-            in Deployments using this Template, where 0.1 is 10%, 1 = 100%
-          type: number
-        grpcMaxConnectionAge:
-          description: The maximum age of a gRPC connection in Deployments using this
-            Template, described in seconds
-          minimum: 0
-          type: integer
-        httpGatewayEnabled:
-          description: Whether the HTTP gateway is enabled for Deployments using this
-            Template
-          type: boolean
-        id:
-          description: The globally unique ID for this Deployment Template
-          type: string
-        internalReference:
-          deprecated: true
-          description: The internal reference of the Deployment Template. DO NOT USE.
-            Prefer ID or the normal name.
-          type: string
-        limitBulkExportRelationships:
-          description: The maximum number of relationships that can be exported in
-            a single BulkExport request in Deployments using this Template
-          minimum: 0
-          type: integer
-        limitDatastoreReadPageSize:
-          description: The maximum page size that will be loaded into memory from
-            the datastore at a time in Deployments using this Template
-          minimum: 0
-          type: integer
-        limitDeleteRelationships:
-          description: The maximum number of relationships that can be deleted in
-            a single request in Deployments using this Template
-          minimum: 0
-          type: integer
-        limitDispatchChunkSize:
-          description: The maximum number of object IDs in a dispatched request in
-            Deployments using this Template
-          minimum: 0
-          type: integer
-        limitDispatchDepth:
-          description: The maximum recursion depth for nested calls in Deployments
-            using this Template. This is used to prevent infinite recursion in dispatches.
-          minimum: 0
-          type: integer
-        limitLookupResourcesPageSize:
-          description: The maximum page size that can be used for LookupResources
-            requests in Deployments using this Template
-          minimum: 0
-          type: integer
-        limitReadRelationshipsPageSize:
-          description: The maximum page size that can be used for ReadRelationships
-            requests in Deployments using this Template
-          minimum: 0
-          type: integer
-        limitRelationshipsPreconditions:
-          description: The maximum number of preconditions that can be included in
-            a single WriteRelationships or DeleteRelationships request in Deployments
-            using this Template
-          minimum: 0
-          type: integer
-        limitRequestCaveatContextSize:
-          description: The maximum allowed size of request caveat context in bytes
-            for Deployments using this Template. A value of zero or less means no
-            limit
-          minimum: 0
-          type: integer
-        limitStoredCaveatContextSize:
-          description: The maximum allowed size of stored caveat context per relationship
-            in bytes for Deployments using this Template
-          minimum: 0
-          type: integer
-        limitWriteRelationshipsUpdates:
-          description: The maximum number of updates that can be made in a single
-            WriteRelationships request in Deployments using this Template
-          minimum: 0
-          type: integer
-        memory:
-          description: The memory allocated for Deployments using this Template, described
-            in MiB
-          type: integer
-        name:
-          description: The name of the Deployment Template
-          type: string
-        relationshipExpirationEnabled:
-          description: Whether experimental support for first-class relationship expiration
-            is enabled in Deployments using this Template
-          type: boolean
-        requireSchemaPrefixes:
-          description: Whether schema prefixes are required in Deployments using this
-            Template
-          type: boolean
-        systemType:
-          $ref: '#/components/schemas/SystemType'
-        watchableSchemaCacheEnabled:
-          description: Whether the experimental schema cache which makes use of the
-            Watch API to keep the cache updated is enabled in Deployments using this
-            Template
-          type: boolean
-        watchableSchemaHeartbeatInterval:
-          description: The heartbeat interval for the experimental schema cache in
-            Deployments using this Template, described in seconds
-          minimum: 0
-          type: integer
-      required:
-      - id
-      type: object
-    DownloadFGAMConfigResponse:
-      properties:
-        configYAML:
-          description: The FGAM configuration as a YAML string
-          type: string
-      required:
-      - configYAML
-      type: object
     Duration:
-      type: object
-    EstimatedLineItem:
-      properties:
-        estimatedCost:
-          $ref: '#/components/schemas/EstimatedPricesByTime'
-        quantity:
-          description: The quantity for the line item
-          example: 4
-          type: number
-        quantityUnit:
-          description: The unit of measurement for the quantity
-          example: vCPU
-          type: string
-        regionName:
-          description: The region name for the line item
-          example: us-central1
-          type: string
-        title:
-          description: The title of the line item
-          example: SpiceDB Compute
-          type: string
-      required:
-      - title
-      - regionName
-      - estimatedCost
-      - quantity
-      - quantityUnit
-      type: object
-    EstimatedPrice:
-      properties:
-        currencyISOCode:
-          description: The ISO code of the currency
-          example: USD
-          type: string
-        formattedCost:
-          description: The formatted cost with currency symbol
-          example: $2.50
-          type: string
-        numericCost:
-          description: The numeric cost value
-          example: 2.5
-          type: number
-      required:
-      - formattedCost
-      - numericCost
-      - currencyISOCode
-      type: object
-    EstimatedPricesByTime:
-      properties:
-        hourly:
-          $ref: '#/components/schemas/EstimatedPrice'
-        monthly:
-          $ref: '#/components/schemas/EstimatedPrice'
-      required:
-      - hourly
-      - monthly
       type: object
     Feature:
       properties:
@@ -4112,146 +2544,6 @@ components:
       properties:
         datastore:
           $ref: '#/components/schemas/Datastore'
-      type: object
-    GetDeploymentTemplateResponse:
-      properties:
-        compute:
-          description: The compute allocated for Deployments using this Template,
-            described in millicores
-          type: integer
-        datastoreCockroachDBTxOverlapStrategy:
-          $ref: '#/components/schemas/CockroachDBOverlapStrategy'
-        datastoreColumnOptimization:
-          description: Whether the experimental datastore column optimization is enabled
-            in Deployments using this Template
-          type: boolean
-        datastoreFollowerReadDelay:
-          description: amount of time to subtract from computed revision to ensure
-            they are sufficiently in the past to enable follower reads. Used for cockroach/spanner
-            and postgres read-replicas. Described in seconds
-          type: number
-        datastoreGCInterval:
-          description: The interval at which revision garbage collection runs in the
-            datastore for Deployments using this Template, in seconds
-          minimum: 0
-          type: integer
-        datastoreGCWindow:
-          description: The window of time before which revisions are garbage collected
-            in the datastore for Deployments using this Template, in seconds
-          minimum: 0
-          type: integer
-        datastoreRevisionQuantizationInterval:
-          description: The quantization interval for revisions in the datastore for
-            Deployments using this Template, in seconds
-          minimum: 0
-          type: integer
-        datastoreRevisionQuantizationMaxStalenessPercent:
-          description: The maximum staleness percentage for revision quantization
-            in Deployments using this Template, where 0.1 is 10%, 1 = 100%
-          type: number
-        grpcMaxConnectionAge:
-          description: The maximum age of a gRPC connection in Deployments using this
-            Template, described in seconds
-          minimum: 0
-          type: integer
-        httpGatewayEnabled:
-          description: Whether the HTTP gateway is enabled for Deployments using this
-            Template
-          type: boolean
-        id:
-          description: The globally unique ID for this Deployment Template
-          type: string
-        internalReference:
-          deprecated: true
-          description: The internal reference of the Deployment Template. DO NOT USE.
-            Prefer ID or the normal name.
-          type: string
-        limitBulkExportRelationships:
-          description: The maximum number of relationships that can be exported in
-            a single BulkExport request in Deployments using this Template
-          minimum: 0
-          type: integer
-        limitDatastoreReadPageSize:
-          description: The maximum page size that will be loaded into memory from
-            the datastore at a time in Deployments using this Template
-          minimum: 0
-          type: integer
-        limitDeleteRelationships:
-          description: The maximum number of relationships that can be deleted in
-            a single request in Deployments using this Template
-          minimum: 0
-          type: integer
-        limitDispatchChunkSize:
-          description: The maximum number of object IDs in a dispatched request in
-            Deployments using this Template
-          minimum: 0
-          type: integer
-        limitDispatchDepth:
-          description: The maximum recursion depth for nested calls in Deployments
-            using this Template. This is used to prevent infinite recursion in dispatches.
-          minimum: 0
-          type: integer
-        limitLookupResourcesPageSize:
-          description: The maximum page size that can be used for LookupResources
-            requests in Deployments using this Template
-          minimum: 0
-          type: integer
-        limitReadRelationshipsPageSize:
-          description: The maximum page size that can be used for ReadRelationships
-            requests in Deployments using this Template
-          minimum: 0
-          type: integer
-        limitRelationshipsPreconditions:
-          description: The maximum number of preconditions that can be included in
-            a single WriteRelationships or DeleteRelationships request in Deployments
-            using this Template
-          minimum: 0
-          type: integer
-        limitRequestCaveatContextSize:
-          description: The maximum allowed size of request caveat context in bytes
-            for Deployments using this Template. A value of zero or less means no
-            limit
-          minimum: 0
-          type: integer
-        limitStoredCaveatContextSize:
-          description: The maximum allowed size of stored caveat context per relationship
-            in bytes for Deployments using this Template
-          minimum: 0
-          type: integer
-        limitWriteRelationshipsUpdates:
-          description: The maximum number of updates that can be made in a single
-            WriteRelationships request in Deployments using this Template
-          minimum: 0
-          type: integer
-        memory:
-          description: The memory allocated for Deployments using this Template, described
-            in MiB
-          type: integer
-        name:
-          description: The name of the Deployment Template
-          type: string
-        relationshipExpirationEnabled:
-          description: Whether experimental support for first-class relationship expiration
-            is enabled in Deployments using this Template
-          type: boolean
-        requireSchemaPrefixes:
-          description: Whether schema prefixes are required in Deployments using this
-            Template
-          type: boolean
-        systemType:
-          $ref: '#/components/schemas/SystemType'
-        watchableSchemaCacheEnabled:
-          description: Whether the experimental schema cache which makes use of the
-            Watch API to keep the cache updated is enabled in Deployments using this
-            Template
-          type: boolean
-        watchableSchemaHeartbeatInterval:
-          description: The heartbeat interval for the experimental schema cache in
-            Deployments using this Template, described in seconds
-          minimum: 0
-          type: integer
-      required:
-      - id
       type: object
     GetFeatureAuditLogResponse:
       properties:
@@ -4320,20 +2612,6 @@ components:
       required:
       - id
       - systemType
-      type: object
-    GetPlatformResponse:
-      properties:
-        capabilities:
-          description: List of platform capabilities
-          items:
-            $ref: '#/components/schemas/PlatformCapability'
-          type: array
-        cloudApiDocumentationEndpoint:
-          description: The endpoint for the Cloud API documentation
-          type: string
-      required:
-      - capabilities
-      - cloudApiDocumentationEndpoint
       type: object
     GetPolicyResponse:
       properties:
@@ -4550,17 +2828,6 @@ components:
       - name
       - id
       type: object
-    InternalSystemType:
-      enum:
-      - development
-      - production
-      type: string
-    InvitationRoleName:
-      enum:
-      - org_admin
-      - ps_admin
-      - ps_viewer
-      type: string
     ListChannelsAndVersionsResponse:
       properties:
         channels:
@@ -4586,16 +2853,6 @@ components:
         $ref: '#/components/schemas/Datastore'
       nullable: true
       type: array
-    ListDeploymentTemplatesResponse:
-      properties:
-        deploymentTemplates:
-          description: The list of DeploymentTemplate
-          items:
-            $ref: '#/components/schemas/DeploymentTemplate'
-          type: array
-      required:
-      - deploymentTemplates
-      type: object
     ListDeploymentsResponse:
       items:
         $ref: '#/components/schemas/Deployment'
@@ -4637,52 +2894,6 @@ components:
       required:
       - clusters
       type: object
-    ListOrganizationRolesResponse:
-      properties:
-        canGrantRoles:
-          description: Whether the current user can grant roles on this organization
-          type: boolean
-        roles:
-          description: List of roles for the Organization. Each role includes its
-            kind and the subject ID it applies to.
-          items:
-            $ref: '#/components/schemas/OrganizationRole'
-          type: array
-      required:
-      - roles
-      - canGrantRoles
-      type: object
-    ListOrganizationsResponse:
-      properties:
-        organizations:
-          description: List of organizations
-          items:
-            $ref: '#/components/schemas/Organization'
-          type: array
-      required:
-      - organizations
-      type: object
-    ListPermissionsSystemRolesResponse:
-      properties:
-        canGrantRoles:
-          description: Whether the current user can grant roles on this permissions
-            system
-          type: boolean
-        roles:
-          description: List of roles for the Permissions System. Each role includes
-            its kind and the subject ID it applies to.
-          items:
-            $ref: '#/components/schemas/AuthzedRole'
-          type: array
-      required:
-      - roles
-      - canGrantRoles
-      type: object
-    ListPermissionsSystemTokensResponse:
-      items:
-        $ref: '#/components/schemas/PermissionsSystemToken'
-      nullable: true
-      type: array
     ListPermissionsSystemsResponse:
       items:
         $ref: '#/components/schemas/PermissionsSystem'
@@ -4820,70 +3031,6 @@ components:
         prometheus:
           $ref: '#/components/schemas/PrometheusMetricExport'
       type: object
-    OrgRoleKind:
-      enum:
-      - admin
-      - member
-      type: string
-    Organization:
-      properties:
-        capabilities:
-          description: The capabilities available to the organization
-          items:
-            $ref: '#/components/schemas/OrganizationCapability'
-          type: array
-        description:
-          description: The organization description
-          example: An example organization
-          type: string
-        hasPaymentInfo:
-          description: Whether payment information has been provided for this organization
-          type: boolean
-        id:
-          description: The organization ID
-          example: org-example
-          pattern: ^org-[a-zA-Z0-9-]+$
-          type: string
-        paymentPortalUrl:
-          description: The URL for the user payment portal
-          type: string
-        title:
-          description: The organization title
-          example: Example Organization
-          type: string
-      required:
-      - id
-      - title
-      - hasPaymentInfo
-      type: object
-    OrganizationCapability:
-      enum:
-      - role_management
-      - create_ps
-      - delete
-      - manage_payments
-      - create_datastore
-      type: string
-    OrganizationRole:
-      properties:
-        kind:
-          $ref: '#/components/schemas/OrgRoleKind'
-        metadata:
-          $ref: '#/components/schemas/SubjectMetadata'
-        subjectId:
-          description: The ID of the subject this role applies to, e.g., 'user-12345'
-          type: string
-      required:
-      - kind
-      - subjectId
-      type: object
-    PerfInsightsTopKRangeResponse:
-      properties:
-        prometheusJSON:
-          description: The Prometheus query result in JSON format for the top K API
-            shapes over the specified time range.
-          type: string
-      type: object
     PerfInsightsTopKResponse:
       properties:
         shapes:
@@ -5020,42 +3167,6 @@ components:
       - id
       - type
       type: object
-    PermissionsSystemEstimatedCostRequest:
-      properties:
-        datastoreRegionConfig:
-          description: The datastore region configuration for the Permissions System
-          items:
-            $ref: '#/components/schemas/DatastoreRegionConfig'
-          nullable: true
-          type: array
-        deployments:
-          description: The deployment configurations for the Permissions System
-          items:
-            $ref: '#/components/schemas/DeploymentConfig'
-          minItems: 1
-          nullable: true
-          type: array
-        systemType:
-          $ref: '#/components/schemas/InternalSystemType'
-      required:
-      - systemType
-      - deployments
-      - datastoreRegionConfig
-      type: object
-    PermissionsSystemEstimatedCostResponse:
-      properties:
-        estimatedTotalCost:
-          $ref: '#/components/schemas/EstimatedPricesByTime'
-        lineItems:
-          description: List of estimated cost line items
-          items:
-            $ref: '#/components/schemas/EstimatedLineItem'
-          nullable: true
-          type: array
-      required:
-      - lineItems
-      - estimatedTotalCost
-      type: object
     PermissionsSystemFeature:
       enum:
       - WorkloadIsolation
@@ -5087,23 +3198,6 @@ components:
       - UNKNOWN
       - UPGRADE_ERROR
       - UPGRADING
-      type: string
-    PermissionsSystemToken:
-      properties:
-        name:
-          description: The display name/prefix of the token
-          type: string
-        prefix:
-          description: The prefix of the token
-          type: string
-      required:
-      - name
-      - prefix
-      type: object
-    PlatformCapability:
-      enum:
-      - UserOrgCreation
-      - DatadogExport
       type: string
     Policy:
       properties:
@@ -5245,11 +3339,6 @@ components:
       - permissions
       - id
       type: object
-    RoleKind:
-      enum:
-      - admin
-      - viewer
-      type: string
     RotateExternalMetricsTokenResponse:
       properties:
         secret:
@@ -5257,31 +3346,6 @@ components:
           type: string
       required:
       - secret
-      type: object
-    SendRoleInvitationRequest:
-      properties:
-        inviteeEmail:
-          description: The email address of the invitee
-          example: invitee@example.com
-          maxLength: 255
-          minLength: 1
-          type: string
-        message:
-          description: Custom message to include in the invitation email
-          example: Welcome!
-          maxLength: 1000
-          type: string
-        roleName:
-          $ref: '#/components/schemas/InvitationRoleName'
-        targetResourceId:
-          description: The ID of the target resource (org-* for organizations, ps-*
-            for permissions systems)
-          example: org-example
-          type: string
-      required:
-      - targetResourceId
-      - roleName
-      - inviteeEmail
       type: object
     ServerlessSpecification:
       properties:
@@ -5398,35 +3462,6 @@ components:
           type: boolean
         id:
           $ref: '#/components/schemas/PermissionsSystemFeature'
-      type: object
-    SetOrgRoleKind:
-      enum:
-      - admin
-      type: string
-    SetOrganizationRoleRequest:
-      properties:
-        kind:
-          $ref: '#/components/schemas/SetOrgRoleKind'
-        subjectId:
-          description: The ID of the subject to assign the role to
-          example: user-12345
-          pattern: ^user-[\$a-zA-Z0-9-]+$
-          type: string
-      required:
-      - kind
-      - subjectId
-      type: object
-    SetPermissionsSystemRoleRequest:
-      properties:
-        kind:
-          $ref: '#/components/schemas/RoleKind'
-        subjectId:
-          description: The ID of the subject to assign the role to
-          example: user-12345
-          type: string
-      required:
-      - kind
-      - subjectId
       type: object
     ShapeField:
       enum:
@@ -5617,60 +3652,6 @@ components:
       properties:
         datastore:
           $ref: '#/components/schemas/Datastore'
-      type: object
-    UpdateDeploymentIPAllowFilterPolicy:
-      properties:
-        cidr:
-          description: CIDR of the IP allow filter policy for the Deployment
-          type: string
-        source:
-          $ref: '#/components/schemas/UpdateDeploymentIPAllowFilterPolicySource'
-      type: object
-    UpdateDeploymentIPAllowFilterPolicySource:
-      enum:
-      - Peer
-      - Remote
-      type: string
-    UpdateDeploymentRequest:
-      properties:
-        deploymentTemplateID:
-          description: Optional, the new ID of the Deployment Template to use for
-            this Deployment
-          type: string
-        ipAllowFilterPolicy:
-          description: Optional, the new IP allow filter policy for the Deployment
-          items:
-            $ref: '#/components/schemas/UpdateDeploymentIPAllowFilterPolicy'
-          nullable: true
-          type: array
-        name:
-          description: Optional, the new name of the Deployment
-          minLength: 1
-          type: string
-        replicas:
-          description: Optional, the new number of replicas on this Deployment
-          maximum: 32
-          minimum: 1
-          nullable: true
-          type: integer
-      type: object
-    UpdateMyMetadataRequest:
-      properties:
-        email:
-          description: The user's email address
-          example: john.doe@example.com
-          nullable: true
-          type: string
-        name:
-          description: The user's display name
-          example: John Doe
-          nullable: true
-          type: string
-        picture:
-          description: The user's profile picture URL
-          example: https://example.com/avatar.jpg
-          nullable: true
-          type: string
       type: object
     UpdatePermissionsSystemRequest:
       properties:
@@ -6023,14 +4004,6 @@ components:
       required:
       - name
       - id
-      type: object
-    UploadFGAMConfigRequest:
-      properties:
-        configYAML:
-          description: The FGAM configuration as a YAML string
-          type: string
-      required:
-      - configYAML
       type: object
     UsageLimits:
       properties:
