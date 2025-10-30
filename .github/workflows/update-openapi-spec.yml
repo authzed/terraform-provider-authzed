@@ -46,8 +46,12 @@ jobs:
       - name: Install mage
         run: go install github.com/magefile/mage@latest
 
+      # Note: Requires INTERNAL_REPO_TOKEN secret to be set in repository settings
+      # This token should have read access to the authzed/internal repository
       - name: Update OpenAPI spec
         id: update-spec
+        env:
+          GITHUB_TOKEN: ${{ secrets.INTERNAL_REPO_TOKEN }}
         run: |
           mage openapi:update
           # Check if there are changes
