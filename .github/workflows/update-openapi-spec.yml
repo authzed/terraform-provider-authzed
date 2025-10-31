@@ -5,13 +5,6 @@ on:
   schedule:
     - cron: '0 0 * * *'
   
-  # Run when PRs are opened or synchronized
-  pull_request:
-    types: [opened, synchronize]
-    paths:
-      - 'openapi-spec.yaml'
-      - '.github/workflows/update-openapi-spec.yml'
-  
   # Allow manual triggering
   workflow_dispatch:
   
@@ -22,8 +15,6 @@ on:
 jobs:
   update-openapi-spec:
     name: Update OpenAPI Spec
-    # Don't run this job on PR events if the PR is from the update-openapi-spec branch (to avoid loops)
-    if: github.event_name != 'pull_request' || github.head_ref != 'update-openapi-spec'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -48,6 +39,8 @@ jobs:
 
       - name: Update OpenAPI spec
         id: update-spec
+        env:
+          GITHUB_TOKEN: ${{ secrets.INTERNAL_REPO_TOKEN }}
         run: |
           mage openapi:update
           # Check if there are changes
@@ -57,9 +50,9 @@ jobs:
             echo "changes=false" >> $GITHUB_OUTPUT
           fi
 
-      # When not in a PR, create a new PR with changes
+      # Create a new PR with changes
       - name: Create Pull Request
-        if: steps.update-spec.outputs.changes == 'true' && github.event_name != 'pull_request'
+        if: steps.update-spec.outputs.changes == 'true'
         uses: peter-evans/create-pull-request@v7
         with:
           commit-message: 'chore: update OpenAPI spec'
@@ -70,27 +63,4 @@ jobs:
             This is an automated PR created by the GitHub Actions workflow.
           branch: update-openapi-spec
           base: main
-          labels: dependencies,automated
-      
-      # When in a PR context, update the PR with the latest spec
-      - name: Commit changes to PR
-        if: steps.update-spec.outputs.changes == 'true' && github.event_name == 'pull_request'
-        run: |
-          git config --global user.name 'GitHub Actions'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add openapi-spec.yaml
-          git commit -m "chore: update OpenAPI spec to latest version"
-          git push
-          
-      # Also add a comment to the PR about the update
-      - name: Comment on PR
-        if: steps.update-spec.outputs.changes == 'true' && github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '✅ The OpenAPI spec in this PR has been automatically updated to the latest version.'
-            }) 
+          labels: dependencies,automated 

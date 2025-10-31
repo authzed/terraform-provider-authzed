@@ -12,12 +12,18 @@ import (
 
 type OpenAPI mg.Namespace
 
-// Update fetches the latest OpenAPI specification from the API
+// Update fetches the latest OpenAPI specification from the private GitHub repository
 func (OpenAPI) Update() error {
-	apiURL := "https://api.admin.stage.aws.authzed.net/openapi-spec"
+	apiURL := "https://raw.githubusercontent.com/authzed/internal/main/cloud-api/internal/specs/25r1.yaml"
 	outputFile := "openapi-spec.yaml"
 
-	fmt.Printf("Fetching latest OpenAPI spec from %s...\n", apiURL)
+	// Get GitHub token from environment
+	githubToken := os.Getenv("GITHUB_TOKEN")
+	if githubToken == "" {
+		return fmt.Errorf("GITHUB_TOKEN environment variable is not set")
+	}
+
+	fmt.Printf("Fetching latest OpenAPI spec from GitHub repository...\n")
 
 	client := &http.Client{}
 
@@ -26,9 +32,10 @@ func (OpenAPI) Update() error {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
-	// Set headers (User-Agent, Accept, etc.)
+	// Set headers (User-Agent, Accept, Authorization)
 	req.Header.Set("User-Agent", "AuthZed-Terraform-Provider-Builder")
 	req.Header.Set("Accept", "application/yaml, text/yaml, application/json")
+	req.Header.Set("Authorization", "token "+githubToken)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -36,9 +43,18 @@ func (OpenAPI) Update() error {
 	}
 	defer resp.Body.Close()
 
-	// Check response status
+	// Check response status with detailed error messages
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to fetch OpenAPI spec, status code: %d", resp.StatusCode)
+		switch resp.StatusCode {
+		case http.StatusUnauthorized:
+			return fmt.Errorf("authentication failed (status 401). Please check GITHUB_TOKEN")
+		case http.StatusForbidden:
+			return fmt.Errorf("access forbidden (status 403). Token may lack required permissions")
+		case http.StatusNotFound:
+			return fmt.Errorf("file not found (status 404). Check repository and file path")
+		default:
+			return fmt.Errorf("failed to fetch OpenAPI spec, status code: %d", resp.StatusCode)
+		}
 	}
 
 	file, err := os.Create(outputFile)
