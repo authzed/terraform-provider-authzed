@@ -15,7 +15,7 @@ jobs:
     name: "Lint Go"
     runs-on: "depot-ubuntu-24.04"
     steps:
-      - uses: "actions/checkout@v6.0.0"
+      - uses: "actions/checkout@v6.0.1"
       - uses: "authzed/actions/setup-go@main"
       - name: "Lint Go"
         run: "go run mage.go lint:go"
