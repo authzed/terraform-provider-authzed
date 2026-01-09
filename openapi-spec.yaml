@@ -1930,6 +1930,7 @@ components:
       - role_management
       - administer_permissions_system
       - datastore_scaling
+      - datastore_sharing
       type: string
     CloudKind:
       enum:
@@ -2388,6 +2389,11 @@ components:
           description: The region where the Datastore is hosted. This is separate
             from the Permissions System region.
           type: string
+        referencingPermissionSystems:
+          description: The names of PermissionSystems that reference this Datastore.
+          items:
+            type: string
+          type: array
         templateName:
           description: The name of the DatastoreTemplate used during creation.
           type: string
@@ -2409,6 +2415,12 @@ components:
       properties:
         allowOverrides:
           description: Configuration fields users are allowed to override
+        allowSharing:
+          description: Whether databases created with this template can be shared
+            between multiple PermissionSystems
+          type: boolean
+        constraints:
+          description: Named constraint parameters for validation and UI
         defaults:
           description: Default configuration values
         description:
