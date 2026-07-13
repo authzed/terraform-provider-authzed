@@ -127,6 +127,7 @@ func (p *CloudProvider) Resources(_ context.Context) []func() resource.Resource 
 		NewPolicyResource,
 		NewServiceAccountResource,
 		NewTokenResource,
+		NewMaterializeDeploymentResource,
 	}
 	return resources
 }
