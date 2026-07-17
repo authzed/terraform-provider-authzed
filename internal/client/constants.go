@@ -17,4 +17,9 @@ const (
 	DefaultBaseRetryDelay = 200 * time.Millisecond
 	DefaultMaxRetryDelay  = 5 * time.Second
 	DefaultMaxJitter      = 500 * time.Millisecond
+
+	// MaterializeAPIVersion is the API version required by the Materialize
+	// endpoints, which only exist in the internal API version. Update this
+	// once the Materialize API is promoted to a public version.
+	MaterializeAPIVersion = "internal"
 )
