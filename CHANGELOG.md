@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **New resource `authzed_materialize_deployment`** - Create, update, delete, and import AuthZed Materialize deployments for a permission system deployment (uses the internal API version, which has no compatibility guarantees and can change or break at any time)
 - **Concurrency testing suite** - Performance benchmarking (15-75 resources), concurrent creation tests, and eventual consistency validation
 - **DeleteLanes infrastructure** - Conflict resolution system for resource deletion with intelligent retry logic
 - **Per-Permission System serialization lanes (PSLanes)** - Concurrent operations across different permission systems while preventing FGAM conflicts

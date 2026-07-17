@@ -123,6 +123,13 @@ var _ HTTPResponder = (*ResponseWithETag)(nil)
 // RequestOption allows setting optional parameters for requests
 type RequestOption func(*http.Request)
 
+// WithAPIVersion overrides the X-API-Version header for a single request
+func WithAPIVersion(version string) RequestOption {
+	return func(req *http.Request) {
+		req.Header.Set("X-API-Version", version)
+	}
+}
+
 // IdempotentRecoveryConfig configures idempotent recovery for create operations
 type IdempotentRecoveryConfig struct {
 	ResourceType string
@@ -172,8 +179,8 @@ func (c *CloudClient) Do(req *http.Request) (*ResponseWithETag, error) {
 }
 
 // DeleteResource deletes a resource
-func (c *CloudClient) DeleteResource(endpoint string) error {
-	req, err := c.NewRequest(http.MethodDelete, endpoint, nil)
+func (c *CloudClient) DeleteResource(endpoint string, options ...RequestOption) error {
+	req, err := c.NewRequest(http.MethodDelete, endpoint, nil, options...)
 	if err != nil {
 		return err
 	}
@@ -193,7 +200,7 @@ func (c *CloudClient) DeleteResource(endpoint string) error {
 		if os.Getenv("AUTHZED_DELETE_CONFIRM_ON_204") == "1" {
 			confirmCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			if req2, err := c.NewRequest(http.MethodGet, endpoint, nil); err == nil {
+			if req2, err := c.NewRequest(http.MethodGet, endpoint, nil, options...); err == nil {
 				req2 = req2.WithContext(confirmCtx)
 				if resp2, err2 := c.Do(req2); err2 == nil {
 					_ = resp2.Response.Body.Close()
@@ -208,7 +215,7 @@ func (c *CloudClient) DeleteResource(endpoint string) error {
 	}
 	// 202 Accepted: async delete, poll for completion
 	if status == http.StatusAccepted {
-		return c.waitForDeletion(endpoint)
+		return c.waitForDeletion(endpoint, options...)
 	}
 
 	// Other statuses are errors
@@ -216,7 +223,7 @@ func (c *CloudClient) DeleteResource(endpoint string) error {
 }
 
 // waitForDeletion polls the resource endpoint until it returns 404/410 (deleted)
-func (c *CloudClient) waitForDeletion(endpoint string) error {
+func (c *CloudClient) waitForDeletion(endpoint string, options ...RequestOption) error {
 	// Overall timeout
 	ctx, cancel := context.WithTimeout(context.Background(), c.DeleteTimeout)
 	defer cancel()
@@ -233,7 +240,7 @@ func (c *CloudClient) waitForDeletion(endpoint string) error {
 
 		// Short per-probe timeout
 		probeCtx, probeCancel := context.WithTimeout(ctx, 15*time.Second)
-		req, err := c.NewRequest(http.MethodGet, endpoint, nil)
+		req, err := c.NewRequest(http.MethodGet, endpoint, nil, options...)
 		if err != nil {
 			probeCancel()
 			return fmt.Errorf("failed to create request while polling for deletion: %w", err)
