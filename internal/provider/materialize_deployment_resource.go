@@ -344,6 +344,11 @@ func (r *materializeDeploymentResource) Create(ctx context.Context, req resource
 		return
 	}
 
+	// The endpoint is assigned just after snapshotting starts, so the wait
+	// above usually returns without it. Fetch it now rather than leaving the
+	// url output empty for whatever this apply feeds.
+	deployment = waitForMaterializeDeploymentURL(createCtx, r.client, deployment)
+
 	resp.Diagnostics.Append(applyMaterializeDeploymentToModel(ctx, deployment, &data)...)
 	if resp.Diagnostics.HasError() {
 		return

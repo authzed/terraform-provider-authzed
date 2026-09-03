@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"terraform-provider-authzed/internal/client"
 	"terraform-provider-authzed/internal/models"
@@ -98,6 +99,12 @@ func waitForRoleExists(ctx context.Context, client *client.CloudClient, psID, ro
 		return true, nil // Found!
 	})
 }
+
+// materializeURLWaitTimeout caps the wait for a deployment's endpoint. The
+// endpoint is assigned seconds after the deployment starts snapshotting, so
+// waiting minutes for it means it is not coming — and an apply should not
+// spend the rest of a long create timeout on a cosmetic field.
+const materializeURLWaitTimeout = 2 * time.Minute
 
 // classifyAPIError inspects err for an *client.APIError.
 func classifyAPIError(err error) (isNotFound, isPermanent bool) {
@@ -396,4 +403,50 @@ func waitForMaterializeDeploymentReady(ctx context.Context, cloudClient *client.
 		return nil, fmt.Errorf("waiting for materialize deployment %s to start snapshotting: %w", id, err)
 	}
 	return ready, nil
+}
+
+// waitForMaterializeDeploymentURL polls until the deployment's endpoint is
+// assigned, returning the deployment that carries it.
+//
+// The create response never includes the URL, and the operator assigns it
+// shortly after the deployment starts snapshotting — just after the readiness
+// wait returns. Without this, a first apply stores an empty url and anything
+// consuming that output (an app config, a secret, a downstream resource) gets
+// nothing until some later refresh fills it in.
+//
+// The deployment itself already exists by this point, so a failure here
+// returns the original deployment rather than failing the apply: an empty url
+// that the next refresh repairs beats a tainted resource.
+func waitForMaterializeDeploymentURL(ctx context.Context, cloudClient *client.CloudClient, deployment *models.MaterializeDeployment) *models.MaterializeDeployment {
+	if deployment == nil || deployment.URL != "" {
+		return deployment
+	}
+
+	urlCtx, cancel := context.WithTimeout(ctx, materializeURLWaitTimeout)
+	defer cancel()
+
+	withURL := deployment
+	operation := func() error {
+		latest, err := cloudClient.GetMaterializeDeployment(urlCtx, deployment.ID)
+		if err != nil {
+			if _, isPermanent := classifyAPIError(err); isPermanent {
+				return backoff.Permanent(err)
+			}
+			return err
+		}
+		if latest.URL == "" {
+			return errors.New("endpoint not assigned yet")
+		}
+		withURL = latest
+		return nil
+	}
+
+	if err := backoff.Retry(operation, backoff.WithContext(client.NewPollBackOff(), urlCtx)); err != nil {
+		tflog.Warn(ctx, "materialize deployment endpoint was not assigned before the timeout; the next refresh will fill it in", map[string]any{
+			"id":    deployment.ID,
+			"error": err.Error(),
+		})
+		return deployment
+	}
+	return withURL
 }

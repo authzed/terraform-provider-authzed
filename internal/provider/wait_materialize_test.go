@@ -711,3 +711,73 @@ func TestWaitForMaterializeDeploymentReadySettlesWithoutAConfigCheck(t *testing.
 		t.Fatalf("expected the settle window to release the wait: %v", err)
 	}
 }
+
+// The create response carries no URL and the operator assigns it shortly
+// after snapshotting starts, so the readiness wait usually returns without
+// one. Polling for it keeps the first apply from storing an empty url.
+func TestWaitForMaterializeDeploymentURLPollsUntilAssigned(t *testing.T) {
+	var calls int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := atomic.AddInt32(&calls, 1)
+		url := ""
+		if n >= 3 {
+			url = "mc-test-cache.us-east-1.example.com"
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintf(w, `{"deployment": {"id": "mc-test", "name": "t", "permissionsSystemID": "ps-x", "deploymentID": "dp-x", "watchedPermissions": [], "url": %q}}`, url)
+	}))
+	defer server.Close()
+
+	c := client.NewCloudClient(&client.CloudClientConfig{Host: server.URL, Token: "test-token"})
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	deployment := waitForMaterializeDeploymentURL(ctx, c, &models.MaterializeDeployment{ID: "mc-test"})
+	if deployment.URL != "mc-test-cache.us-east-1.example.com" {
+		t.Fatalf("expected the endpoint to be filled in, got %q", deployment.URL)
+	}
+	if calls < 3 {
+		t.Fatalf("expected polling until the endpoint appeared, got %d calls", calls)
+	}
+}
+
+// A deployment that already carries its endpoint needs no extra request.
+func TestWaitForMaterializeDeploymentURLSkipsWhenPresent(t *testing.T) {
+	var calls int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		atomic.AddInt32(&calls, 1)
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	c := client.NewCloudClient(&client.CloudClientConfig{Host: server.URL, Token: "test-token"})
+	existing := &models.MaterializeDeployment{ID: "mc-test", URL: "already-there.example.com"}
+
+	deployment := waitForMaterializeDeploymentURL(context.Background(), c, existing)
+	if deployment.URL != "already-there.example.com" {
+		t.Fatalf("expected the existing endpoint to be kept, got %q", deployment.URL)
+	}
+	if calls != 0 {
+		t.Fatalf("expected no requests, got %d", calls)
+	}
+}
+
+// The deployment exists by the time this runs, so a URL that never arrives
+// must not fail the apply — the next refresh fills it in.
+func TestWaitForMaterializeDeploymentURLGivesUpWithoutFailing(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprint(w, `{"deployment": {"id": "mc-test", "name": "t", "permissionsSystemID": "ps-x", "deploymentID": "dp-x", "watchedPermissions": []}}`)
+	}))
+	defer server.Close()
+
+	c := client.NewCloudClient(&client.CloudClientConfig{Host: server.URL, Token: "test-token"})
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+
+	original := &models.MaterializeDeployment{ID: "mc-test"}
+	deployment := waitForMaterializeDeploymentURL(ctx, c, original)
+	if deployment != original {
+		t.Fatalf("expected the original deployment back, got %+v", deployment)
+	}
+}
