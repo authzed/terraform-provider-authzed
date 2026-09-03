@@ -52,6 +52,30 @@ func containsFGAMConfigConflict(message string) bool {
 		strings.Contains(lowerMessage, "has changed")
 }
 
+// errorDetails pulls the per-problem messages out of an error body. The
+// top-level message is often a generic summary ("bad request"), while these
+// say which field is wrong and why.
+func errorDetails(jsonErr map[string]any, summary string) string {
+	raw, ok := jsonErr["errors"].([]any)
+	if !ok {
+		return ""
+	}
+	details := make([]string, 0, len(raw))
+	for _, item := range raw {
+		entry, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		message, ok := entry["message"].(string)
+		// Skip a detail that only repeats the summary, so it is not said twice.
+		if !ok || message == "" || message == summary {
+			continue
+		}
+		details = append(details, message)
+	}
+	return strings.Join(details, "; ")
+}
+
 // NewAPIError creates a new APIError from an HTTPResponder
 func NewAPIError(responder HTTPResponder) *APIError {
 	resp := responder.GetResponse()
@@ -65,6 +89,13 @@ func NewAPIError(responder HTTPResponder) *APIError {
 			errMsg = msg
 		} else if msg, ok := jsonErr["error"].(string); ok {
 			errMsg = msg
+		}
+		if details := errorDetails(jsonErr, errMsg); details != "" {
+			if errMsg == "" {
+				errMsg = details
+			} else {
+				errMsg += ": " + details
+			}
 		}
 	}
 
