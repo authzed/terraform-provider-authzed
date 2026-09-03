@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"terraform-provider-authzed/internal/client"
 	"terraform-provider-authzed/internal/models"
@@ -325,8 +327,16 @@ func (r *materializeDeploymentResource) Create(ctx context.Context, req resource
 
 	// The wait's final poll returns the deployment it observed, so no extra
 	// read is needed afterwards.
-	deployment, err := waitForMaterializeDeploymentReady(createCtx, r.client, created.ID)
+	deployment, err := waitForMaterializeDeploymentReady(createCtx, r.client, created.ID, 0)
 	if err != nil {
+		var rejected *materializeConfigRejectedError
+		if errors.As(err, &rejected) {
+			resp.Diagnostics.AddError(
+				"Invalid Materialize Deployment Configuration",
+				fmt.Sprintf("Deployment %s was created but rejected its configuration: %s. Fix the configuration and apply again.", created.ID, err),
+			)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Materialize Deployment Not Ready",
 			fmt.Sprintf("Deployment %s was created but did not start snapshotting: %s. Increase the create timeout if provisioning needs more time.", created.ID, err),
@@ -438,6 +448,20 @@ func (r *materializeDeploymentResource) Update(ctx context.Context, req resource
 	}
 
 	id := state.ID.ValueString()
+
+	// Note the version being replaced so the wait below can tell the new
+	// configuration's status from the old one's. Failing to read it only
+	// costs that, so it must not fail the update.
+	var currentGeneration int64
+	if current, err := r.client.GetMaterializeDeployment(updateCtx, id); err == nil {
+		currentGeneration = materializeObservedGeneration(current)
+	} else {
+		tflog.Warn(ctx, "could not read the deployment's version before updating it", map[string]any{
+			"id":    id,
+			"error": err.Error(),
+		})
+	}
+
 	if err := r.client.UpdateMaterializeDeployment(updateCtx, id, updateReq); err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update materialize deployment, got error: %s", err))
 		return
@@ -445,8 +469,16 @@ func (r *materializeDeploymentResource) Update(ctx context.Context, req resource
 
 	// The wait's final poll returns the deployment it observed, so no extra
 	// read is needed afterwards.
-	deployment, err := waitForMaterializeDeploymentReady(updateCtx, r.client, id)
+	deployment, err := waitForMaterializeDeploymentReady(updateCtx, r.client, id, currentGeneration)
 	if err != nil {
+		var rejected *materializeConfigRejectedError
+		if errors.As(err, &rejected) {
+			resp.Diagnostics.AddError(
+				"Invalid Materialize Deployment Configuration",
+				fmt.Sprintf("Deployment %s rejected its updated configuration: %s. Fix the configuration and apply again.", id, err),
+			)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Materialize Deployment Not Ready",
 			fmt.Sprintf("Deployment %s was updated but did not return to a ready state: %s. Increase the update timeout if the rollout needs more time.", id, err),
