@@ -163,3 +163,37 @@ func TestApplyMaterializeDeploymentToModelResolvesUnknowns(t *testing.T) {
 		t.Fatalf("expected created_at resolved to null, got %v", data.CreatedAt)
 	}
 }
+
+// Order carries no meaning server-side, so the same permissions in a
+// different order must compare equal — otherwise config written from the UI
+// in a different order than the API returns produces a spurious diff and a
+// no-op update on the first plan.
+func TestWatchedPermissionsIgnoreOrder(t *testing.T) {
+	ctx := context.Background()
+
+	first := fullTestDeployment()
+	first.WatchedPermissions = []string{
+		"document#view@user",
+		"document#edit@user",
+		"folder#view@user",
+	}
+	second := fullTestDeployment()
+	second.WatchedPermissions = []string{
+		"folder#view@user",
+		"document#view@user",
+		"document#edit@user",
+	}
+
+	var firstData, secondData materializeDeploymentResourceModel
+	if diags := applyMaterializeDeploymentToModel(ctx, first, &firstData); diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	if diags := applyMaterializeDeploymentToModel(ctx, second, &secondData); diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	if !firstData.WatchedPermissions.Equal(secondData.WatchedPermissions) {
+		t.Fatalf("expected reordered permissions to compare equal:\n  %v\n  %v",
+			firstData.WatchedPermissions, secondData.WatchedPermissions)
+	}
+}

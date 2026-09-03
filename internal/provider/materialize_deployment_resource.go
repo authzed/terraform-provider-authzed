@@ -43,7 +43,7 @@ type materializeDeploymentResourceModel struct {
 	ServerTemplateID    types.String   `tfsdk:"server_template_id"`
 	SnapshotTemplateID  types.String   `tfsdk:"snapshot_template_id"`
 	HydrationTemplateID types.String   `tfsdk:"hydration_template_id"`
-	WatchedPermissions  types.List     `tfsdk:"watched_permissions"`
+	WatchedPermissions  types.Set      `tfsdk:"watched_permissions"`
 	Replicas            types.Int64    `tfsdk:"replicas"`
 	AcceleratedQueries  types.Bool     `tfsdk:"accelerated_queries"`
 	URL                 types.String   `tfsdk:"url"`
@@ -104,7 +104,7 @@ func applyMaterializeDeploymentToModel(ctx context.Context, deployment *models.M
 	data.URL = stringOrPreserve(deployment.URL, data.URL)
 	data.CreatedAt = stringOrPreserve(deployment.CreatedAt, data.CreatedAt)
 
-	watched, d := types.ListValueFrom(ctx, types.StringType, deployment.WatchedPermissions)
+	watched, d := types.SetValueFrom(ctx, types.StringType, deployment.WatchedPermissions)
 	diags.Append(d...)
 	data.WatchedPermissions = watched
 
@@ -203,10 +203,10 @@ func (r *materializeDeploymentResource) Schema(ctx context.Context, _ resource.S
 				Required:    true,
 				Description: "ID of the Materialize offline hydration template (e.g. mthc-4-vcpu)",
 			},
-			"watched_permissions": schema.ListAttribute{
+			"watched_permissions": schema.SetAttribute{
 				Required:    true,
 				ElementType: types.StringType,
-				Description: "Permissions to materialize, in the format resource_type#relation@subject_type[#subject_relation] (1-100 entries). Updates replace the entire list.",
+				Description: "Permissions to materialize, in the format resource_type#relation@subject_type[#subject_relation] (1-100 entries). Unordered: reordering the same permissions is not a change. Updates replace the entire set.",
 			},
 			"replicas": schema.Int64Attribute{
 				Optional:    true,

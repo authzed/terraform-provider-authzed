@@ -65,9 +65,10 @@ resource "authzed_materialize_deployment" "example" {
 - `hydration_template_id` - (Required) ID of the Materialize offline
   hydration template (e.g. `mthc-4-vcpu` — see
   [Available Templates](#available-templates)).
-- `watched_permissions` - (Required) List of permissions to materialize, in
+- `watched_permissions` - (Required) Set of permissions to materialize, in
   the format `resource_type#relation@subject_type[#subject_relation]`
-  (1-100 entries). Updates replace the entire list.
+  (1-100 entries). Unordered: reordering the same permissions is not a
+  change. Updates replace the entire set.
 - `replicas` - (Optional) Number of online hydration server replicas
   (0-16). Zero temporarily disables the deployment without deleting it.
   When omitted, the server template default applies and the applied value
