@@ -11,6 +11,28 @@ const (
 	MaterializeJobPhaseDisabled = "Disabled"
 )
 
+// MaterializeConditionPreflightFailed is set when the configuration check
+// rejected the deployment's configuration.
+const MaterializeConditionPreflightFailed = "PreflightFailed"
+
+// MaterializeConditionPreflightInProgress is set while the configuration
+// check runs. Until it finishes, the rest of the status still describes the
+// previous configuration.
+const MaterializeConditionPreflightInProgress = "PreflightInProgress"
+
+// MaterializeConditionTrue means the condition currently holds. One that no
+// longer holds may be set to "False" or dropped, so treat both the same.
+const MaterializeConditionTrue = "True"
+
+// Configuration check failures that mean the configuration itself was
+// rejected. Retrying cannot help: the configuration or the permission
+// system's schema has to change first.
+const (
+	MaterializePreflightReasonInvalidWatchedPermission = "InvalidWatchedPermission"
+	MaterializePreflightReasonSchemaEmpty              = "SchemaEmpty"
+	MaterializePreflightReasonNoWatchedPermissions     = "NoWatchedPermissions"
+)
+
 // MaterializeDeployment represents a Materialize deployment as returned by the API
 type MaterializeDeployment struct {
 	ID                  string                       `json:"id"`
@@ -31,10 +53,21 @@ type MaterializeDeployment struct {
 // create-readiness signal, plus the feature flags and compute that mirror
 // configurable attributes back for drift detection.
 type MaterializeDeploymentStatus struct {
-	Phase    string                             `json:"phase,omitempty"`
-	Snapshot *MaterializeDeploymentSnapshotInfo `json:"snapshot,omitempty"`
-	Features *MaterializeDeploymentFeatures     `json:"features,omitempty"`
-	Compute  *MaterializeDeploymentCompute      `json:"compute,omitempty"`
+	Phase      string                                 `json:"phase,omitempty"`
+	Conditions []MaterializeDeploymentStatusCondition `json:"conditions,omitempty"`
+	Snapshot   *MaterializeDeploymentSnapshotInfo     `json:"snapshot,omitempty"`
+	Features   *MaterializeDeploymentFeatures         `json:"features,omitempty"`
+	Compute    *MaterializeDeploymentCompute          `json:"compute,omitempty"`
+}
+
+// MaterializeDeploymentStatusCondition is one reported aspect of the
+// deployment's state. Reason is a short code, Message explains it in words.
+type MaterializeDeploymentStatusCondition struct {
+	Type               string `json:"type"`
+	Status             string `json:"status"`
+	Reason             string `json:"reason,omitempty"`
+	Message            string `json:"message,omitempty"`
+	ObservedGeneration int64  `json:"observedGeneration,omitempty"`
 }
 
 // MaterializeDeploymentSnapshotInfo reports the state of the snapshot job

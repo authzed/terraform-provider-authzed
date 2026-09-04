@@ -99,8 +99,8 @@ func waitForRoleExists(ctx context.Context, client *client.CloudClient, psID, ro
 	})
 }
 
-// classifyMaterializeDeploymentError inspects err for an *client.APIError.
-func classifyMaterializeDeploymentError(err error) (isNotFound, isPermanent bool) {
+// classifyAPIError inspects err for an *client.APIError.
+func classifyAPIError(err error) (isNotFound, isPermanent bool) {
 	var apiErr *client.APIError
 	if !errors.As(err, &apiErr) {
 		return false, false
@@ -147,16 +147,183 @@ func materializeDeploymentReady(deployment *models.MaterializeDeployment) bool {
 	return false
 }
 
+// terminalPreflightReasons are the failures worth giving up on. The service
+// retries a failed check on its own, so everything else keeps polling.
+var terminalPreflightReasons = map[string]struct{}{
+	models.MaterializePreflightReasonInvalidWatchedPermission: {},
+	models.MaterializePreflightReasonSchemaEmpty:              {},
+	models.MaterializePreflightReasonNoWatchedPermissions:     {},
+}
+
+// materializeConditions returns the deployment's conditions, or none.
+func materializeConditions(deployment *models.MaterializeDeployment) []models.MaterializeDeploymentStatusCondition {
+	if deployment.Status == nil {
+		return nil
+	}
+	return deployment.Status.Conditions
+}
+
+// materializeConditionActive reports whether the named condition holds.
+func materializeConditionActive(deployment *models.MaterializeDeployment, conditionType string) bool {
+	for _, condition := range materializeConditions(deployment) {
+		if condition.Type == conditionType {
+			return condition.Status == models.MaterializeConditionTrue
+		}
+	}
+	return false
+}
+
+// describeMaterializeCondition renders a condition as "Type: Reason: message".
+func describeMaterializeCondition(condition models.MaterializeDeploymentStatusCondition) string {
+	parts := make([]string, 0, 3)
+	for _, part := range []string{condition.Type, condition.Reason, condition.Message} {
+		if part != "" {
+			parts = append(parts, part)
+		}
+	}
+	return strings.Join(parts, ": ")
+}
+
+// materializeFailureDetail describes every failure the deployment reports, or
+// "" if none. Retryable ones are included: if the deployment never recovers,
+// this is the only clue the user gets about why. The name match is loose on
+// purpose, so failures added later are still described.
+func materializeFailureDetail(deployment *models.MaterializeDeployment) string {
+	var failures []string
+	for _, condition := range materializeConditions(deployment) {
+		if condition.Status != models.MaterializeConditionTrue {
+			continue
+		}
+		if strings.HasSuffix(condition.Type, "Failed") || strings.HasSuffix(condition.Type, "Error") {
+			failures = append(failures, describeMaterializeCondition(condition))
+		}
+	}
+	return strings.Join(failures, "; ")
+}
+
+// materializeObservedGeneration returns the newest configuration version the
+// deployment's status describes, or 0 if it reports none.
+func materializeObservedGeneration(deployment *models.MaterializeDeployment) int64 {
+	var newest int64
+	for _, condition := range materializeConditions(deployment) {
+		if condition.ObservedGeneration > newest {
+			newest = condition.ObservedGeneration
+		}
+	}
+	return newest
+}
+
+// materializeConfigCheckRunning reports whether the deployment is checking
+// its configuration, so there is no verdict on it yet.
+func materializeConfigCheckRunning(deployment *models.MaterializeDeployment) bool {
+	return materializeConditionActive(deployment, models.MaterializeConditionPreflightInProgress)
+}
+
+// materializeSettleWindow caps how long a tracker waits for a configuration
+// check that may never run.
+var materializeSettleWindow = 20 * time.Second
+
+// materializeChangeTracker reports when a deployment's status describes the
+// change just made, rather than the configuration it replaced. For a moment
+// after a change the deployment still reports the old configuration, and
+// reports it as ready, so two things have to happen before its status means
+// anything: it has to name a newer configuration version, and the
+// configuration check has to run and finish. Some changes need no check, so
+// the wait also ends materializeSettleWindow after the newer version first
+// shows up.
+type materializeChangeTracker struct {
+	previousGeneration int64
+	settleBy           time.Time
+	newGenerationSeen  bool
+	checkSeen          bool
+	tookEffect         bool
+}
+
+// newMaterializeChangeTracker tracks a change to a deployment that was on
+// previousGeneration. Zero means nothing was there before, as on create,
+// where the status can be trusted straight away.
+func newMaterializeChangeTracker(previousGeneration int64) *materializeChangeTracker {
+	return &materializeChangeTracker{
+		previousGeneration: previousGeneration,
+		tookEffect:         previousGeneration == 0,
+	}
+}
+
+// TookEffect reports whether this observation of the deployment describes the
+// change. Once it does, it always does.
+func (t *materializeChangeTracker) TookEffect(deployment *models.MaterializeDeployment) bool {
+	if t.tookEffect {
+		return true
+	}
+	if materializeObservedGeneration(deployment) <= t.previousGeneration {
+		return false
+	}
+	if !t.newGenerationSeen {
+		// The window gives the configuration check time to start, so it can
+		// only start counting once there is a newer version for it to check.
+		// Started any earlier, a service that takes longer than the window
+		// to bump the version would have the restamped previous verdict —
+		// ready, and passing a check that has not run — accepted on sight.
+		t.newGenerationSeen = true
+		t.settleBy = time.Now().Add(materializeSettleWindow)
+	}
+	switch {
+	case materializeConfigCheckRunning(deployment):
+		t.checkSeen = true
+	case t.checkSeen, time.Now().After(t.settleBy):
+		t.tookEffect = true
+	}
+	return t.tookEffect
+}
+
+// materializeConfigRejectedError means the user has to change their
+// configuration. Callers check for it so they do not blame a timeout.
+type materializeConfigRejectedError struct{ err error }
+
+func (e *materializeConfigRejectedError) Error() string { return e.err.Error() }
+func (e *materializeConfigRejectedError) Unwrap() error { return e.err }
+
+// terminalMaterializeFailure returns an error if the deployment can never
+// start with the configuration it was given, so waiting longer is pointless.
+// Only call it once the change has taken effect, or it can report a failure
+// left over from the configuration being replaced.
+func terminalMaterializeFailure(deployment *models.MaterializeDeployment) error {
+	for _, condition := range materializeConditions(deployment) {
+		if condition.Type != models.MaterializeConditionPreflightFailed ||
+			condition.Status != models.MaterializeConditionTrue {
+			continue
+		}
+		if _, terminal := terminalPreflightReasons[condition.Reason]; !terminal {
+			continue
+		}
+		detail := condition.Reason
+		if condition.Message != "" {
+			detail += ": " + condition.Message
+		}
+		return &materializeConfigRejectedError{
+			err: fmt.Errorf("preflight check failed: %s", detail),
+		}
+	}
+	return nil
+}
+
 // waitForMaterializeDeploymentReady waits for a materialize deployment to be
 // provisioned and snapshotting (see materializeDeploymentReady) — NOT fully
-// hydrated, which can take hours — and returns the deployment observed by
-// its final poll, saving callers a follow-up read. Callers control the
-// overall wait via ctx. A 404 means the deployment is not yet visible;
-// Degraded/Unknown phases can be transient during provisioning, so both keep
-// polling until ctx expires. Unlike waitForExists, this fails fast on any
-// other 4xx response (e.g. an invalid or expired token) instead of burning
-// the full wait budget on an error that will never resolve on its own.
-func waitForMaterializeDeploymentReady(ctx context.Context, cloudClient *client.CloudClient, id string) (*models.MaterializeDeployment, error) {
+// hydrated, which can take long — and returns the deployment observed by its
+// final poll, saving callers a follow-up read.
+//
+// previousGeneration is the configuration version the deployment was on
+// before the change being waited on; pass 0 on create (see
+// materializeChangeTracker).
+//
+// A 404 means the deployment is not yet visible, and Degraded/Unknown phases
+// can be transient while provisioning, so both keep polling until ctx
+// expires. Unlike waitForExists, this fails fast on any other 4xx response
+// (e.g. an invalid or expired token) and on a rejected configuration, rather
+// than waiting for something will never resolve itself.
+func waitForMaterializeDeploymentReady(ctx context.Context, cloudClient *client.CloudClient, id string, previousGeneration int64) (*models.MaterializeDeployment, error) {
+	change := newMaterializeChangeTracker(previousGeneration)
+
 	var ready *models.MaterializeDeployment
 	// lastState remembers what the most recent poll observed: on ctx expiry
 	// backoff.Retry returns a bare context error, and without this a stuck
@@ -165,7 +332,7 @@ func waitForMaterializeDeploymentReady(ctx context.Context, cloudClient *client.
 	operation := func() error {
 		deployment, err := cloudClient.GetMaterializeDeployment(ctx, id)
 		if err != nil {
-			isNotFound, isPermanent := classifyMaterializeDeploymentError(err)
+			isNotFound, isPermanent := classifyAPIError(err)
 			switch {
 			case isNotFound:
 				// Not visible yet, keep waiting.
@@ -181,10 +348,26 @@ func waitForMaterializeDeploymentReady(ctx context.Context, cloudClient *client.
 			}
 			return lastState
 		}
+		if !change.TookEffect(deployment) {
+			lastState = errors.New("the new configuration has not taken effect yet")
+			// On timeout this message is all the user sees, so say what the
+			// deployment is complaining about while it fails to catch up.
+			if detail := materializeFailureDetail(deployment); detail != "" {
+				lastState = fmt.Errorf("%w: %s", lastState, detail)
+			}
+			return lastState
+		}
+		// Before the ready test: the previous configuration's jobs can still
+		// be running, which looks ready even though the new one was rejected.
+		if failure := terminalMaterializeFailure(deployment); failure != nil {
+			return backoff.Permanent(failure)
+		}
+
 		if materializeDeploymentReady(deployment) {
 			ready = deployment
 			return nil
 		}
+
 		phase := ""
 		snapshotPhase := ""
 		if deployment.Status != nil {
@@ -194,10 +377,19 @@ func waitForMaterializeDeploymentReady(ctx context.Context, cloudClient *client.
 			}
 		}
 		lastState = fmt.Errorf("not ready yet (phase %q, snapshot phase %q)", phase, snapshotPhase)
+		// On timeout this message is all the user sees, so say what failed.
+		if detail := materializeFailureDetail(deployment); detail != "" {
+			lastState = fmt.Errorf("%w: %s", lastState, detail)
+		}
 		return lastState
 	}
 
 	if err := backoff.Retry(operation, backoff.WithContext(client.NewPollBackOff(), ctx)); err != nil {
+		// A rejected configuration is terminal; the "waiting for ..." framing would be misleading.
+		var rejected *materializeConfigRejectedError
+		if errors.As(err, &rejected) {
+			return nil, err
+		}
 		if lastState != nil && (errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled)) {
 			err = fmt.Errorf("%w (last state: %w)", err, lastState)
 		}

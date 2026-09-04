@@ -15,3 +15,10 @@ terraform-provider-authzed
 # Terraform state
 *.tfstate
 *.tfstate.backup
+
+# Local smoke-test TF and envs, and Terraform working files
+*.env
+smoke-test.tf
+.terraform/
+.terraform.lock.hcl
+.terraform.tfstate.lock.info
