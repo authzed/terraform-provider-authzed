@@ -31,7 +31,7 @@ builds:
       goarch: '386'
   binary: '{{ .ProjectName }}_v{{ .Version }}'
 archives:
-- format: zip
+- formats: [zip]
   name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
 checksum:
   extra_files:
@@ -52,11 +52,11 @@ signs:
       - "--detach-sign"
       - "${artifact}"
 release:
+  # on tag push, GH release is marked as draft to give us the opportunity to change release notes
+  draft: true
   extra_files:
     - glob: 'terraform-registry-manifest.json'
       name_template: '{{ .ProjectName }}_{{ .Version }}_manifest.json'
-  # If you want to manually examine the release before its live, uncomment this line:
-  # draft: true
 
 changelog:
   sort: asc
