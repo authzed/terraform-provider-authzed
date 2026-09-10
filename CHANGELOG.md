@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-09-10
+
+First stable release of the 0.7 line. Identical code to [0.7.0-beta2]; see that entry
+and [0.7.0-beta1] for everything included since [0.6.0-beta1].
+
 ## [0.7.0-beta2] - 2026-09-04
 
 ### Fixed
@@ -102,6 +107,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for managing Policies
 - Documentation and examples
 
+[0.7.0]: https://github.com/authzed/terraform-provider-authzed/releases/tag/v0.7.0
 [0.7.0-beta2]: https://github.com/authzed/terraform-provider-authzed/releases/tag/v0.7.0-beta2
 [0.7.0-beta1]: https://github.com/authzed/terraform-provider-authzed/releases/tag/v0.7.0-beta1
 [0.6.0-beta1]: https://github.com/authzed/terraform-provider-authzed/releases/tag/v0.6.0-beta1
