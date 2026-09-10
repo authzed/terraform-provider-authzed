@@ -1,6 +1,6 @@
 module terraform-provider-authzed
 
-go 1.25.8
+go 1.26.0
 
 require (
 	github.com/cenkalti/backoff/v4 v4.3.0
@@ -10,7 +10,7 @@ require (
 	github.com/hashicorp/terraform-plugin-log v0.11.0
 	github.com/hashicorp/terraform-plugin-testing v1.16.0
 	github.com/stretchr/testify v1.12.1
-	golang.org/x/sync v0.22.0
+	golang.org/x/sync v0.23.0
 )
 
 require (
